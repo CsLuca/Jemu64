@@ -82,4 +82,5 @@ jobs:
             week26_drive_iec_runtime.csv
             week27_drive_cmdphase_runtime.csv
             week28_drive_eoi_atn_runtime.csv
+            week29_drive_timeout_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

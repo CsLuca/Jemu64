@@ -152,6 +152,16 @@
   - runtime: `week28_drive_eoi_atn_runtime.csv`
   - reference: `reference/edge/week28_drive_eoi_atn_trace.csv`
 
+## Week29 Drive Timeout/Recovery Hard-Ref
+
+- Added dedicated 1541 timeout and recovery battery across drive revisions (1541/1541C/1541-II) for:
+  - RX idle timeout trigger and edge-based recovery,
+  - TX idle timeout trigger under active talk state,
+  - EOI wait timeout trigger and post-timeout command processing recovery.
+- Hard reference trace:
+  - runtime: `week29_drive_timeout_runtime.csv`
+  - reference: `reference/edge/week29_drive_timeout_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -221,6 +231,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week26_drive_iec_trace.csv`
     - `reference/edge/week27_drive_cmdphase_trace.csv`
     - `reference/edge/week28_drive_eoi_atn_trace.csv`
+    - `reference/edge/week29_drive_timeout_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

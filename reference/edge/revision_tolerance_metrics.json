@@ -28,6 +28,10 @@
                     "week27_drive_cmdphase_talk_sa0_rows":  6,
                     "week28_drive_eoi_rows":  27,
                     "week28_drive_eoi_ack_count_max":  1,
-                    "week28_drive_eoi_pending_rows":  6
+                    "week28_drive_eoi_pending_rows":  6,
+                    "week29_drive_timeout_rows":  18,
+                    "week29_drive_rx_timeout_max":  2,
+                    "week29_drive_tx_timeout_max":  1,
+                    "week29_drive_eoi_timeout_max":  1
                 }
 }

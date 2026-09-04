@@ -161,6 +161,10 @@ $metrics = [ordered]@{
     week28_drive_eoi_rows = 0
     week28_drive_eoi_ack_count_max = 0
     week28_drive_eoi_pending_rows = 0
+    week29_drive_timeout_rows = 0
+    week29_drive_rx_timeout_max = 0
+    week29_drive_tx_timeout_max = 0
+    week29_drive_eoi_timeout_max = 0
 }
 
 $savedPath = $env:PATH
@@ -441,6 +445,30 @@ try {
             }
             $metrics.week28_drive_eoi_ack_count_max = $ackMax
             $metrics.week28_drive_eoi_pending_rows = $eoiPendingRows
+        }
+    }
+    $week29Ref = Join-Path -Path $repo -ChildPath "reference\edge\week29_drive_timeout_trace.csv"
+    if (Test-Path -LiteralPath $week29Ref) {
+        $rows29 = @(Get-Content -LiteralPath $week29Ref)
+        if ($rows29.Count -gt 1) {
+            $metrics.week29_drive_timeout_rows = $rows29.Count - 1
+            $rxTimeoutMax = 0
+            $txTimeoutMax = 0
+            $eoiTimeoutMax = 0
+            foreach ($line in $rows29) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 16) {
+                    $rxVal = 0
+                    $txVal = 0
+                    $eoiVal = 0
+                    if ([int]::TryParse($parts[6], [ref]$rxVal)) { if ($rxVal -gt $rxTimeoutMax) { $rxTimeoutMax = $rxVal } }
+                    if ([int]::TryParse($parts[9], [ref]$txVal)) { if ($txVal -gt $txTimeoutMax) { $txTimeoutMax = $txVal } }
+                    if ([int]::TryParse($parts[11], [ref]$eoiVal)) { if ($eoiVal -gt $eoiTimeoutMax) { $eoiTimeoutMax = $eoiVal } }
+                }
+            }
+            $metrics.week29_drive_rx_timeout_max = $rxTimeoutMax
+            $metrics.week29_drive_tx_timeout_max = $txTimeoutMax
+            $metrics.week29_drive_eoi_timeout_max = $eoiTimeoutMax
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
