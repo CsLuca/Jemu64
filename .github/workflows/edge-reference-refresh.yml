@@ -79,4 +79,5 @@ jobs:
             week23_cia_irq_nmi_runtime.csv
             week24_irq_latch_runtime.csv
             week25_cia_serial_runtime.csv
+            week26_drive_iec_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

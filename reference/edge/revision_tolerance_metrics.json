@@ -20,6 +20,9 @@
                     "week24_irq_latch_irq_sampled_rows":  20,
                     "week25_cia_serial_rows":  49,
                     "week25_cia_serial_rx_bytes":  1,
-                    "week25_cia_serial_tx_bytes":  1
+                    "week25_cia_serial_tx_bytes":  1,
+                    "week26_drive_iec_rows":  21,
+                    "week26_drive_iec_rx_processed_max":  1,
+                    "week26_drive_iec_atn_ack_active_rows":  8
                 }
 }

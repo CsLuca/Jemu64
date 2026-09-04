@@ -153,6 +153,9 @@ $metrics = [ordered]@{
     week25_cia_serial_rows = 0
     week25_cia_serial_rx_bytes = 0
     week25_cia_serial_tx_bytes = 0
+    week26_drive_iec_rows = 0
+    week26_drive_iec_rx_processed_max = 0
+    week26_drive_iec_atn_ack_active_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -380,6 +383,25 @@ try {
             }
             $metrics.week25_cia_serial_rx_bytes = $rxBytes
             $metrics.week25_cia_serial_tx_bytes = $txBytes
+        }
+    }
+    $week26Ref = Join-Path -Path $repo -ChildPath "reference\edge\week26_drive_iec_trace.csv"
+    if (Test-Path -LiteralPath $week26Ref) {
+        $rows26 = @(Get-Content -LiteralPath $week26Ref)
+        if ($rows26.Count -gt 1) {
+            $metrics.week26_drive_iec_rows = $rows26.Count - 1
+            $rxProcessedMax = 0
+            $ackActiveRows = 0
+            foreach ($line in $rows26) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 12) {
+                    $rxVal = 0
+                    if ([int]::TryParse($parts[9], [ref]$rxVal)) { if ($rxVal -gt $rxProcessedMax) { $rxProcessedMax = $rxVal } }
+                    if ($parts[5] -eq '1') { $ackActiveRows++ }
+                }
+            }
+            $metrics.week26_drive_iec_rx_processed_max = $rxProcessedMax
+            $metrics.week26_drive_iec_atn_ack_active_rows = $ackActiveRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

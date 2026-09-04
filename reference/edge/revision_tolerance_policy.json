@@ -22,6 +22,9 @@
     "week24_irq_latch_irq_sampled_rows": { "min": 4, "max": 24 },
     "week25_cia_serial_rows": { "min": 20, "max": 120 },
     "week25_cia_serial_rx_bytes": { "min": 1, "max": 20 },
-    "week25_cia_serial_tx_bytes": { "min": 1, "max": 20 }
+    "week25_cia_serial_tx_bytes": { "min": 1, "max": 20 },
+    "week26_drive_iec_rows": { "min": 18, "max": 60 },
+    "week26_drive_iec_rx_processed_max": { "min": 1, "max": 10 },
+    "week26_drive_iec_atn_ack_active_rows": { "min": 3, "max": 30 }
   }
 }
