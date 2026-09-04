@@ -8436,6 +8436,8 @@ static void runWeek19CiaDenseEdgeHardReference();
 static void runWeek20VicPathologicalEdgeHardReference();
 static void runWeek21BusCornerEdgeHardReference();
 static void runWeek22PortMapEdgeHardReference();
+static void runWeek23CiaIrqNmiBridgeEdgeHardReference();
+static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
     #if RUN_PROFILE == RUN_PROFILE_FULL
@@ -8451,6 +8453,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek20VicPathologicalEdgeHardReference();
     runWeek21BusCornerEdgeHardReference();
     runWeek22PortMapEdgeHardReference();
+    runWeek23CiaIrqNmiBridgeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8468,6 +8471,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek20VicPathologicalEdgeHardReference();
     runWeek21BusCornerEdgeHardReference();
     runWeek22PortMapEdgeHardReference();
+    runWeek23CiaIrqNmiBridgeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -9838,6 +9842,132 @@ static void runWeek22PortMapEdgeHardReference() {
     }
 
     std::cout << "[WEEK22][HARDREF] PASS: port-map/open-bus edge trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek23CiaIrqNmiBridgeRowsForRevision(CIA6526::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Bus b;
+    CIA6526 cia1;
+    CIA6526 cia2;
+    b.cia1 = &cia1;
+    b.cia2 = &cia2;
+
+    cia1.setRevision(rev);
+    cia2.setRevision(rev);
+    cia1.setFlagPin(true);
+    cia2.setFlagPin(true);
+    cia1.write(0x000D, 0x90);
+    cia2.write(0x000D, 0x90);
+
+    CPU6510 cpu(b);
+
+    auto pushRow = [&](const char *event, uint64_t step) {
+        syncInterruptLines(b, cpu);
+        std::ostringstream oss;
+        oss << label
+            << "," << event
+            << "," << step
+            << "," << int(cia1.icr)
+            << "," << int(cia2.icr)
+            << "," << int(cia1.icrDeferredEvents)
+            << "," << int(cia2.icrDeferredEvents)
+            << "," << (cpu.irqLine ? 1 : 0)
+            << "," << (cpu.nmiLine ? 1 : 0);
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    cia1.setFlagPin(false);
+    cia2.setFlagPin(false);
+    pushRow("flag_fall_pre_tick", step++);
+
+    cia1.cycleCore.tickHalfCycle(cia1);
+    cia2.cycleCore.tickHalfCycle(cia2);
+    pushRow("half_tick_1", step++);
+
+    cia1.cycleCore.tickHalfCycle(cia1);
+    cia2.cycleCore.tickHalfCycle(cia2);
+    pushRow("half_tick_2", step++);
+
+    cia1.setFlagPin(true);
+    cia2.setFlagPin(true);
+    cia1.cycleCore.tickHalfCycle(cia1);
+    cia2.cycleCore.tickHalfCycle(cia2);
+    pushRow("flag_release", step++);
+
+    (void)cia1.read(0x000D, b.openBusValue);
+    pushRow("cia1_icr_read_clear", step++);
+
+    (void)cia2.read(0x000D, b.openBusValue);
+    pushRow("cia2_icr_read_clear", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek23CiaIrqNmiBridgeEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek23CiaIrqNmiBridgeRowsForRevision(CIA6526::REV_6526, "6526");
+    const auto r1 = buildWeek23CiaIrqNmiBridgeRowsForRevision(CIA6526::REV_6526A, "6526A");
+    const auto r2 = buildWeek23CiaIrqNmiBridgeRowsForRevision(CIA6526::REV_6526R4, "6526R4");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek23CiaIrqNmiBridgeEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,event,step,cia1_icr,cia2_icr,cia1_deferred,cia2_deferred,cpu_irq_line,cpu_nmi_line\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek23CiaIrqNmiBridgeEdgeHardReference() {
+    const std::string runtimePath = "week23_cia_irq_nmi_runtime.csv";
+    const std::string refPath = "reference/edge/week23_cia_irq_nmi_trace.csv";
+
+    const std::vector<std::string> got = buildWeek23CiaIrqNmiBridgeEdgeTraceRows();
+    writeWeek23CiaIrqNmiBridgeEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK23_BOOTSTRAP_IRQNMI_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek23CiaIrqNmiBridgeEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK23][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK23][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK23][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK23][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK23][HARDREF] PASS: CIA IRQ/NMI bridge trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
