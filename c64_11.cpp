@@ -8442,6 +8442,7 @@ static void runWeek25CiaSerialEdgeHardReference();
 static void runWeek26DriveIecHandshakeEdgeHardReference();
 static void runWeek27DriveCommandPhaseEdgeHardReference();
 static void runWeek28DriveEoiAtnEdgeHardReference();
+static void runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8464,6 +8465,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek26DriveIecHandshakeEdgeHardReference();
     runWeek27DriveCommandPhaseEdgeHardReference();
     runWeek28DriveEoiAtnEdgeHardReference();
+    runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8487,6 +8489,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek26DriveIecHandshakeEdgeHardReference();
     runWeek27DriveCommandPhaseEdgeHardReference();
     runWeek28DriveEoiAtnEdgeHardReference();
+    runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -10657,6 +10660,147 @@ static void runWeek28DriveEoiAtnEdgeHardReference() {
     }
 
     std::cout << "[WEEK28][HARDREF] PASS: drive EOI/ATN edge trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek29DriveIecTimeoutRecoveryRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.iecEnableAtnAck = true;
+    drive.iecEnableListenerByteAck = true;
+    drive.iecListening = true;
+    drive.iecSerialState = Drive1541::IecSerialState::ListenData;
+    drive.iecRxShift = 0x03;
+    drive.iecRxBitCount = 3;
+
+    auto pushRow = [&](const char *phase, uint64_t step) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << int(drive.iecRxBitCount)
+            << "," << int(drive.iecRxShift)
+            << "," << int(drive.iecRxIdleTicks)
+            << "," << drive.iecRxTimeoutCount
+            << "," << int(drive.iecTxBitCount)
+            << "," << int(drive.iecTxIdleTicks)
+            << "," << drive.iecTxTimeoutCount
+            << "," << int(drive.iecEoiWaitTicks)
+            << "," << drive.iecEoiTimeoutCount
+            << "," << (drive.iecEoiPendingAck ? 1 : 0)
+            << "," << drive.iecCommandDispatchCount
+            << "," << drive.iecDataDispatchCount
+            << "," << drive.iecCommandSyntaxErrorCount;
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    drive.setIecLines(true, true, true);
+    for (int i = 0; i < 300; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    pushRow("rx_timeout", step++);
+
+    drive.setIecLines(true, false, false);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("rx_recover_edge", step++);
+
+    drive.iecTalking = true;
+    drive.iecListening = false;
+    drive.iecSerialState = Drive1541::IecSerialState::TalkData;
+    drive.iecTxByteActive = true;
+    drive.iecTxBitCount = 2;
+    drive.iecTxShift = 0xA5;
+    drive.iecTxIdleTicks = 0;
+    drive.setIecLines(true, true, true);
+    for (int i = 0; i < 300; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    pushRow("tx_timeout", step++);
+
+    drive.iecEoiPendingAck = true;
+    drive.iecEoiAckLowSeen = false;
+    drive.iecEoiWaitTicks = 0;
+    for (int i = 0; i < 300; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    pushRow("eoi_timeout", step++);
+
+    drive.consumeReceivedByte(0x28, true);
+    drive.consumeReceivedByte(0xF0, true);
+    drive.consumeReceivedByte(0x3F, true);
+    pushRow("post_timeout_cmd", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek29DriveIecTimeoutRecoveryEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek29DriveIecTimeoutRecoveryRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek29DriveIecTimeoutRecoveryRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek29DriveIecTimeoutRecoveryRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek29DriveIecTimeoutRecoveryEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,rx_bits,rx_shift,rx_idle,rx_timeout,tx_bits,tx_idle,tx_timeout,eoi_wait,eoi_timeout,eoi_pending,cmd_dispatch,data_dispatch,syntax_err\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek29DriveIecTimeoutRecoveryEdgeHardReference() {
+    const std::string runtimePath = "week29_drive_timeout_runtime.csv";
+    const std::string refPath = "reference/edge/week29_drive_timeout_trace.csv";
+
+    const std::vector<std::string> got = buildWeek29DriveIecTimeoutRecoveryEdgeTraceRows();
+    writeWeek29DriveIecTimeoutRecoveryEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK29_BOOTSTRAP_DRIVETIMEOUT_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek29DriveIecTimeoutRecoveryEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK29][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK29][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK29][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK29][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK29][HARDREF] PASS: drive timeout/recovery trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
