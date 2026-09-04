@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "cpu_illegals_8500",
+      "rom_path": "roms/Illegal_Codes.prg",
+      "format": "prg",
+      "start_pc": "0x100D",
+      "max_halfcycles": 2000000,
+      "require_pc": "0x0FA7",
+      "require_pc_hits": 100,
+      "min_unique_pc": 200,
+      "trace": false,
+      "env_cpu_revision": "8500",
+      "env_vic_revision": "8565",
+      "env_cia_revision": "6526A",
+      "env_openbus_revision": "hmos",
+      "env_drive_revision": "1541C"
+    },
+    {
+      "name": "cpu_timing_irq_nmi_delay_proxy_8500",
+      "rom_path": "roms/lorenz_cpu_irq_illegal.prg",
+      "format": "prg",
+      "start_pc": "0x0816",
+      "max_halfcycles": 10000000,
+      "pass_pc": "0x0002",
+      "fail_pc": "0x0004",
+      "trace": true,
+      "reference_trace": "reference/vice/cpu_timing_irq_nmi_delay_proxy.trace.csv",
+      "reference_mode": "pc_only",
+      "max_trace_mismatches": 0,
+      "reference_optional": false,
+      "env_cpu_revision": "8500",
+      "env_vic_revision": "8565",
+      "env_cia_revision": "6526A",
+      "env_openbus_revision": "hmos",
+      "env_drive_revision": "1541C"
+    }
+  ]
+}

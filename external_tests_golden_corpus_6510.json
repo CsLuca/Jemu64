@@ -1,0 +1,72 @@
+{
+  "tests": [
+    {
+      "name": "cpu_klaus_6502_functional_6510",
+      "rom_path": "roms/klaus_6502_functional_test.bin",
+      "format": "bin",
+      "load_address": "0x0000",
+      "reset_vector": "0x0400",
+      "max_halfcycles": 600000000,
+      "pass_pc": "0x3469",
+      "fail_pc": "0xD0FE",
+      "trace": false,
+      "env_cpu_revision": "6510",
+      "env_vic_revision": "6569",
+      "env_cia_revision": "6526",
+      "env_openbus_revision": "nmos",
+      "env_drive_revision": "1541"
+    },
+    {
+      "name": "cpu_decimal_6510",
+      "rom_path": "roms/6502_decimal_test.bin",
+      "format": "bin",
+      "load_address": "0x0200",
+      "reset_vector": "0x0200",
+      "max_halfcycles": 250000000,
+      "expect_mem_addr": "0x000B",
+      "expect_mem_value": "0x00",
+      "min_unique_pc": 180,
+      "trace": false,
+      "env_cpu_revision": "6510",
+      "env_vic_revision": "6569",
+      "env_cia_revision": "6526",
+      "env_openbus_revision": "nmos",
+      "env_drive_revision": "1541"
+    },
+    {
+      "name": "cpu_illegals_6510",
+      "rom_path": "roms/Illegal_Codes.prg",
+      "format": "prg",
+      "start_pc": "0x100D",
+      "max_halfcycles": 2000000,
+      "require_pc": "0x0FA7",
+      "require_pc_hits": 100,
+      "min_unique_pc": 200,
+      "trace": false,
+      "env_cpu_revision": "6510",
+      "env_vic_revision": "6569",
+      "env_cia_revision": "6526",
+      "env_openbus_revision": "nmos",
+      "env_drive_revision": "1541"
+    },
+    {
+      "name": "cpu_timing_irq_nmi_delay_proxy_6510",
+      "rom_path": "roms/lorenz_cpu_irq_illegal.prg",
+      "format": "prg",
+      "start_pc": "0x0816",
+      "max_halfcycles": 10000000,
+      "pass_pc": "0x0002",
+      "fail_pc": "0x0004",
+      "trace": true,
+      "reference_trace": "reference/vice/cpu_timing_irq_nmi_delay_proxy.trace.csv",
+      "reference_mode": "pc_only",
+      "max_trace_mismatches": 0,
+      "reference_optional": false,
+      "env_cpu_revision": "6510",
+      "env_vic_revision": "6569",
+      "env_cia_revision": "6526",
+      "env_openbus_revision": "nmos",
+      "env_drive_revision": "1541"
+    }
+  ]
+}

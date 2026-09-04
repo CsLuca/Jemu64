@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "cpu_illegals_8500",
+      "rom_path": "roms/Illegal_Codes.prg",
+      "format": "prg",
+      "start_pc": "0x100D",
+      "max_halfcycles": 2000000,
+      "require_pc": "0x0FA7",
+      "require_pc_hits": 100,
+      "min_unique_pc": 200,
+      "trace": false,
+      "env_cpu_revision": "8500",
+      "env_vic_revision": "8565",
+      "env_cia_revision": "6526A",
+      "env_openbus_revision": "hmos",
+      "env_drive_revision": "1541C"
+    }
+  ]
+}
