@@ -132,6 +132,16 @@
   - runtime: `week26_drive_iec_runtime.csv`
   - reference: `reference/edge/week26_drive_iec_trace.csv`
 
+## Week27 Drive Command-Phase Transition Hard-Ref
+
+- Added dedicated 1541 command-phase transition battery across drive revisions (1541/1541C/1541-II) for:
+  - ATN-low command entry,
+  - LISTEN/UNLISTEN and TALK/UNTALK transitions,
+  - TALK SA0 confirmation and channel-state evolution.
+- Hard reference trace:
+  - runtime: `week27_drive_cmdphase_runtime.csv`
+  - reference: `reference/edge/week27_drive_cmdphase_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -199,6 +209,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week24_irq_latch_trace.csv`
     - `reference/edge/week25_cia_serial_trace.csv`
     - `reference/edge/week26_drive_iec_trace.csv`
+    - `reference/edge/week27_drive_cmdphase_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

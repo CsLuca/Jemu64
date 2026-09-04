@@ -23,6 +23,8 @@
                     "week25_cia_serial_tx_bytes":  1,
                     "week26_drive_iec_rows":  21,
                     "week26_drive_iec_rx_processed_max":  1,
-                    "week26_drive_iec_atn_ack_active_rows":  8
+                    "week26_drive_iec_atn_ack_active_rows":  8,
+                    "week27_drive_cmdphase_rows":  27,
+                    "week27_drive_cmdphase_talk_sa0_rows":  6
                 }
 }

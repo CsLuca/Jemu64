@@ -25,6 +25,8 @@
     "week25_cia_serial_tx_bytes": { "min": 1, "max": 20 },
     "week26_drive_iec_rows": { "min": 18, "max": 60 },
     "week26_drive_iec_rx_processed_max": { "min": 1, "max": 10 },
-    "week26_drive_iec_atn_ack_active_rows": { "min": 3, "max": 30 }
+    "week26_drive_iec_atn_ack_active_rows": { "min": 3, "max": 30 },
+    "week27_drive_cmdphase_rows": { "min": 20, "max": 60 },
+    "week27_drive_cmdphase_talk_sa0_rows": { "min": 3, "max": 20 }
   }
 }

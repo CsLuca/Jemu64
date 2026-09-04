@@ -156,6 +156,8 @@ $metrics = [ordered]@{
     week26_drive_iec_rows = 0
     week26_drive_iec_rx_processed_max = 0
     week26_drive_iec_atn_ack_active_rows = 0
+    week27_drive_cmdphase_rows = 0
+    week27_drive_cmdphase_talk_sa0_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -402,6 +404,21 @@ try {
             }
             $metrics.week26_drive_iec_rx_processed_max = $rxProcessedMax
             $metrics.week26_drive_iec_atn_ack_active_rows = $ackActiveRows
+        }
+    }
+    $week27Ref = Join-Path -Path $repo -ChildPath "reference\edge\week27_drive_cmdphase_trace.csv"
+    if (Test-Path -LiteralPath $week27Ref) {
+        $rows27 = @(Get-Content -LiteralPath $week27Ref)
+        if ($rows27.Count -gt 1) {
+            $metrics.week27_drive_cmdphase_rows = $rows27.Count - 1
+            $talkSa0Rows = 0
+            foreach ($line in $rows27) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 13) {
+                    if ($parts[9] -eq '1') { $talkSa0Rows++ }
+                }
+            }
+            $metrics.week27_drive_cmdphase_talk_sa0_rows = $talkSa0Rows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
