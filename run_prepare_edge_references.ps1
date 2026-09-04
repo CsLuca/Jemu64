@@ -10,17 +10,21 @@ $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 $py = "python"
 $pcTool = Join-Path $repo "tools\make_pc_only_reference.py"
 $strictExe = Join-Path $repo "c64_11_strict_edge_ref.exe"
+$savedPath = $env:PATH
+
+try {
+    $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
 
 if (-not (Test-Path -LiteralPath $pcTool)) {
     throw "Missing tool: $pcTool"
 }
 
-if ($RebuildStrict -or -not (Test-Path -LiteralPath $strictExe)) {
-    & $gxx -std=c++17 -O2 "-DRUN_PROFILE=RUN_PROFILE_STRICT" (Join-Path $repo "c64_11.cpp") -o $strictExe
-    if ($LASTEXITCODE -ne 0) {
-        throw "Strict build failed"
+    if ($RebuildStrict -or -not (Test-Path -LiteralPath $strictExe)) {
+        & $gxx -std=c++17 -O2 "-DRUN_PROFILE=RUN_PROFILE_STRICT" (Join-Path $repo "c64_11.cpp") -o $strictExe
+        if ($LASTEXITCODE -ne 0) {
+            throw "Strict build failed"
+        }
     }
-}
 
 $savedManifest = [Environment]::GetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", "Process")
 $savedGuard = [Environment]::GetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "Process")
@@ -30,6 +34,7 @@ $savedWeek18 = [Environment]::GetEnvironmentVariable("WEEK18_BOOTSTRAP_OPENBUS_R
 $savedWeek19 = [Environment]::GetEnvironmentVariable("WEEK19_BOOTSTRAP_CIA_REF", "Process")
 $savedWeek20 = [Environment]::GetEnvironmentVariable("WEEK20_BOOTSTRAP_VIC_REF", "Process")
 $savedWeek21 = [Environment]::GetEnvironmentVariable("WEEK21_BOOTSTRAP_BUS_REF", "Process")
+$savedWeek22 = [Environment]::GetEnvironmentVariable("WEEK22_BOOTSTRAP_PORTMAP_REF", "Process")
 
 try {
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $Manifest, "Process")
@@ -40,6 +45,7 @@ try {
     [Environment]::SetEnvironmentVariable("WEEK19_BOOTSTRAP_CIA_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK20_BOOTSTRAP_VIC_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK21_BOOTSTRAP_BUS_REF", "1", "Process")
+    [Environment]::SetEnvironmentVariable("WEEK22_BOOTSTRAP_PORTMAP_REF", "1", "Process")
 
     & $strictExe
     if ($LASTEXITCODE -ne 0) {
@@ -55,6 +61,7 @@ finally {
     [Environment]::SetEnvironmentVariable("WEEK19_BOOTSTRAP_CIA_REF", $savedWeek19, "Process")
     [Environment]::SetEnvironmentVariable("WEEK20_BOOTSTRAP_VIC_REF", $savedWeek20, "Process")
     [Environment]::SetEnvironmentVariable("WEEK21_BOOTSTRAP_BUS_REF", $savedWeek21, "Process")
+    [Environment]::SetEnvironmentVariable("WEEK22_BOOTSTRAP_PORTMAP_REF", $savedWeek22, "Process")
 }
 
 $week15Runtime = Join-Path $repo "week15_baaec_handoff_runtime.csv"
@@ -63,6 +70,7 @@ $week18Runtime = Join-Path $repo "week18_openbus_revision_runtime.csv"
 $week19Runtime = Join-Path $repo "week19_cia_dense_runtime.csv"
 $week20Runtime = Join-Path $repo "week20_vic_pathological_runtime.csv"
 $week21Runtime = Join-Path $repo "week21_bus_corner_runtime.csv"
+$week22Runtime = Join-Path $repo "week22_port_map_runtime.csv"
 $brknRuntime = Join-Path $repo "c64_lorenz_brkn_edge_ref.trace.csv"
 
 if (-not (Test-Path -LiteralPath $week15Runtime)) {
@@ -83,6 +91,9 @@ if (-not (Test-Path -LiteralPath $week20Runtime)) {
 if (-not (Test-Path -LiteralPath $week21Runtime)) {
     throw "Missing runtime edge trace: $week21Runtime"
 }
+if (-not (Test-Path -LiteralPath $week22Runtime)) {
+    throw "Missing runtime edge trace: $week22Runtime"
+}
 if (-not (Test-Path -LiteralPath $brknRuntime)) {
     throw "Missing runtime trace: $brknRuntime"
 }
@@ -93,4 +104,8 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed building pc_only reference for c64_lorenz_brkn_edge_ref"
 }
 
-"[EDGE-REF] PASS: refreshed week15/week16 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
+"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
+}
+finally {
+    $env:PATH = $savedPath
+}

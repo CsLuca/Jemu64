@@ -8435,6 +8435,7 @@ static void runWeek18OpenBusEdgeHardReference();
 static void runWeek19CiaDenseEdgeHardReference();
 static void runWeek20VicPathologicalEdgeHardReference();
 static void runWeek21BusCornerEdgeHardReference();
+static void runWeek22PortMapEdgeHardReference();
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
     #if RUN_PROFILE == RUN_PROFILE_FULL
@@ -8449,6 +8450,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek19CiaDenseEdgeHardReference();
     runWeek20VicPathologicalEdgeHardReference();
     runWeek21BusCornerEdgeHardReference();
+    runWeek22PortMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8465,6 +8467,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek19CiaDenseEdgeHardReference();
     runWeek20VicPathologicalEdgeHardReference();
     runWeek21BusCornerEdgeHardReference();
+    runWeek22PortMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -9693,6 +9696,148 @@ static void runWeek21BusCornerEdgeHardReference() {
     }
 
     std::cout << "[WEEK21][HARDREF] PASS: bus-level corner trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek22PortMapEdgeTraceRowsForRevision(Bus::OpenBusRevision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Bus b;
+    b.flatMemoryMode = false;
+    b.hasBasicRom = true;
+    b.basicRom.fill(0xBA);
+    b.hasKernalRom = false;
+    b.hasCharRom = true;
+    b.charRom.fill(0xA1);
+    b.vic = nullptr;
+    b.cia1 = nullptr;
+    b.cia2 = nullptr;
+    b.sid = nullptr;
+    b.memory[0xD020] = 0x3C;
+    b.setOpenBusRevision(rev);
+    b.write(0x0000, 0x07);
+    b.write(0x0001, 0x07);
+
+    auto pushRow = [&](const char *name, uint64_t step, uint8_t value) {
+        const bool loram = (b.cpuPortDir & 0x01) && (b.cpuPortData & 0x01);
+        const bool hiram = (b.cpuPortDir & 0x02) && (b.cpuPortData & 0x02);
+        const bool charen = (b.cpuPortDir & 0x04) && (b.cpuPortData & 0x04);
+        const bool ioVisible = (loram || hiram) && charen;
+        const bool charVisible = (loram || hiram) && !charen;
+
+        std::ostringstream oss;
+        oss << label
+            << "," << name
+            << "," << step
+            << "," << int(value)
+            << "," << int(b.openBusValue)
+            << "," << int(b.lastDataBusValue)
+            << "," << b.openBusIdleReads
+            << "," << int(b.cpuPortData)
+            << "," << int(b.cpuPortDir)
+            << "," << (ioVisible ? 1 : 0)
+            << "," << (charVisible ? 1 : 0);
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+
+    const uint8_t ioVisibleRead = b.read(0xD020);
+    pushRow("io_visible_mem", step++, ioVisibleRead);
+
+    b.write(0x0001, 0x03);
+    b.charRom[0x020] = 0xA5;
+    b.memory[0xD020] = 0x5A;
+    const uint8_t charVisibleRead = b.read(0xD020);
+    pushRow("char_visible_read", step++, charVisibleRead);
+
+    b.write(0x0001, 0x00);
+    const uint8_t ramVisibleRead = b.read(0xD020);
+    pushRow("ram_visible_read", step++, ramVisibleRead);
+
+    b.write(0x0001, 0x07);
+    const uint8_t basicRead = b.read(0xA000);
+    pushRow("drive_openbus_seed", step++, basicRead);
+
+    const uint32_t threshold = b.getOpenBusProfile().decayReadThreshold;
+    for (uint32_t i = 0; i <= threshold; ++i) {
+        const uint8_t floating = b.read(0xDE80);
+        if (i == 0 || i + 1 == threshold || i == threshold) {
+            pushRow("floating_decay", step++, floating);
+        }
+    }
+
+    b.write(0x0000, 0x05);
+    b.write(0x0001, 0x02);
+    const uint8_t maskedPortRead = b.read(0x0001);
+    pushRow("port_mask_read", step++, maskedPortRead);
+
+    b.flatMemoryMode = true;
+    b.write(0x1F00, 0x6D);
+    const uint8_t flatRead = b.read(0x1F00);
+    pushRow("flat_mode_passthrough", step++, flatRead);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek22PortMapEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto nmos = buildWeek22PortMapEdgeTraceRowsForRevision(Bus::OPENBUS_C64_NMOS, "nmos");
+    const auto hmos = buildWeek22PortMapEdgeTraceRowsForRevision(Bus::OPENBUS_C64_HMOS, "hmos");
+    rows.insert(rows.end(), nmos.begin(), nmos.end());
+    rows.insert(rows.end(), hmos.begin(), hmos.end());
+    return rows;
+}
+
+static void writeWeek22PortMapEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,case,step,val,openbus,last_data,idle_reads,port_data,port_dir,io_visible,char_visible\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek22PortMapEdgeHardReference() {
+    const std::string runtimePath = "week22_port_map_runtime.csv";
+    const std::string refPath = "reference/edge/week22_port_map_trace.csv";
+
+    const std::vector<std::string> got = buildWeek22PortMapEdgeTraceRows();
+    writeWeek22PortMapEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK22_BOOTSTRAP_PORTMAP_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek22PortMapEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK22][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK22][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK22][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK22][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK22][HARDREF] PASS: port-map/open-bus edge trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
