@@ -8440,6 +8440,7 @@ static void runWeek23CiaIrqNmiBridgeEdgeHardReference();
 static void runWeek24IrqLatchUnderAecEdgeHardReference();
 static void runWeek25CiaSerialEdgeHardReference();
 static void runWeek26DriveIecHandshakeEdgeHardReference();
+static void runWeek27DriveCommandPhaseEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8460,6 +8461,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek24IrqLatchUnderAecEdgeHardReference();
     runWeek25CiaSerialEdgeHardReference();
     runWeek26DriveIecHandshakeEdgeHardReference();
+    runWeek27DriveCommandPhaseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8481,6 +8483,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek24IrqLatchUnderAecEdgeHardReference();
     runWeek25CiaSerialEdgeHardReference();
     runWeek26DriveIecHandshakeEdgeHardReference();
+    runWeek27DriveCommandPhaseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -10395,6 +10398,128 @@ static void runWeek26DriveIecHandshakeEdgeHardReference() {
     }
 
     std::cout << "[WEEK26][HARDREF] PASS: drive IEC handshake trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek27DriveCommandPhaseRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.iecEnableAtnAck = true;
+    drive.iecEnableListenerByteAck = true;
+
+    auto pushRow = [&](const char *phase, uint64_t step) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << (drive.iecListening ? 1 : 0)
+            << "," << (drive.iecTalking ? 1 : 0)
+            << "," << int(drive.iecListenSecondary)
+            << "," << int(drive.iecTalkSecondary)
+            << "," << int(drive.iecActiveListenChannel)
+            << "," << int(drive.iecActiveTalkChannel)
+            << "," << (drive.iecTalkSa0Confirmed ? 1 : 0)
+            << "," << int(drive.iecSerialState)
+            << "," << int(drive.lastIecCommand)
+            << "," << drive.iecTxQueue.size();
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    drive.setIecLines(false, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("atn_low_enter_cmd", step++);
+
+    drive.consumeReceivedByte(0x28, true);
+    pushRow("listen_device", step++);
+
+    drive.consumeReceivedByte(0xF0, true);
+    pushRow("listen_sa0", step++);
+
+    drive.consumeReceivedByte(0x3F, true);
+    pushRow("unlisten", step++);
+
+    drive.consumeReceivedByte(0x48, true);
+    pushRow("talk_device", step++);
+
+    drive.consumeReceivedByte(0x60, true);
+    pushRow("talk_sa0", step++);
+
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("atn_high_talkdata", step++);
+
+    drive.consumeReceivedByte(0x5F, true);
+    pushRow("untalk", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek27DriveCommandPhaseEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek27DriveCommandPhaseRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek27DriveCommandPhaseRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek27DriveCommandPhaseRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek27DriveCommandPhaseEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,listening,talking,listen_sa,talk_sa,listen_ch,talk_ch,talk_sa0,state,last_cmd,txq\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek27DriveCommandPhaseEdgeHardReference() {
+    const std::string runtimePath = "week27_drive_cmdphase_runtime.csv";
+    const std::string refPath = "reference/edge/week27_drive_cmdphase_trace.csv";
+
+    const std::vector<std::string> got = buildWeek27DriveCommandPhaseEdgeTraceRows();
+    writeWeek27DriveCommandPhaseEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK27_BOOTSTRAP_DRIVECMD_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek27DriveCommandPhaseEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK27][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK27][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK27][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK27][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK27][HARDREF] PASS: drive command-phase trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
