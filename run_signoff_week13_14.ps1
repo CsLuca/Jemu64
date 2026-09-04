@@ -168,6 +168,9 @@ $metrics = [ordered]@{
     week30_drive_cmdch_rows = 0
     week30_drive_cmdch_syntax_err_max = 0
     week30_drive_cmdch_dispatch_max = 0
+    week31_drive_status_rows = 0
+    week31_drive_status_talking_rows = 0
+    week31_drive_status_txq_max = 0
 }
 
 $savedPath = $env:PATH
@@ -492,6 +495,25 @@ try {
             }
             $metrics.week30_drive_cmdch_syntax_err_max = $syntaxMax
             $metrics.week30_drive_cmdch_dispatch_max = $dispatchMax
+        }
+    }
+    $week31Ref = Join-Path -Path $repo -ChildPath "reference\edge\week31_drive_status_talk_trace.csv"
+    if (Test-Path -LiteralPath $week31Ref) {
+        $rows31 = @(Get-Content -LiteralPath $week31Ref)
+        if ($rows31.Count -gt 1) {
+            $metrics.week31_drive_status_rows = $rows31.Count - 1
+            $talkingRows = 0
+            $txqMax = 0
+            foreach ($line in $rows31) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 10) {
+                    if ($parts[3] -eq '1') { $talkingRows++ }
+                    $txqVal = 0
+                    if ([int]::TryParse($parts[7], [ref]$txqVal)) { if ($txqVal -gt $txqMax) { $txqMax = $txqVal } }
+                }
+            }
+            $metrics.week31_drive_status_talking_rows = $talkingRows
+            $metrics.week31_drive_status_txq_max = $txqMax
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

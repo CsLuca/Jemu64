@@ -84,4 +84,5 @@ jobs:
             week28_drive_eoi_atn_runtime.csv
             week29_drive_timeout_runtime.csv
             week30_drive_cmdch_runtime.csv
+            week31_drive_status_talk_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
