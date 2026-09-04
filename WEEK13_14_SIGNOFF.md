@@ -92,6 +92,16 @@
   - runtime: `week22_port_map_runtime.csv`
   - reference: `reference/edge/week22_port_map_trace.csv`
 
+## Week23 CIA IRQ/NMI Bridge Hard-Ref
+
+- Added dedicated CIA interrupt-line bridging edge battery (per 6526/6526A/6526R4) for:
+  - FLAG falling edge propagation timing into deferred/immediate ICR paths,
+  - CPU interrupt-line synchronization (`IRQ` from CIA1 and `NMI` from CIA2),
+  - interrupt clear semantics via ICR readback.
+- Hard reference trace:
+  - runtime: `week23_cia_irq_nmi_runtime.csv`
+  - reference: `reference/edge/week23_cia_irq_nmi_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -155,6 +165,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week20_vic_pathological_trace.csv`
     - `reference/edge/week21_bus_corner_trace.csv`
     - `reference/edge/week22_port_map_trace.csv`
+    - `reference/edge/week23_cia_irq_nmi_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
