@@ -17,6 +17,9 @@
                     "week23_cia_irq_nmi_rows":  21,
                     "week23_cia_irq_nmi_dual_assert_rows":  11,
                     "week24_irq_latch_rows":  24,
-                    "week24_irq_latch_irq_sampled_rows":  20
+                    "week24_irq_latch_irq_sampled_rows":  20,
+                    "week25_cia_serial_rows":  49,
+                    "week25_cia_serial_rx_bytes":  1,
+                    "week25_cia_serial_tx_bytes":  1
                 }
 }

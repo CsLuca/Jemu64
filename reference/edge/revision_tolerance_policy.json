@@ -19,6 +19,9 @@
     "week23_cia_irq_nmi_rows": { "min": 18, "max": 40 },
     "week23_cia_irq_nmi_dual_assert_rows": { "min": 2, "max": 20 },
     "week24_irq_latch_rows": { "min": 20, "max": 40 },
-    "week24_irq_latch_irq_sampled_rows": { "min": 4, "max": 24 }
+    "week24_irq_latch_irq_sampled_rows": { "min": 4, "max": 24 },
+    "week25_cia_serial_rows": { "min": 20, "max": 120 },
+    "week25_cia_serial_rx_bytes": { "min": 1, "max": 20 },
+    "week25_cia_serial_tx_bytes": { "min": 1, "max": 20 }
   }
 }

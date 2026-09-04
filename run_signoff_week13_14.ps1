@@ -150,6 +150,9 @@ $metrics = [ordered]@{
     week23_cia_irq_nmi_dual_assert_rows = 0
     week24_irq_latch_rows = 0
     week24_irq_latch_irq_sampled_rows = 0
+    week25_cia_serial_rows = 0
+    week25_cia_serial_rx_bytes = 0
+    week25_cia_serial_tx_bytes = 0
 }
 
 $savedPath = $env:PATH
@@ -357,6 +360,26 @@ try {
                 }
             }
             $metrics.week24_irq_latch_irq_sampled_rows = $irqSampledRows
+        }
+    }
+    $week25Ref = Join-Path -Path $repo -ChildPath "reference\edge\week25_cia_serial_trace.csv"
+    if (Test-Path -LiteralPath $week25Ref) {
+        $rows25 = @(Get-Content -LiteralPath $week25Ref)
+        if ($rows25.Count -gt 1) {
+            $metrics.week25_cia_serial_rows = $rows25.Count - 1
+            $rxBytes = 0
+            $txBytes = 0
+            foreach ($line in $rows25) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    $rxVal = 0
+                    $txVal = 0
+                    if ([int]::TryParse($parts[7], [ref]$rxVal)) { if ($rxVal -gt $rxBytes) { $rxBytes = $rxVal } }
+                    if ([int]::TryParse($parts[8], [ref]$txVal)) { if ($txVal -gt $txBytes) { $txBytes = $txVal } }
+                }
+            }
+            $metrics.week25_cia_serial_rx_bytes = $rxBytes
+            $metrics.week25_cia_serial_tx_bytes = $txBytes
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

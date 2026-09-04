@@ -112,6 +112,16 @@
   - runtime: `week24_irq_latch_runtime.csv`
   - reference: `reference/edge/week24_irq_latch_trace.csv`
 
+## Week25 CIA Serial Rx/Tx Revision Edge Hard-Ref
+
+- Added dedicated CIA serial battery across 6526/6526A/6526R4 for:
+  - serial output shift progression and completion IRQ timing,
+  - serial input edge direction differences (rising/falling) by revision,
+  - ICR clear semantics across tx/rx completion paths.
+- Hard reference trace:
+  - runtime: `week25_cia_serial_runtime.csv`
+  - reference: `reference/edge/week25_cia_serial_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -177,6 +187,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week22_port_map_trace.csv`
     - `reference/edge/week23_cia_irq_nmi_trace.csv`
     - `reference/edge/week24_irq_latch_trace.csv`
+    - `reference/edge/week25_cia_serial_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

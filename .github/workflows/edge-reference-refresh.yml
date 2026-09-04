@@ -78,4 +78,5 @@ jobs:
             week22_port_map_runtime.csv
             week23_cia_irq_nmi_runtime.csv
             week24_irq_latch_runtime.csv
+            week25_cia_serial_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
