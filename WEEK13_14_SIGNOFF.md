@@ -81,6 +81,17 @@
   - runtime: `week21_bus_corner_runtime.csv`
   - reference: `reference/edge/week21_bus_corner_trace.csv`
 
+## Week22 Port Map + Open-Bus Transition Hard-Ref
+
+- Added a dedicated bus mapping battery per open-bus revision (NMOS/HMOS) for:
+  - `$0001` port mapping transitions (`LORAM/HIRAM/CHAREN`) across IO/CHAR/RAM visibility,
+  - floating IO region decay progression and threshold crossing,
+  - masked port readback with DDR interaction,
+  - flat-memory passthrough behavior under active open-bus profile.
+- Hard reference trace:
+  - runtime: `week22_port_map_runtime.csv`
+  - reference: `reference/edge/week22_port_map_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -139,6 +150,11 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - boots strict with explicit edge bootstrap flags and refreshes:
     - `reference/edge/week15_baaec_handoff_trace.csv`
     - `reference/edge/week16_cross_domain_trace.csv`
+    - `reference/edge/week18_openbus_revision_trace.csv`
+    - `reference/edge/week19_cia_dense_trace.csv`
+    - `reference/edge/week20_vic_pathological_trace.csv`
+    - `reference/edge/week21_bus_corner_trace.csv`
+    - `reference/edge/week22_port_map_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

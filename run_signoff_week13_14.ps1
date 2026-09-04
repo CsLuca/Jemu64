@@ -144,6 +144,8 @@ $metrics = [ordered]@{
     week20_vic_path_vsp_hits = 0
     week20_vic_path_fld_hits = 0
     week21_bus_corner_rows = 0
+    week22_port_map_rows = 0
+    week22_port_map_decay_observed = 0
 }
 
 $savedPath = $env:PATH
@@ -300,6 +302,23 @@ try {
         $rows21 = @(Get-Content -LiteralPath $week21Ref)
         if ($rows21.Count -gt 1) {
             $metrics.week21_bus_corner_rows = $rows21.Count - 1
+        }
+    }
+    $week22Ref = Join-Path -Path $repo -ChildPath "reference\edge\week22_port_map_trace.csv"
+    if (Test-Path -LiteralPath $week22Ref) {
+        $rows22 = @(Get-Content -LiteralPath $week22Ref)
+        if ($rows22.Count -gt 1) {
+            $metrics.week22_port_map_rows = $rows22.Count - 1
+            $decayObserved = 0
+            foreach ($line in $rows22) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    if (($parts[1] -eq 'floating_decay') -and ($parts[3] -eq $parts[4])) {
+                        $decayObserved++
+                    }
+                }
+            }
+            $metrics.week22_port_map_decay_observed = $decayObserved
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

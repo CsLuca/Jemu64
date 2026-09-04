@@ -11,6 +11,8 @@
                     "week20_vic_path_rows":  896,
                     "week20_vic_path_vsp_hits":  448,
                     "week20_vic_path_fld_hits":  448,
-                    "week21_bus_corner_rows":  14
+                    "week21_bus_corner_rows":  14,
+                    "week22_port_map_rows":  18,
+                    "week22_port_map_decay_observed":  6
                 }
 }

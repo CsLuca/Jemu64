@@ -75,4 +75,5 @@ jobs:
             week19_cia_dense_runtime.csv
             week20_vic_pathological_runtime.csv
             week21_bus_corner_runtime.csv
+            week22_port_map_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

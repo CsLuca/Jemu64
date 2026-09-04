@@ -13,6 +13,8 @@
     "week20_vic_path_rows": { "min": 800, "max": 1200 },
     "week20_vic_path_vsp_hits": { "min": 1, "max": 500 },
     "week20_vic_path_fld_hits": { "min": 1, "max": 500 },
-    "week21_bus_corner_rows": { "min": 10, "max": 80 }
+    "week21_bus_corner_rows": { "min": 10, "max": 80 },
+    "week22_port_map_rows": { "min": 12, "max": 60 },
+    "week22_port_map_decay_observed": { "min": 4, "max": 20 }
   }
 }
