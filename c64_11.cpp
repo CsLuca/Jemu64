@@ -8437,6 +8437,7 @@ static void runWeek20VicPathologicalEdgeHardReference();
 static void runWeek21BusCornerEdgeHardReference();
 static void runWeek22PortMapEdgeHardReference();
 static void runWeek23CiaIrqNmiBridgeEdgeHardReference();
+static void runWeek24IrqLatchUnderAecEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8454,6 +8455,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek21BusCornerEdgeHardReference();
     runWeek22PortMapEdgeHardReference();
     runWeek23CiaIrqNmiBridgeEdgeHardReference();
+    runWeek24IrqLatchUnderAecEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8472,6 +8474,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek21BusCornerEdgeHardReference();
     runWeek22PortMapEdgeHardReference();
     runWeek23CiaIrqNmiBridgeEdgeHardReference();
+    runWeek24IrqLatchUnderAecEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -9968,6 +9971,137 @@ static void runWeek23CiaIrqNmiBridgeEdgeHardReference() {
     }
 
     std::cout << "[WEEK23][HARDREF] PASS: CIA IRQ/NMI bridge trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek24IrqLatchUnderAecRowsForRevision(CPU6510::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(32);
+
+    Bus b;
+    VICII vic;
+    b.vic = &vic;
+    vic.bus = &b;
+    b.cia1 = nullptr;
+    b.cia2 = nullptr;
+
+    CPU6510 cpu(b);
+    cpu.setRevision(rev);
+    cpu.setCurrentPhaseForTest(PHI2);
+    cpu.clearMicroOpsForTest();
+    cpu.blockNMI = false;
+    bool lastVicHadBus = false;
+
+    cpu.pushMicroOpForTest(PHI2, [&]() {
+        (void)b.read(0xD012);
+    });
+
+    auto pushRow = [&](const char *event, uint64_t step) {
+        std::ostringstream oss;
+        oss << label
+            << "," << event
+            << "," << step
+            << "," << cpu.pendingMicroOpCountForTest()
+            << "," << (cpu.getCurrentPhase() == PHI1 ? 1 : 2)
+            << "," << (cpu.irqLine ? 1 : 0)
+            << "," << (cpu.irqSampledLow ? 1 : 0)
+            << "," << (cpu.pendingNMI ? 1 : 0)
+            << "," << (cpu.nmiLine ? 1 : 0)
+            << "," << (vic.aecLine ? 1 : 0)
+            << "," << (lastVicHadBus ? 1 : 0);
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    cpu.setIRQ(false);
+    vic.aecLine = false;
+    tickCpuWithVicContention(b, cpu, lastVicHadBus);
+    pushRow("irq_latched_hold", step++);
+
+    cpu.setIRQ(true);
+    pushRow("irq_line_release_only", step++);
+
+    vic.aecLine = true;
+    tickCpuWithVicContention(b, cpu, lastVicHadBus);
+    tickCpuWithVicContention(b, cpu, lastVicHadBus);
+    pushRow("aec_release_exec", step++);
+
+    cpu.setNMI(false);
+    vic.aecLine = false;
+    tickCpuWithVicContention(b, cpu, lastVicHadBus);
+    pushRow("nmi_edge_hold", step++);
+
+    vic.aecLine = true;
+    tickCpuWithVicContention(b, cpu, lastVicHadBus);
+    cpu.setNMI(true);
+    pushRow("nmi_release", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek24IrqLatchUnderAecEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek24IrqLatchUnderAecRowsForRevision(CPU6510::REV_6510, "6510");
+    const auto r1 = buildWeek24IrqLatchUnderAecRowsForRevision(CPU6510::REV_6510R2, "6510R2");
+    const auto r2 = buildWeek24IrqLatchUnderAecRowsForRevision(CPU6510::REV_8500, "8500");
+    const auto r3 = buildWeek24IrqLatchUnderAecRowsForRevision(CPU6510::REV_8500R2, "8500R2");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    rows.insert(rows.end(), r3.begin(), r3.end());
+    return rows;
+}
+
+static void writeWeek24IrqLatchUnderAecEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,event,step,pending_ops,phase,irq_line,irq_sampled_low,pending_nmi,nmi_line,aec,last_vic_bus\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek24IrqLatchUnderAecEdgeHardReference() {
+    const std::string runtimePath = "week24_irq_latch_runtime.csv";
+    const std::string refPath = "reference/edge/week24_irq_latch_trace.csv";
+
+    const std::vector<std::string> got = buildWeek24IrqLatchUnderAecEdgeTraceRows();
+    writeWeek24IrqLatchUnderAecEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK24_BOOTSTRAP_IRQLATCH_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek24IrqLatchUnderAecEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK24][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK24][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK24][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK24][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK24][HARDREF] PASS: IRQ/NMI latch-under-AEC trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
