@@ -1,0 +1,17 @@
+{
+  "tests": [
+    {
+      "name": "cpu_timing_branch_pagecross_proxy",
+      "rom_path": "roms/vice_testprogs_cpu.prg",
+      "format": "prg",
+      "start_pc": "0x080D",
+      "max_halfcycles": 30000000,
+      "min_unique_pc": 80,
+      "trace": true,
+      "reference_trace": "reference/vice/cpu_timing_branch_pagecross_proxy.trace.csv",
+      "reference_mode": "pc_only",
+      "max_trace_mismatches": 33685257,
+      "reference_optional": false
+    }
+  ]
+}

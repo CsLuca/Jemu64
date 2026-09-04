@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "klaus_6502_decimal_test",
+      "rom_path": "C:/Users/LBiondi/Downloads/roms/6502_decimal_test.bin",
+      "format": "bin",
+      "load_address": "0x0200",
+      "reset_vector": "0x0200",
+      "max_halfcycles": 200000000,
+      "expect_mem_addr": "0x000B",
+      "expect_mem_value": "0x00",
+      "min_unique_pc": 200,
+      "trace": false
+    }
+  ]
+}

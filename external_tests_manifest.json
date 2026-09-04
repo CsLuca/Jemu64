@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "example_klaus_6502",
+      "rom_path": "C:/Users/LBiondi/Downloads/roms/klaus_6502_functional_test.bin",
+      "load_address": "0x0000",
+      "reset_vector": "0x0400",
+      "max_halfcycles": 300000000,
+      "pass_pc": "0x3469",
+      "fail_pc": "0xD0FE",
+      "trace": false
+    },
+    {
+      "name": "illegal_codes_prg_smoke",
+      "rom_path": "C:/Users/LBiondi/Downloads/roms/Illegal_Codes.prg",
+      "format": "prg",
+      "start_pc": "0x100D",
+      "max_halfcycles": 2000000,
+      "pass_pc": "0x0000",
+      "require_pc": "0x0FA7",
+      "require_pc_hits": 100,
+      "min_unique_pc": 200,
+      "trace": false
+    }
+  ]
+}
