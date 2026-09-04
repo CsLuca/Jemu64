@@ -25,6 +25,9 @@
                     "week26_drive_iec_rx_processed_max":  1,
                     "week26_drive_iec_atn_ack_active_rows":  8,
                     "week27_drive_cmdphase_rows":  27,
-                    "week27_drive_cmdphase_talk_sa0_rows":  6
+                    "week27_drive_cmdphase_talk_sa0_rows":  6,
+                    "week28_drive_eoi_rows":  27,
+                    "week28_drive_eoi_ack_count_max":  1,
+                    "week28_drive_eoi_pending_rows":  6
                 }
 }

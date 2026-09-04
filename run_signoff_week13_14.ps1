@@ -158,6 +158,9 @@ $metrics = [ordered]@{
     week26_drive_iec_atn_ack_active_rows = 0
     week27_drive_cmdphase_rows = 0
     week27_drive_cmdphase_talk_sa0_rows = 0
+    week28_drive_eoi_rows = 0
+    week28_drive_eoi_ack_count_max = 0
+    week28_drive_eoi_pending_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -419,6 +422,25 @@ try {
                 }
             }
             $metrics.week27_drive_cmdphase_talk_sa0_rows = $talkSa0Rows
+        }
+    }
+    $week28Ref = Join-Path -Path $repo -ChildPath "reference\edge\week28_drive_eoi_atn_trace.csv"
+    if (Test-Path -LiteralPath $week28Ref) {
+        $rows28 = @(Get-Content -LiteralPath $week28Ref)
+        if ($rows28.Count -gt 1) {
+            $metrics.week28_drive_eoi_rows = $rows28.Count - 1
+            $ackMax = 0
+            $eoiPendingRows = 0
+            foreach ($line in $rows28) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 14) {
+                    $ackVal = 0
+                    if ([int]::TryParse($parts[9], [ref]$ackVal)) { if ($ackVal -gt $ackMax) { $ackMax = $ackVal } }
+                    if ($parts[6] -eq '1') { $eoiPendingRows++ }
+                }
+            }
+            $metrics.week28_drive_eoi_ack_count_max = $ackMax
+            $metrics.week28_drive_eoi_pending_rows = $eoiPendingRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

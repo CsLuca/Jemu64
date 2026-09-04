@@ -142,6 +142,16 @@
   - runtime: `week27_drive_cmdphase_runtime.csv`
   - reference: `reference/edge/week27_drive_cmdphase_trace.csv`
 
+## Week28 Drive EOI/ATN Interaction Hard-Ref
+
+- Added dedicated 1541 edge battery across drive revisions (1541/1541C/1541-II) for:
+  - TALK byte shifting up to EOI pending state,
+  - EOI acknowledge low/high handshake completion,
+  - ATN assertion/release interaction around active TALK flow.
+- Hard reference trace:
+  - runtime: `week28_drive_eoi_atn_runtime.csv`
+  - reference: `reference/edge/week28_drive_eoi_atn_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -210,6 +220,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week25_cia_serial_trace.csv`
     - `reference/edge/week26_drive_iec_trace.csv`
     - `reference/edge/week27_drive_cmdphase_trace.csv`
+    - `reference/edge/week28_drive_eoi_atn_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
