@@ -1,0 +1,19 @@
+rev,phase,step,talking,talk_sa,talk_ch,respq,txq,tx_head,status
+1541,baseline,0,0,255,255,0,0,-1,00,OK,00,00
+1541,resp_queue_seed,1,0,255,255,3,0,-1,00,OK,00,00
+1541,talk_device,2,1,255,255,3,0,-1,00,OK,00,00
+1541,talk_ch15_response,3,1,15,15,0,4,65,00,OK,00,00
+1541,talk_ch15_status,4,1,15,15,0,25,55,74,DRIVE NOT READY,00,00
+1541,untalk,5,0,255,255,0,25,55,74,DRIVE NOT READY,00,00
+1541C,baseline,0,0,255,255,0,0,-1,00,OK,00,00
+1541C,resp_queue_seed,1,0,255,255,3,0,-1,00,OK,00,00
+1541C,talk_device,2,1,255,255,3,0,-1,00,OK,00,00
+1541C,talk_ch15_response,3,1,15,15,0,4,65,00,OK,00,00
+1541C,talk_ch15_status,4,1,15,15,0,25,55,74,DRIVE NOT READY,00,00
+1541C,untalk,5,0,255,255,0,25,55,74,DRIVE NOT READY,00,00
+1541II,baseline,0,0,255,255,0,0,-1,00,OK,00,00
+1541II,resp_queue_seed,1,0,255,255,3,0,-1,00,OK,00,00
+1541II,talk_device,2,1,255,255,3,0,-1,00,OK,00,00
+1541II,talk_ch15_response,3,1,15,15,0,4,65,00,OK,00,00
+1541II,talk_ch15_status,4,1,15,15,0,25,55,74,DRIVE NOT READY,00,00
+1541II,untalk,5,0,255,255,0,25,55,74,DRIVE NOT READY,00,00
