@@ -148,6 +148,8 @@ $metrics = [ordered]@{
     week22_port_map_decay_observed = 0
     week23_cia_irq_nmi_rows = 0
     week23_cia_irq_nmi_dual_assert_rows = 0
+    week24_irq_latch_rows = 0
+    week24_irq_latch_irq_sampled_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -338,6 +340,23 @@ try {
                 }
             }
             $metrics.week23_cia_irq_nmi_dual_assert_rows = $dualAssert
+        }
+    }
+    $week24Ref = Join-Path -Path $repo -ChildPath "reference\edge\week24_irq_latch_trace.csv"
+    if (Test-Path -LiteralPath $week24Ref) {
+        $rows24 = @(Get-Content -LiteralPath $week24Ref)
+        if ($rows24.Count -gt 1) {
+            $metrics.week24_irq_latch_rows = $rows24.Count - 1
+            $irqSampledRows = 0
+            foreach ($line in $rows24) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    if ($parts[6] -eq '1') {
+                        $irqSampledRows++
+                    }
+                }
+            }
+            $metrics.week24_irq_latch_irq_sampled_rows = $irqSampledRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

@@ -102,6 +102,16 @@
   - runtime: `week23_cia_irq_nmi_runtime.csv`
   - reference: `reference/edge/week23_cia_irq_nmi_trace.csv`
 
+## Week24 IRQ/NMI Latch Under AEC Hard-Ref
+
+- Added dedicated IRQ/NMI latch behavior battery under VIC bus denial (`AEC=0`) across CPU revisions:
+  - IRQ sampled-low persistence while PHI2 bus micro-op is blocked,
+  - delayed execution after `AEC` release,
+  - NMI edge capture while contention is active.
+- Hard reference trace:
+  - runtime: `week24_irq_latch_runtime.csv`
+  - reference: `reference/edge/week24_irq_latch_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -166,6 +176,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week21_bus_corner_trace.csv`
     - `reference/edge/week22_port_map_trace.csv`
     - `reference/edge/week23_cia_irq_nmi_trace.csv`
+    - `reference/edge/week24_irq_latch_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

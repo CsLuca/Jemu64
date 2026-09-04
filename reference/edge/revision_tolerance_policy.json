@@ -17,6 +17,8 @@
     "week22_port_map_rows": { "min": 12, "max": 60 },
     "week22_port_map_decay_observed": { "min": 4, "max": 20 },
     "week23_cia_irq_nmi_rows": { "min": 18, "max": 40 },
-    "week23_cia_irq_nmi_dual_assert_rows": { "min": 2, "max": 20 }
+    "week23_cia_irq_nmi_dual_assert_rows": { "min": 2, "max": 20 },
+    "week24_irq_latch_rows": { "min": 20, "max": 40 },
+    "week24_irq_latch_irq_sampled_rows": { "min": 4, "max": 24 }
   }
 }

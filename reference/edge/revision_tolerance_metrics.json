@@ -15,6 +15,8 @@
                     "week22_port_map_rows":  18,
                     "week22_port_map_decay_observed":  6,
                     "week23_cia_irq_nmi_rows":  21,
-                    "week23_cia_irq_nmi_dual_assert_rows":  11
+                    "week23_cia_irq_nmi_dual_assert_rows":  11,
+                    "week24_irq_latch_rows":  24,
+                    "week24_irq_latch_irq_sampled_rows":  20
                 }
 }
