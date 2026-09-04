@@ -8438,6 +8438,7 @@ static void runWeek21BusCornerEdgeHardReference();
 static void runWeek22PortMapEdgeHardReference();
 static void runWeek23CiaIrqNmiBridgeEdgeHardReference();
 static void runWeek24IrqLatchUnderAecEdgeHardReference();
+static void runWeek25CiaSerialEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8456,6 +8457,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek22PortMapEdgeHardReference();
     runWeek23CiaIrqNmiBridgeEdgeHardReference();
     runWeek24IrqLatchUnderAecEdgeHardReference();
+    runWeek25CiaSerialEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8475,6 +8477,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek22PortMapEdgeHardReference();
     runWeek23CiaIrqNmiBridgeEdgeHardReference();
     runWeek24IrqLatchUnderAecEdgeHardReference();
+    runWeek25CiaSerialEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -10102,6 +10105,143 @@ static void runWeek24IrqLatchUnderAecEdgeHardReference() {
     }
 
     std::cout << "[WEEK24][HARDREF] PASS: IRQ/NMI latch-under-AEC trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek25CiaSerialRowsForRevision(CIA6526::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(128);
+
+    CIA6526 cia;
+    cia.setRevision(rev);
+    cia.write(0x000D, 0x88);
+    cia.write(0x0004, 0x01);
+    cia.write(0x0005, 0x00);
+    cia.write(0x000E, 0x51);
+
+    auto pushRow = [&](const char *phase, uint64_t step) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << int(cia.serialDataReg)
+            << "," << int(cia.serialShiftReg)
+            << "," << int(cia.serialShiftBitCount)
+            << "," << int(cia.serialOutputBitCount)
+            << "," << cia.serialRxByteCount
+            << "," << cia.serialTxByteCount
+            << "," << int(cia.icr)
+            << "," << int(cia.serialShiftDivider);
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    cia.write(0x000C, 0xA6);
+    pushRow("tx_seed", step++);
+
+    for (uint32_t i = 0; i < 160; ++i) {
+        cia.setSerialPins(false, ((i & 1u) != 0));
+        cia.cycleCore.tickHalfCycle(cia);
+        cia.setSerialPins(true, ((i & 1u) != 0));
+        cia.cycleCore.tickHalfCycle(cia);
+
+        if ((i % 23u) == 0u || cia.serialTxByteCount > 0) {
+            pushRow("tx_tick", step++);
+            if (cia.serialTxByteCount > 0) {
+                break;
+            }
+        }
+    }
+
+    (void)cia.read(0x000D, 0xFF);
+    pushRow("tx_icr_clear", step++);
+
+    cia.write(0x000E, 0x01);
+    cia.serialShiftReg = 0;
+    cia.serialShiftBitCount = 0;
+    const bool fallingEdgeInput = cia.getRevisionProfile().serialInputShiftOnFallingEdge;
+    for (int bit = 0; bit < 8; ++bit) {
+        const bool inBit = ((0x5Au >> (7 - bit)) & 0x01) != 0;
+        if (fallingEdgeInput) {
+            cia.setSerialPins(true, inBit);
+            cia.cycleCore.tickHalfCycle(cia);
+            cia.setSerialPins(false, inBit);
+            cia.cycleCore.tickHalfCycle(cia);
+        } else {
+            cia.setSerialPins(false, inBit);
+            cia.cycleCore.tickHalfCycle(cia);
+            cia.setSerialPins(true, inBit);
+            cia.cycleCore.tickHalfCycle(cia);
+        }
+        pushRow("rx_bit", step++);
+    }
+
+    pushRow("rx_done", step++);
+    (void)cia.read(0x000D, 0xFF);
+    pushRow("rx_icr_clear", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek25CiaSerialEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek25CiaSerialRowsForRevision(CIA6526::REV_6526, "6526");
+    const auto r1 = buildWeek25CiaSerialRowsForRevision(CIA6526::REV_6526A, "6526A");
+    const auto r2 = buildWeek25CiaSerialRowsForRevision(CIA6526::REV_6526R4, "6526R4");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek25CiaSerialEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,sdr,shift,bits_in,bits_out,rx_bytes,tx_bytes,icr,divider\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek25CiaSerialEdgeHardReference() {
+    const std::string runtimePath = "week25_cia_serial_runtime.csv";
+    const std::string refPath = "reference/edge/week25_cia_serial_trace.csv";
+
+    const std::vector<std::string> got = buildWeek25CiaSerialEdgeTraceRows();
+    writeWeek25CiaSerialEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK25_BOOTSTRAP_CIASERIAL_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek25CiaSerialEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK25][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK25][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK25][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK25][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK25][HARDREF] PASS: CIA serial edge trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
