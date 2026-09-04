@@ -165,6 +165,9 @@ $metrics = [ordered]@{
     week29_drive_rx_timeout_max = 0
     week29_drive_tx_timeout_max = 0
     week29_drive_eoi_timeout_max = 0
+    week30_drive_cmdch_rows = 0
+    week30_drive_cmdch_syntax_err_max = 0
+    week30_drive_cmdch_dispatch_max = 0
 }
 
 $savedPath = $env:PATH
@@ -469,6 +472,26 @@ try {
             $metrics.week29_drive_rx_timeout_max = $rxTimeoutMax
             $metrics.week29_drive_tx_timeout_max = $txTimeoutMax
             $metrics.week29_drive_eoi_timeout_max = $eoiTimeoutMax
+        }
+    }
+    $week30Ref = Join-Path -Path $repo -ChildPath "reference\edge\week30_drive_cmdch_trace.csv"
+    if (Test-Path -LiteralPath $week30Ref) {
+        $rows30 = @(Get-Content -LiteralPath $week30Ref)
+        if ($rows30.Count -gt 1) {
+            $metrics.week30_drive_cmdch_rows = $rows30.Count - 1
+            $syntaxMax = 0
+            $dispatchMax = 0
+            foreach ($line in $rows30) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    $cmdVal = 0
+                    $syntaxVal = 0
+                    if ([int]::TryParse($parts[3], [ref]$cmdVal)) { if ($cmdVal -gt $dispatchMax) { $dispatchMax = $cmdVal } }
+                    if ([int]::TryParse($parts[5], [ref]$syntaxVal)) { if ($syntaxVal -gt $syntaxMax) { $syntaxMax = $syntaxVal } }
+                }
+            }
+            $metrics.week30_drive_cmdch_syntax_err_max = $syntaxMax
+            $metrics.week30_drive_cmdch_dispatch_max = $dispatchMax
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

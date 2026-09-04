@@ -32,6 +32,9 @@
                     "week29_drive_timeout_rows":  18,
                     "week29_drive_rx_timeout_max":  2,
                     "week29_drive_tx_timeout_max":  1,
-                    "week29_drive_eoi_timeout_max":  1
+                    "week29_drive_eoi_timeout_max":  1,
+                    "week30_drive_cmdch_rows":  21,
+                    "week30_drive_cmdch_syntax_err_max":  0,
+                    "week30_drive_cmdch_dispatch_max":  0
                 }
 }

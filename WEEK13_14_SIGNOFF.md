@@ -162,6 +162,16 @@
   - runtime: `week29_drive_timeout_runtime.csv`
   - reference: `reference/edge/week29_drive_timeout_trace.csv`
 
+## Week30 Drive Command-Channel + Status Hard-Ref
+
+- Added dedicated 1541 command-channel battery across drive revisions (1541/1541C/1541-II) for:
+  - `M-W`/`M-R` command handling with response payload generation,
+  - `B-A`/`B-F` allocation/free status transitions,
+  - syntax-error path (`30,SYNTAX ERROR`) with stable counter progression.
+- Hard reference trace:
+  - runtime: `week30_drive_cmdch_runtime.csv`
+  - reference: `reference/edge/week30_drive_cmdch_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -232,6 +242,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week27_drive_cmdphase_trace.csv`
     - `reference/edge/week28_drive_eoi_atn_trace.csv`
     - `reference/edge/week29_drive_timeout_trace.csv`
+    - `reference/edge/week30_drive_cmdch_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
