@@ -1,0 +1,33 @@
+name: Revision Tolerance Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tolerance:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Setup MSYS2 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+
+      - name: Run signoff and generate metrics
+        shell: powershell
+        run: .\run_signoff_week13_14.ps1
+
+      - name: Check tolerance policy
+        shell: powershell
+        run: .\run_check_revision_tolerance.ps1

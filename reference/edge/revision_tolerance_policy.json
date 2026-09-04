@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "Software-level tolerance policy for per-revision signoff metrics",
+  "metrics": {
+    "strict_6510_exit": { "min": 0, "max": 0 },
+    "strict_8500_exit": { "min": 0, "max": 0 },
+    "fast_6510_exit": { "min": 0, "max": 0 },
+    "fast_8500_exit": { "min": 0, "max": 0 },
+    "week18_openbus_rows": { "min": 80, "max": 300 },
+    "week18_openbus_hmos_decay_threshold": { "min": 20, "max": 40 },
+    "week18_openbus_nmos_decay_threshold": { "min": 50, "max": 90 },
+    "week19_cia_dense_rows": { "min": 500, "max": 800 },
+    "week20_vic_path_rows": { "min": 800, "max": 1200 },
+    "week20_vic_path_vsp_hits": { "min": 1, "max": 500 },
+    "week20_vic_path_fld_hits": { "min": 1, "max": 500 },
+    "week21_bus_corner_rows": { "min": 10, "max": 80 }
+  }
+}

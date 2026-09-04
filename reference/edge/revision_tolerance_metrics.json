@@ -1,0 +1,16 @@
+{
+    "metrics":  {
+                    "strict_6510_exit":  0,
+                    "strict_8500_exit":  0,
+                    "fast_6510_exit":  0,
+                    "fast_8500_exit":  0,
+                    "week18_openbus_rows":  90,
+                    "week18_openbus_hmos_decay_threshold":  24,
+                    "week18_openbus_nmos_decay_threshold":  64,
+                    "week19_cia_dense_rows":  576,
+                    "week20_vic_path_rows":  896,
+                    "week20_vic_path_vsp_hits":  448,
+                    "week20_vic_path_fld_hits":  448,
+                    "week21_bus_corner_rows":  14
+                }
+}

@@ -1,0 +1,54 @@
+name: Revision Signoff Matrix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  signoff-revisions:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rev:
+          - name: nmos
+            slot: 6510
+            cpu: 6510
+            vic: 6569
+            cia: 6526
+            openbus: nmos
+            drive: 1541
+            manifest_strict: external_tests_golden_corpus_6510.json
+            manifest_fast: external_tests_golden_corpus_6510_fast.json
+          - name: hmos
+            slot: 8500
+            cpu: 8500
+            vic: 8565
+            cia: 6526A
+            openbus: hmos
+            drive: 1541C
+            manifest_strict: external_tests_golden_corpus_8500.json
+            manifest_fast: external_tests_golden_corpus_8500_fast.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+
+      - name: Run signoff matrix (${{ matrix.rev.name }})
+        shell: powershell
+        run: |
+          .\run_signoff_week13_14.ps1 `
+            -Manifest "${{ matrix.rev.manifest_strict }}" `
+            -FastManifest "${{ matrix.rev.manifest_fast }}" `
+            -Manifest6510 "${{ matrix.rev.manifest_strict }}" `
+            -Manifest8500 "${{ matrix.rev.manifest_strict }}" `
+            -FastManifest6510 "${{ matrix.rev.manifest_fast }}" `
+            -FastManifest8500 "${{ matrix.rev.manifest_fast }}" `
+            -RevisionSlot "${{ matrix.rev.slot }}"
