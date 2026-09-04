@@ -1,0 +1,78 @@
+name: Edge Reference Refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild_strict:
+        description: Rebuild strict binary before refresh
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  refresh-edge-references:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Setup MSYS2 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+
+      - name: Refresh edge references
+        shell: powershell
+        run: |
+          if ('${{ inputs.rebuild_strict }}' -eq 'true') {
+            .\run_prepare_edge_references.ps1 -RebuildStrict
+          } else {
+            .\run_prepare_edge_references.ps1
+          }
+
+      - name: Refresh PLA snapshot
+        shell: powershell
+        run: |
+          if ('${{ inputs.rebuild_strict }}' -eq 'true') {
+            .\run_prepare_pla_snapshot.ps1 -RebuildStrict
+          } else {
+            .\run_prepare_pla_snapshot.ps1
+          }
+
+      - name: Guardrail - fail on reference diffs
+        shell: powershell
+        run: |
+          $changed = git status --porcelain --untracked-files=all -- reference/edge reference/vice/c64_lorenz_brkn_edge_ref.trace.csv
+          if ($changed) {
+            "[GUARDRAIL] Reference files changed; commit refreshed references before sign-off."
+            $changed
+            git diff -- reference/edge reference/vice/c64_lorenz_brkn_edge_ref.trace.csv
+            exit 1
+          }
+          "[GUARDRAIL] PASS: no uncommitted reference diffs."
+
+      - name: Upload refreshed references
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-reference-refresh
+          path: |
+            reference/edge/*.csv
+            reference/edge/*.md
+            reference/vice/c64_lorenz_brkn_edge_ref.trace.csv
+            week15_baaec_handoff_runtime.csv
+            week16_cross_domain_runtime.csv
+            week18_openbus_revision_runtime.csv
+            week19_cia_dense_runtime.csv
+            week20_vic_pathological_runtime.csv
+            week21_bus_corner_runtime.csv
+            c64_lorenz_brkn_edge_ref.trace.csv
