@@ -8447,6 +8447,7 @@ static void runWeek30DriveCommandChannelEdgeHardReference();
 static void runWeek31DriveStatusTalkEdgeHardReference();
 static void runWeek32DriveDirectoryStreamEdgeHardReference();
 static void runWeek33DriveDirectoryFilterEdgeHardReference();
+static void runWeek34DriveAllocMapEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8474,6 +8475,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek31DriveStatusTalkEdgeHardReference();
     runWeek32DriveDirectoryStreamEdgeHardReference();
     runWeek33DriveDirectoryFilterEdgeHardReference();
+    runWeek34DriveAllocMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8502,6 +8504,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek31DriveStatusTalkEdgeHardReference();
     runWeek32DriveDirectoryStreamEdgeHardReference();
     runWeek33DriveDirectoryFilterEdgeHardReference();
+    runWeek34DriveAllocMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -11333,6 +11336,123 @@ static void runWeek33DriveDirectoryFilterEdgeHardReference() {
     }
 
     std::cout << "[WEEK33][HARDREF] PASS: drive directory-filter trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek34DriveAllocMapRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    auto pushRow = [&](const char *phase, uint64_t step, uint8_t trk, uint8_t sec, uint8_t ch, bool opResult) {
+        const uint16_t idx = drive.blockAllocIndex(trk, sec);
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << int(trk)
+            << "," << int(sec)
+            << "," << int(ch)
+            << "," << (opResult ? 1 : 0)
+            << "," << drive.iecAllocatedBlockCount
+            << "," << drive.virtualBlocksFree()
+            << "," << int(drive.iecBlockAllocated[idx])
+            << "," << int(drive.iecAllocOwnerEntry[idx]);
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++, 0x11, 0x01, 0x00, true);
+
+    const bool a1 = drive.allocateVirtualBlock(0x11, 0x01, 0x00);
+    pushRow("alloc_1101_ch0", step++, 0x11, 0x01, 0x00, a1);
+
+    const bool a2 = drive.allocateVirtualBlock(0x11, 0x02, 0x01);
+    pushRow("alloc_1102_ch1", step++, 0x11, 0x02, 0x01, a2);
+
+    const bool a3 = drive.allocateVirtualBlock(0x11, 0x01, 0x02);
+    pushRow("alloc_dup_1101", step++, 0x11, 0x01, 0x02, a3);
+
+    const bool f1 = drive.freeVirtualBlock(0x11, 0x01);
+    pushRow("free_1101", step++, 0x11, 0x01, 0x00, f1);
+
+    const bool f2 = drive.freeVirtualBlock(0x11, 0x01);
+    pushRow("free_missing_1101", step++, 0x11, 0x01, 0x00, f2);
+
+    const bool a4 = drive.allocateVirtualBlock(0x12, 0x03, 0x02);
+    pushRow("alloc_1203_ch2", step++, 0x12, 0x03, 0x02, a4);
+
+    const bool f3 = drive.freeVirtualBlock(0x11, 0x02);
+    pushRow("free_1102", step++, 0x11, 0x02, 0x01, f3);
+
+    const bool f4 = drive.freeVirtualBlock(0x12, 0x03);
+    pushRow("free_1203", step++, 0x12, 0x03, 0x02, f4);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek34DriveAllocMapEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek34DriveAllocMapRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek34DriveAllocMapRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek34DriveAllocMapRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek34DriveAllocMapEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,trk,sec,ch,op_ok,alloc_count,blocks_free,alloc_bit,owner\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek34DriveAllocMapEdgeHardReference() {
+    const std::string runtimePath = "week34_drive_alloc_map_runtime.csv";
+    const std::string refPath = "reference/edge/week34_drive_alloc_map_trace.csv";
+
+    const std::vector<std::string> got = buildWeek34DriveAllocMapEdgeTraceRows();
+    writeWeek34DriveAllocMapEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK34_BOOTSTRAP_ALLOCMAP_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek34DriveAllocMapEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK34][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK34][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK34][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK34][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK34][HARDREF] PASS: drive alloc-map trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
