@@ -8445,6 +8445,7 @@ static void runWeek28DriveEoiAtnEdgeHardReference();
 static void runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
 static void runWeek30DriveCommandChannelEdgeHardReference();
 static void runWeek31DriveStatusTalkEdgeHardReference();
+static void runWeek32DriveDirectoryStreamEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8470,6 +8471,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
     runWeek30DriveCommandChannelEdgeHardReference();
     runWeek31DriveStatusTalkEdgeHardReference();
+    runWeek32DriveDirectoryStreamEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8496,6 +8498,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek29DriveIecTimeoutRecoveryEdgeHardReference();
     runWeek30DriveCommandChannelEdgeHardReference();
     runWeek31DriveStatusTalkEdgeHardReference();
+    runWeek32DriveDirectoryStreamEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -11064,6 +11067,134 @@ static void runWeek31DriveStatusTalkEdgeHardReference() {
     }
 
     std::cout << "[WEEK31][HARDREF] PASS: drive status-talk trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek32DriveDirectoryStreamRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(64);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    auto pushRow = [&](const char *phase, uint64_t step) {
+        const int txHead = drive.iecTxQueue.empty() ? -1 : int(drive.iecTxQueue.front());
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << drive.iecTxQueue.size()
+            << "," << txHead
+            << "," << int(drive.iecChannelBufferPos[0])
+            << "," << (drive.iecDirectoryFromBlockBuffer ? 1 : 0)
+            << "," << drive.virtualBlocksFree()
+            << "," << drive.iecDirectoryWildcardPattern
+            << "," << drive.iecDirectoryTypeFilter
+            << "," << drive.iecDirectoryModeFilter;
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    drive.iecNameBuffer.clear();
+    {
+        const std::string dirSpec = "$D*Q,S,W";
+        for (char c : dirSpec) {
+            drive.iecNameBuffer.push_back(static_cast<uint8_t>(c));
+        }
+    }
+    const Drive1541::DirectoryFilters filters = drive.extractDirectoryFilters();
+    drive.iecDirectoryWildcardPattern = filters.pattern;
+    drive.iecDirectoryTypeFilter = filters.type;
+    drive.iecDirectoryModeFilter = filters.mode;
+    drive.iecDirectoryModeFilterNegated = filters.modeNegated;
+    drive.buildDirectoryStubPayload();
+    pushRow("dir_stub_filtered", step++);
+
+    drive.iecBlockBufferValid = true;
+    for (int i = 0; i < 256; ++i) {
+        drive.iecBlockBuffer[static_cast<size_t>(i)] = static_cast<uint8_t>((i * 7) & 0xFF);
+    }
+    drive.iecDirectoryFromBlockBuffer = true;
+    drive.iecChannelBufferPos[0] = 0x10;
+    drive.buildDirectoryFromBlockBufferPayload(0);
+    pushRow("dir_blockbuf_ptr10", step++);
+
+    drive.iecChannelBufferPos[0] = 0x20;
+    drive.buildDirectoryFromBlockBufferPayload(0);
+    pushRow("dir_blockbuf_ptr20", step++);
+
+    drive.iecDirectoryWildcardPattern.clear();
+    drive.iecDirectoryTypeFilter.clear();
+    drive.iecDirectoryModeFilter.clear();
+    drive.iecDirectoryModeFilterNegated = false;
+    drive.buildDirectoryStubPayload();
+    pushRow("dir_stub_reset", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek32DriveDirectoryStreamEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek32DriveDirectoryStreamRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek32DriveDirectoryStreamRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek32DriveDirectoryStreamRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek32DriveDirectoryStreamEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,txq,tx_head,ch0_ptr,from_blockbuf,blocks_free,wildcard,type,mode\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek32DriveDirectoryStreamEdgeHardReference() {
+    const std::string runtimePath = "week32_drive_dir_stream_runtime.csv";
+    const std::string refPath = "reference/edge/week32_drive_dir_stream_trace.csv";
+
+    const std::vector<std::string> got = buildWeek32DriveDirectoryStreamEdgeTraceRows();
+    writeWeek32DriveDirectoryStreamEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK32_BOOTSTRAP_DIRSTREAM_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek32DriveDirectoryStreamEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK32][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK32][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK32][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK32][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK32][HARDREF] PASS: drive directory-stream trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

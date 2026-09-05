@@ -1,0 +1,16 @@
+rev,phase,step,txq,tx_head,ch0_ptr,from_blockbuf,blocks_free,wildcard,type,mode
+1541,baseline,0,0,-1,0,0,664,,,
+1541,dir_stub_filtered,1,67,1,0,0,664,D*Q,SEQ,W
+1541,dir_blockbuf_ptr10,2,244,1,16,1,664,D*Q,SEQ,W
+1541,dir_blockbuf_ptr20,3,228,1,32,1,664,D*Q,SEQ,W
+1541,dir_stub_reset,4,67,1,32,0,664,,,
+1541C,baseline,0,0,-1,0,0,664,,,
+1541C,dir_stub_filtered,1,67,1,0,0,664,D*Q,SEQ,W
+1541C,dir_blockbuf_ptr10,2,244,1,16,1,664,D*Q,SEQ,W
+1541C,dir_blockbuf_ptr20,3,228,1,32,1,664,D*Q,SEQ,W
+1541C,dir_stub_reset,4,67,1,32,0,664,,,
+1541II,baseline,0,0,-1,0,0,664,,,
+1541II,dir_stub_filtered,1,67,1,0,0,664,D*Q,SEQ,W
+1541II,dir_blockbuf_ptr10,2,244,1,16,1,664,D*Q,SEQ,W
+1541II,dir_blockbuf_ptr20,3,228,1,32,1,664,D*Q,SEQ,W
+1541II,dir_stub_reset,4,67,1,32,0,664,,,
