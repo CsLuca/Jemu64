@@ -46,6 +46,9 @@
     "week32_drive_dir_txq_max": { "min": 200, "max": 400 },
     "week33_drive_dir_filter_rows": { "min": 15, "max": 40 },
     "week33_drive_dir_filter_negated_rows": { "min": 3, "max": 20 },
-    "week33_drive_dir_filter_txq_max": { "min": 20, "max": 300 }
+    "week33_drive_dir_filter_txq_max": { "min": 20, "max": 300 },
+    "week34_drive_alloc_rows": { "min": 20, "max": 50 },
+    "week34_drive_alloc_fail_rows": { "min": 3, "max": 20 },
+    "week34_drive_blocks_free_min": { "min": 650, "max": 664 }
   }
 }

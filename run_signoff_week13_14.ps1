@@ -177,6 +177,9 @@ $metrics = [ordered]@{
     week33_drive_dir_filter_rows = 0
     week33_drive_dir_filter_negated_rows = 0
     week33_drive_dir_filter_txq_max = 0
+    week34_drive_alloc_rows = 0
+    week34_drive_alloc_fail_rows = 0
+    week34_drive_blocks_free_min = 0
 }
 
 $savedPath = $env:PATH
@@ -558,6 +561,26 @@ try {
             }
             $metrics.week33_drive_dir_filter_negated_rows = $negRows
             $metrics.week33_drive_dir_filter_txq_max = $txqMax
+        }
+    }
+    $week34Ref = Join-Path -Path $repo -ChildPath "reference\edge\week34_drive_alloc_map_trace.csv"
+    if (Test-Path -LiteralPath $week34Ref) {
+        $rows34 = @(Get-Content -LiteralPath $week34Ref)
+        if ($rows34.Count -gt 1) {
+            $metrics.week34_drive_alloc_rows = $rows34.Count - 1
+            $failRows = 0
+            $blocksFreeMin = 65535
+            foreach ($line in $rows34) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    if ($parts[6] -eq '0') { $failRows++ }
+                    $freeVal = 0
+                    if ([int]::TryParse($parts[8], [ref]$freeVal)) { if ($freeVal -lt $blocksFreeMin) { $blocksFreeMin = $freeVal } }
+                }
+            }
+            if ($blocksFreeMin -eq 65535) { $blocksFreeMin = 0 }
+            $metrics.week34_drive_alloc_fail_rows = $failRows
+            $metrics.week34_drive_blocks_free_min = $blocksFreeMin
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

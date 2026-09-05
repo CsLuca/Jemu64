@@ -202,6 +202,16 @@
   - runtime: `week33_drive_dir_filter_runtime.csv`
   - reference: `reference/edge/week33_drive_dir_filter_trace.csv`
 
+## Week34 Drive Allocation/Map Hard-Ref
+
+- Added dedicated 1541 allocation-map battery across drive revisions (1541/1541C/1541-II) for:
+  - successful allocation/free transitions,
+  - duplicate allocate and missing-free failure paths,
+  - block ownership bitmap and free-block counter consistency.
+- Hard reference trace:
+  - runtime: `week34_drive_alloc_map_runtime.csv`
+  - reference: `reference/edge/week34_drive_alloc_map_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -276,6 +286,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week31_drive_status_talk_trace.csv`
     - `reference/edge/week32_drive_dir_stream_trace.csv`
     - `reference/edge/week33_drive_dir_filter_trace.csv`
+    - `reference/edge/week34_drive_alloc_map_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
