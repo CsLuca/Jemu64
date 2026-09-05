@@ -50,6 +50,9 @@
                     "week34_drive_blocks_free_min":  662,
                     "week35_drive_ptr_rows":  18,
                     "week35_drive_ptr_blockbuf_rows":  12,
-                    "week35_drive_ptr_txq_min":  0
+                    "week35_drive_ptr_txq_min":  0,
+                    "week36_drive_catalog_rows":  24,
+                    "week36_drive_catalog_used_max":  2,
+                    "week36_drive_catalog_error_rows":  0
                 }
 }

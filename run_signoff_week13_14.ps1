@@ -183,6 +183,9 @@ $metrics = [ordered]@{
     week35_drive_ptr_rows = 0
     week35_drive_ptr_blockbuf_rows = 0
     week35_drive_ptr_txq_min = 0
+    week36_drive_catalog_rows = 0
+    week36_drive_catalog_used_max = 0
+    week36_drive_catalog_error_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -604,6 +607,25 @@ try {
             if ($txqMin -eq 65535) { $txqMin = 0 }
             $metrics.week35_drive_ptr_blockbuf_rows = $blockBufRows
             $metrics.week35_drive_ptr_txq_min = $txqMin
+        }
+    }
+    $week36Ref = Join-Path -Path $repo -ChildPath "reference\edge\week36_drive_catalog_trace.csv"
+    if (Test-Path -LiteralPath $week36Ref) {
+        $rows36 = @(Get-Content -LiteralPath $week36Ref)
+        if ($rows36.Count -gt 1) {
+            $metrics.week36_drive_catalog_rows = $rows36.Count - 1
+            $usedMax = 0
+            $errorRows = 0
+            foreach ($line in $rows36) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    $usedVal = 0
+                    if ([int]::TryParse($parts[4], [ref]$usedVal)) { if ($usedVal -gt $usedMax) { $usedMax = $usedVal } }
+                    if ($parts[10] -like '65,*') { $errorRows++ }
+                }
+            }
+            $metrics.week36_drive_catalog_used_max = $usedMax
+            $metrics.week36_drive_catalog_error_rows = $errorRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

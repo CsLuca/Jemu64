@@ -222,6 +222,16 @@
   - runtime: `week35_drive_ptr_dir_runtime.csv`
   - reference: `reference/edge/week35_drive_ptr_dir_trace.csv`
 
+## Week36 Drive Catalog Lifecycle Hard-Ref
+
+- Added dedicated 1541 catalog lifecycle battery across drive revisions (1541/1541C/1541-II) for:
+  - catalog entry creation/growth across multi-channel allocations,
+  - entry removal when block count returns to zero,
+  - error path stability on missing free (`65,NO BLOCK,00,00`).
+- Hard reference trace:
+  - runtime: `week36_drive_catalog_runtime.csv`
+  - reference: `reference/edge/week36_drive_catalog_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -298,6 +308,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week33_drive_dir_filter_trace.csv`
     - `reference/edge/week34_drive_alloc_map_trace.csv`
     - `reference/edge/week35_drive_ptr_dir_trace.csv`
+    - `reference/edge/week36_drive_catalog_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
