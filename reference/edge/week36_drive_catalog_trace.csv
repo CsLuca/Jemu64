@@ -1,0 +1,25 @@
+rev,phase,step,ch,catalog_used,alloc_count,blocks_free,ch_map,name_valid,name,status
+1541,baseline,0,0,0,0,664,-1,0,,00,OK,00,00
+1541,ch0_alloc_1,1,0,1,1,663,0,1,FILE-A,00,OK,00,00
+1541,ch0_alloc_2,2,0,1,2,662,0,1,FILE-A,00,OK,00,00
+1541,ch1_alloc_1,3,1,2,3,661,1,1,FILE-B,00,OK,00,00
+1541,ch0_free_1,4,0,2,2,662,0,1,FILE-A,00,OK,00,00
+1541,ch0_free_2_remove,5,0,1,1,663,-1,1,FILE-A,00,OK,00,00
+1541,ch1_free_remove,6,1,0,0,664,-1,1,FILE-B,00,OK,00,00
+1541,free_missing,7,1,0,0,664,-1,1,FILE-B,65,NO BLOCK,00,00
+1541C,baseline,0,0,0,0,664,-1,0,,00,OK,00,00
+1541C,ch0_alloc_1,1,0,1,1,663,0,1,FILE-A,00,OK,00,00
+1541C,ch0_alloc_2,2,0,1,2,662,0,1,FILE-A,00,OK,00,00
+1541C,ch1_alloc_1,3,1,2,3,661,1,1,FILE-B,00,OK,00,00
+1541C,ch0_free_1,4,0,2,2,662,0,1,FILE-A,00,OK,00,00
+1541C,ch0_free_2_remove,5,0,1,1,663,-1,1,FILE-A,00,OK,00,00
+1541C,ch1_free_remove,6,1,0,0,664,-1,1,FILE-B,00,OK,00,00
+1541C,free_missing,7,1,0,0,664,-1,1,FILE-B,65,NO BLOCK,00,00
+1541II,baseline,0,0,0,0,664,-1,0,,00,OK,00,00
+1541II,ch0_alloc_1,1,0,1,1,663,0,1,FILE-A,00,OK,00,00
+1541II,ch0_alloc_2,2,0,1,2,662,0,1,FILE-A,00,OK,00,00
+1541II,ch1_alloc_1,3,1,2,3,661,1,1,FILE-B,00,OK,00,00
+1541II,ch0_free_1,4,0,2,2,662,0,1,FILE-A,00,OK,00,00
+1541II,ch0_free_2_remove,5,0,1,1,663,-1,1,FILE-A,00,OK,00,00
+1541II,ch1_free_remove,6,1,0,0,664,-1,1,FILE-B,00,OK,00,00
+1541II,free_missing,7,1,0,0,664,-1,1,FILE-B,65,NO BLOCK,00,00
