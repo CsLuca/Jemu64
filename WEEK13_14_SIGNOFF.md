@@ -252,6 +252,16 @@
   - runtime: `week38_drive_talkch_close_runtime.csv`
   - reference: `reference/edge/week38_drive_talkch_close_trace.csv`
 
+## Week39 Drive Command-Response Fallback Hard-Ref
+
+- Added dedicated 1541 command-response/status fallback battery across drive revisions (1541/1541C/1541-II) for:
+  - TALK+SA15 payload emission when command-response queue is populated,
+  - deterministic fallback to status payload once response queue is consumed,
+  - post-UNTALK SA15 behavior stability under unchanged status line.
+- Hard reference trace:
+  - runtime: `week39_drive_cmdresp_fallback_runtime.csv`
+  - reference: `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -331,6 +341,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week36_drive_catalog_trace.csv`
     - `reference/edge/week37_drive_atn_gate_trace.csv`
     - `reference/edge/week38_drive_talkch_close_trace.csv`
+    - `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

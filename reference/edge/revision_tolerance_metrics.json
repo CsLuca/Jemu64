@@ -59,6 +59,9 @@
                     "week37_drive_atn_accept_rows":  9,
                     "week38_drive_talkch_rows":  30,
                     "week38_drive_talkch_close15_count":  2,
-                    "week38_drive_talkch_invalid_sa_rows":  3
+                    "week38_drive_talkch_invalid_sa_rows":  3,
+                    "week39_drive_cmdresp_rows":  24,
+                    "week39_drive_cmdresp_payload_rows":  6,
+                    "week39_drive_cmdresp_status_rows":  3
                 }
 }

@@ -92,4 +92,5 @@ jobs:
             week36_drive_catalog_runtime.csv
             week37_drive_atn_gate_runtime.csv
             week38_drive_talkch_close_runtime.csv
+            week39_drive_cmdresp_fallback_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

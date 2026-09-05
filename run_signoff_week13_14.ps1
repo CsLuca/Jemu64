@@ -192,6 +192,9 @@ $metrics = [ordered]@{
     week38_drive_talkch_rows = 0
     week38_drive_talkch_close15_count = 0
     week38_drive_talkch_invalid_sa_rows = 0
+    week39_drive_cmdresp_rows = 0
+    week39_drive_cmdresp_payload_rows = 0
+    week39_drive_cmdresp_status_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -673,6 +676,25 @@ try {
             }
             $metrics.week38_drive_talkch_close15_count = $closeCountMax
             $metrics.week38_drive_talkch_invalid_sa_rows = $invalidSaRows
+        }
+    }
+    $week39Ref = Join-Path -Path $repo -ChildPath "reference\edge\week39_drive_cmdresp_fallback_trace.csv"
+    if (Test-Path -LiteralPath $week39Ref) {
+        $rows39 = @(Get-Content -LiteralPath $week39Ref)
+        if ($rows39.Count -gt 1) {
+            $metrics.week39_drive_cmdresp_rows = $rows39.Count - 1
+            $payloadRows = 0
+            $statusRows = 0
+            foreach ($line in $rows39) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    $phase = $parts[1]
+                    if ($phase -like '*response*') { $payloadRows++ }
+                    if ($phase -like '*status*') { $statusRows++ }
+                }
+            }
+            $metrics.week39_drive_cmdresp_payload_rows = $payloadRows
+            $metrics.week39_drive_cmdresp_status_rows = $statusRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
