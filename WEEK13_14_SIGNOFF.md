@@ -212,6 +212,16 @@
   - runtime: `week34_drive_alloc_map_runtime.csv`
   - reference: `reference/edge/week34_drive_alloc_map_trace.csv`
 
+## Week35 Drive Pointer-Directory Hard-Ref
+
+- Added dedicated 1541 pointer-directory battery across drive revisions (1541/1541C/1541-II) for:
+  - block-buffer directory streaming at multiple pointer offsets,
+  - pointer validity and stream-shape consistency,
+  - fallback to stub directory path after pointer-driven block-buffer flow.
+- Hard reference trace:
+  - runtime: `week35_drive_ptr_dir_runtime.csv`
+  - reference: `reference/edge/week35_drive_ptr_dir_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -287,6 +297,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week32_drive_dir_stream_trace.csv`
     - `reference/edge/week33_drive_dir_filter_trace.csv`
     - `reference/edge/week34_drive_alloc_map_trace.csv`
+    - `reference/edge/week35_drive_ptr_dir_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

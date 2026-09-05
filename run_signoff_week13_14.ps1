@@ -180,6 +180,9 @@ $metrics = [ordered]@{
     week34_drive_alloc_rows = 0
     week34_drive_alloc_fail_rows = 0
     week34_drive_blocks_free_min = 0
+    week35_drive_ptr_rows = 0
+    week35_drive_ptr_blockbuf_rows = 0
+    week35_drive_ptr_txq_min = 0
 }
 
 $savedPath = $env:PATH
@@ -581,6 +584,26 @@ try {
             if ($blocksFreeMin -eq 65535) { $blocksFreeMin = 0 }
             $metrics.week34_drive_alloc_fail_rows = $failRows
             $metrics.week34_drive_blocks_free_min = $blocksFreeMin
+        }
+    }
+    $week35Ref = Join-Path -Path $repo -ChildPath "reference\edge\week35_drive_ptr_dir_trace.csv"
+    if (Test-Path -LiteralPath $week35Ref) {
+        $rows35 = @(Get-Content -LiteralPath $week35Ref)
+        if ($rows35.Count -gt 1) {
+            $metrics.week35_drive_ptr_rows = $rows35.Count - 1
+            $blockBufRows = 0
+            $txqMin = 65535
+            foreach ($line in $rows35) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    if ($parts[8] -eq '1') { $blockBufRows++ }
+                    $txqVal = 0
+                    if ([int]::TryParse($parts[6], [ref]$txqVal)) { if ($txqVal -lt $txqMin) { $txqMin = $txqVal } }
+                }
+            }
+            if ($txqMin -eq 65535) { $txqMin = 0 }
+            $metrics.week35_drive_ptr_blockbuf_rows = $blockBufRows
+            $metrics.week35_drive_ptr_txq_min = $txqMin
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
