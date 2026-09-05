@@ -40,6 +40,9 @@
     "week30_drive_cmdch_dispatch_max": { "min": 0, "max": 10 },
     "week31_drive_status_rows": { "min": 15, "max": 40 },
     "week31_drive_status_talking_rows": { "min": 3, "max": 20 },
-    "week31_drive_status_txq_max": { "min": 3, "max": 80 }
+    "week31_drive_status_txq_max": { "min": 3, "max": 80 },
+    "week32_drive_dir_rows": { "min": 15, "max": 40 },
+    "week32_drive_dir_blockbuf_rows": { "min": 6, "max": 20 },
+    "week32_drive_dir_txq_max": { "min": 200, "max": 400 }
   }
 }

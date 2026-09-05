@@ -182,6 +182,16 @@
   - runtime: `week31_drive_status_talk_runtime.csv`
   - reference: `reference/edge/week31_drive_status_talk_trace.csv`
 
+## Week32 Drive Directory Stream Hard-Ref
+
+- Added dedicated 1541 directory stream battery across drive revisions (1541/1541C/1541-II) for:
+  - filtered directory stub payload creation (wildcard/type/mode),
+  - block-buffer directory streaming with pointer offsets (`B-P`-style channel pointer use),
+  - fallback reset to unfiltered directory stream shape.
+- Hard reference trace:
+  - runtime: `week32_drive_dir_stream_runtime.csv`
+  - reference: `reference/edge/week32_drive_dir_stream_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -254,6 +264,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week29_drive_timeout_trace.csv`
     - `reference/edge/week30_drive_cmdch_trace.csv`
     - `reference/edge/week31_drive_status_talk_trace.csv`
+    - `reference/edge/week32_drive_dir_stream_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -38,6 +38,9 @@
                     "week30_drive_cmdch_dispatch_max":  0,
                     "week31_drive_status_rows":  18,
                     "week31_drive_status_talking_rows":  9,
-                    "week31_drive_status_txq_max":  25
+                    "week31_drive_status_txq_max":  25,
+                    "week32_drive_dir_rows":  15,
+                    "week32_drive_dir_blockbuf_rows":  6,
+                    "week32_drive_dir_txq_max":  244
                 }
 }
