@@ -195,6 +195,9 @@ $metrics = [ordered]@{
     week39_drive_cmdresp_rows = 0
     week39_drive_cmdresp_payload_rows = 0
     week39_drive_cmdresp_status_rows = 0
+    week40_drive_cmdbuf_rows = 0
+    week40_drive_cmdbuf_commit_rows = 0
+    week40_drive_cmdbuf_syntax_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -695,6 +698,25 @@ try {
             }
             $metrics.week39_drive_cmdresp_payload_rows = $payloadRows
             $metrics.week39_drive_cmdresp_status_rows = $statusRows
+        }
+    }
+    $week40Ref = Join-Path -Path $repo -ChildPath "reference\edge\week40_drive_cmdbuf_commit_trace.csv"
+    if (Test-Path -LiteralPath $week40Ref) {
+        $rows40 = @(Get-Content -LiteralPath $week40Ref)
+        if ($rows40.Count -gt 1) {
+            $metrics.week40_drive_cmdbuf_rows = $rows40.Count - 1
+            $commitRows = 0
+            $syntaxRows = 0
+            foreach ($line in $rows40) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 14) {
+                    $phase = $parts[1]
+                    if ($phase -like 'execute_*') { $commitRows++ }
+                    if (($phase -eq 'execute_invalid_unlisten') -and ($parts[10] -eq '0')) { $syntaxRows++ }
+                }
+            }
+            $metrics.week40_drive_cmdbuf_commit_rows = $commitRows
+            $metrics.week40_drive_cmdbuf_syntax_rows = $syntaxRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

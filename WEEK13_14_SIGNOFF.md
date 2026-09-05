@@ -262,6 +262,16 @@
   - runtime: `week39_drive_cmdresp_fallback_runtime.csv`
   - reference: `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
 
+## Week40 Drive Command-Buffer Commit Hard-Ref
+
+- Added dedicated 1541 command-buffer commit battery across drive revisions (1541/1541C/1541-II) for:
+  - SA15 command-channel data accumulation before commit,
+  - UNLISTEN-triggered command execution for valid and invalid command payloads,
+  - deterministic post-commit command buffer clearing + syntax counter progression.
+- Hard reference trace:
+  - runtime: `week40_drive_cmdbuf_commit_runtime.csv`
+  - reference: `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -342,6 +352,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week37_drive_atn_gate_trace.csv`
     - `reference/edge/week38_drive_talkch_close_trace.csv`
     - `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
+    - `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -64,6 +64,9 @@
     "week38_drive_talkch_invalid_sa_rows": { "min": 3, "max": 6 },
     "week39_drive_cmdresp_rows": { "min": 18, "max": 48 },
     "week39_drive_cmdresp_payload_rows": { "min": 3, "max": 6 },
-    "week39_drive_cmdresp_status_rows": { "min": 3, "max": 6 }
+    "week39_drive_cmdresp_status_rows": { "min": 3, "max": 6 },
+    "week40_drive_cmdbuf_rows": { "min": 24, "max": 48 },
+    "week40_drive_cmdbuf_commit_rows": { "min": 6, "max": 12 },
+    "week40_drive_cmdbuf_syntax_rows": { "min": 3, "max": 6 }
   }
 }

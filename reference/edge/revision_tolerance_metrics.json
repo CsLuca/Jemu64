@@ -62,6 +62,9 @@
                     "week38_drive_talkch_invalid_sa_rows":  3,
                     "week39_drive_cmdresp_rows":  24,
                     "week39_drive_cmdresp_payload_rows":  6,
-                    "week39_drive_cmdresp_status_rows":  3
+                    "week39_drive_cmdresp_status_rows":  3,
+                    "week40_drive_cmdbuf_rows":  36,
+                    "week40_drive_cmdbuf_commit_rows":  6,
+                    "week40_drive_cmdbuf_syntax_rows":  3
                 }
 }
