@@ -242,6 +242,16 @@
   - runtime: `week37_drive_atn_gate_runtime.csv`
   - reference: `reference/edge/week37_drive_atn_gate_trace.csv`
 
+## Week38 Drive TALK/CLOSE Channel Hard-Ref
+
+- Added dedicated 1541 TALK/CLOSE channel battery across drive revisions (1541/1541C/1541-II) for:
+  - TALK command + SA15 status channel open sequencing,
+  - invalid TALK secondary path (`SA2`) syntax/error stability,
+  - repeated CLOSE15 idempotence and UNTALK cleanup consistency.
+- Hard reference trace:
+  - runtime: `week38_drive_talkch_close_runtime.csv`
+  - reference: `reference/edge/week38_drive_talkch_close_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -320,6 +330,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week35_drive_ptr_dir_trace.csv`
     - `reference/edge/week36_drive_catalog_trace.csv`
     - `reference/edge/week37_drive_atn_gate_trace.csv`
+    - `reference/edge/week38_drive_talkch_close_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

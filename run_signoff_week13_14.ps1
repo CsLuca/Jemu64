@@ -189,6 +189,9 @@ $metrics = [ordered]@{
     week37_drive_atn_rows = 0
     week37_drive_atn_blocked_rows = 0
     week37_drive_atn_accept_rows = 0
+    week38_drive_talkch_rows = 0
+    week38_drive_talkch_close15_count = 0
+    week38_drive_talkch_invalid_sa_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -649,6 +652,27 @@ try {
             }
             $metrics.week37_drive_atn_blocked_rows = $blockedRows
             $metrics.week37_drive_atn_accept_rows = $acceptRows
+        }
+    }
+    $week38Ref = Join-Path -Path $repo -ChildPath "reference\edge\week38_drive_talkch_close_trace.csv"
+    if (Test-Path -LiteralPath $week38Ref) {
+        $rows38 = @(Get-Content -LiteralPath $week38Ref)
+        if ($rows38.Count -gt 1) {
+            $metrics.week38_drive_talkch_rows = $rows38.Count - 1
+            $closeCountMax = 0
+            $invalidSaRows = 0
+            foreach ($line in $rows38) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 10) {
+                    $phase = $parts[1]
+                    $opOk = $parts[3]
+                    $closeVal = 0
+                    if ([int]::TryParse($parts[7], [ref]$closeVal)) { if ($closeVal -gt $closeCountMax) { $closeCountMax = $closeVal } }
+                    if (($phase -eq 'talk_sa2_invalid') -and ($opOk -eq '1')) { $invalidSaRows++ }
+                }
+            }
+            $metrics.week38_drive_talkch_close15_count = $closeCountMax
+            $metrics.week38_drive_talkch_invalid_sa_rows = $invalidSaRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

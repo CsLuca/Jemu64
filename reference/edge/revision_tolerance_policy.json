@@ -58,6 +58,9 @@
     "week36_drive_catalog_error_rows": { "min": 0, "max": 20 },
     "week37_drive_atn_rows": { "min": 20, "max": 60 },
     "week37_drive_atn_blocked_rows": { "min": 2, "max": 12 },
-    "week37_drive_atn_accept_rows": { "min": 9, "max": 40 }
+    "week37_drive_atn_accept_rows": { "min": 9, "max": 40 },
+    "week38_drive_talkch_rows": { "min": 24, "max": 60 },
+    "week38_drive_talkch_close15_count": { "min": 2, "max": 8 },
+    "week38_drive_talkch_invalid_sa_rows": { "min": 3, "max": 6 }
   }
 }
