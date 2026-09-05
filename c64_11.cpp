@@ -8451,6 +8451,7 @@ static void runWeek34DriveAllocMapEdgeHardReference();
 static void runWeek35DrivePointerDirectoryEdgeHardReference();
 static void runWeek36DriveCatalogLifecycleEdgeHardReference();
 static void runWeek37DriveAtnCommandGateEdgeHardReference();
+static void runWeek38DriveTalkChannelCloseEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8482,6 +8483,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek35DrivePointerDirectoryEdgeHardReference();
     runWeek36DriveCatalogLifecycleEdgeHardReference();
     runWeek37DriveAtnCommandGateEdgeHardReference();
+    runWeek38DriveTalkChannelCloseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8514,6 +8516,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek35DrivePointerDirectoryEdgeHardReference();
     runWeek36DriveCatalogLifecycleEdgeHardReference();
     runWeek37DriveAtnCommandGateEdgeHardReference();
+    runWeek38DriveTalkChannelCloseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -11844,6 +11847,127 @@ static void runWeek37DriveAtnCommandGateEdgeHardReference() {
     }
 
     std::cout << "[WEEK37][HARDREF] PASS: drive ATN command-gate trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek38DriveTalkChannelCloseRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(96);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    auto pushRow = [&](const char *phase, uint64_t step, bool opOk) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << (opOk ? 1 : 0)
+            << "," << (drive.iecTalking ? 1 : 0)
+            << "," << int(drive.iecTalkSecondary)
+            << "," << (drive.iecOpenTalkChannels[15] ? 1 : 0)
+            << "," << drive.iecChannelCloseCount[15]
+            << "," << drive.iecCommandSyntaxErrorCount
+            << "," << drive.iecTxQueue.size();
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++, true);
+
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    const bool talkCmd = drive.processIecCommandByte(0x48);
+    pushRow("talk_cmd", step++, talkCmd);
+
+    const bool talkSa2Invalid = drive.processIecCommandByte(0x62);
+    pushRow("talk_sa2_invalid", step++, talkSa2Invalid);
+
+    const bool talkSa15 = drive.processIecCommandByte(0x6F);
+    pushRow("talk_sa15", step++, talkSa15);
+
+    const bool close15A = drive.processIecCommandByte(0xEF);
+    pushRow("close15_a", step++, close15A);
+
+    const bool untalkA = drive.processIecCommandByte(0x5F);
+    pushRow("untalk_a", step++, untalkA);
+
+    const bool talkCmdAgain = drive.processIecCommandByte(0x48);
+    pushRow("talk_cmd_again", step++, talkCmdAgain);
+
+    const bool talkSa15Again = drive.processIecCommandByte(0x6F);
+    pushRow("talk_sa15_again", step++, talkSa15Again);
+
+    const bool close15B = drive.processIecCommandByte(0xEF);
+    pushRow("close15_b", step++, close15B);
+
+    const bool untalkB = drive.processIecCommandByte(0x5F);
+    pushRow("untalk_b", step++, untalkB);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek38DriveTalkChannelCloseEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek38DriveTalkChannelCloseRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek38DriveTalkChannelCloseRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek38DriveTalkChannelCloseRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek38DriveTalkChannelCloseEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,op_ok,talking,talk_sa,open_talk15,close15_count,syntax_err,txq_size\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek38DriveTalkChannelCloseEdgeHardReference() {
+    const std::string runtimePath = "week38_drive_talkch_close_runtime.csv";
+    const std::string refPath = "reference/edge/week38_drive_talkch_close_trace.csv";
+
+    const std::vector<std::string> got = buildWeek38DriveTalkChannelCloseEdgeTraceRows();
+    writeWeek38DriveTalkChannelCloseEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK38_BOOTSTRAP_TALKCH_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek38DriveTalkChannelCloseEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK38][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK38][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK38][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK38][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK38][HARDREF] PASS: drive TALK/CLOSE channel trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
