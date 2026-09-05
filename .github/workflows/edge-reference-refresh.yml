@@ -86,4 +86,5 @@ jobs:
             week30_drive_cmdch_runtime.csv
             week31_drive_status_talk_runtime.csv
             week32_drive_dir_stream_runtime.csv
+            week33_drive_dir_filter_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

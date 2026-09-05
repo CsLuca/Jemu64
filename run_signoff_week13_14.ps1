@@ -174,6 +174,9 @@ $metrics = [ordered]@{
     week32_drive_dir_rows = 0
     week32_drive_dir_blockbuf_rows = 0
     week32_drive_dir_txq_max = 0
+    week33_drive_dir_filter_rows = 0
+    week33_drive_dir_filter_negated_rows = 0
+    week33_drive_dir_filter_txq_max = 0
 }
 
 $savedPath = $env:PATH
@@ -536,6 +539,25 @@ try {
             }
             $metrics.week32_drive_dir_blockbuf_rows = $blockBufRows
             $metrics.week32_drive_dir_txq_max = $txqMax
+        }
+    }
+    $week33Ref = Join-Path -Path $repo -ChildPath "reference\edge\week33_drive_dir_filter_trace.csv"
+    if (Test-Path -LiteralPath $week33Ref) {
+        $rows33 = @(Get-Content -LiteralPath $week33Ref)
+        if ($rows33.Count -gt 1) {
+            $metrics.week33_drive_dir_filter_rows = $rows33.Count - 1
+            $negRows = 0
+            $txqMax = 0
+            foreach ($line in $rows33) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    if ($parts[10] -eq '1') { $negRows++ }
+                    $txqVal = 0
+                    if ([int]::TryParse($parts[3], [ref]$txqVal)) { if ($txqVal -gt $txqMax) { $txqMax = $txqVal } }
+                }
+            }
+            $metrics.week33_drive_dir_filter_negated_rows = $negRows
+            $metrics.week33_drive_dir_filter_txq_max = $txqMax
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
