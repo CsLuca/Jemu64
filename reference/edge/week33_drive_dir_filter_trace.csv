@@ -1,0 +1,16 @@
+rev,phase,step,txq,tx_head,alloc_count,blocks_free,wildcard,type,mode,mode_negated
+1541,baseline,0,0,-1,0,664,,,,0
+1541,catalog_seed,1,0,-1,4,660,,,,0
+1541,filter_demo_seq_w,2,76,1,4,660,DEMO*,SEQ,W,0
+1541,filter_negated_mode,3,77,1,4,660,*SEQ,SEQ,W,1
+1541,filter_reset,4,123,1,4,660,,,,0
+1541C,baseline,0,0,-1,0,664,,,,0
+1541C,catalog_seed,1,0,-1,4,660,,,,0
+1541C,filter_demo_seq_w,2,76,1,4,660,DEMO*,SEQ,W,0
+1541C,filter_negated_mode,3,77,1,4,660,*SEQ,SEQ,W,1
+1541C,filter_reset,4,123,1,4,660,,,,0
+1541II,baseline,0,0,-1,0,664,,,,0
+1541II,catalog_seed,1,0,-1,4,660,,,,0
+1541II,filter_demo_seq_w,2,76,1,4,660,DEMO*,SEQ,W,0
+1541II,filter_negated_mode,3,77,1,4,660,*SEQ,SEQ,W,1
+1541II,filter_reset,4,123,1,4,660,,,,0
