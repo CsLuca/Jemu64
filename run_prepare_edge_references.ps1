@@ -49,6 +49,7 @@ $savedWeek33 = [Environment]::GetEnvironmentVariable("WEEK33_BOOTSTRAP_DIRFILTER
 $savedWeek34 = [Environment]::GetEnvironmentVariable("WEEK34_BOOTSTRAP_ALLOCMAP_REF", "Process")
 $savedWeek35 = [Environment]::GetEnvironmentVariable("WEEK35_BOOTSTRAP_PTRDIR_REF", "Process")
 $savedWeek36 = [Environment]::GetEnvironmentVariable("WEEK36_BOOTSTRAP_CATALOG_REF", "Process")
+$savedWeek37 = [Environment]::GetEnvironmentVariable("WEEK37_BOOTSTRAP_ATNGATE_REF", "Process")
 
 try {
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $Manifest, "Process")
@@ -74,6 +75,7 @@ try {
     [Environment]::SetEnvironmentVariable("WEEK34_BOOTSTRAP_ALLOCMAP_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK35_BOOTSTRAP_PTRDIR_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK36_BOOTSTRAP_CATALOG_REF", "1", "Process")
+    [Environment]::SetEnvironmentVariable("WEEK37_BOOTSTRAP_ATNGATE_REF", "1", "Process")
 
     & $strictExe
     if ($LASTEXITCODE -ne 0) {
@@ -104,6 +106,7 @@ finally {
     [Environment]::SetEnvironmentVariable("WEEK34_BOOTSTRAP_ALLOCMAP_REF", $savedWeek34, "Process")
     [Environment]::SetEnvironmentVariable("WEEK35_BOOTSTRAP_PTRDIR_REF", $savedWeek35, "Process")
     [Environment]::SetEnvironmentVariable("WEEK36_BOOTSTRAP_CATALOG_REF", $savedWeek36, "Process")
+    [Environment]::SetEnvironmentVariable("WEEK37_BOOTSTRAP_ATNGATE_REF", $savedWeek37, "Process")
 }
 
 $week15Runtime = Join-Path $repo "week15_baaec_handoff_runtime.csv"
@@ -127,6 +130,7 @@ $week33Runtime = Join-Path $repo "week33_drive_dir_filter_runtime.csv"
 $week34Runtime = Join-Path $repo "week34_drive_alloc_map_runtime.csv"
 $week35Runtime = Join-Path $repo "week35_drive_ptr_dir_runtime.csv"
 $week36Runtime = Join-Path $repo "week36_drive_catalog_runtime.csv"
+$week37Runtime = Join-Path $repo "week37_drive_atn_gate_runtime.csv"
 $brknRuntime = Join-Path $repo "c64_lorenz_brkn_edge_ref.trace.csv"
 
 if (-not (Test-Path -LiteralPath $week15Runtime)) {
@@ -192,6 +196,9 @@ if (-not (Test-Path -LiteralPath $week35Runtime)) {
 if (-not (Test-Path -LiteralPath $week36Runtime)) {
     throw "Missing runtime edge trace: $week36Runtime"
 }
+if (-not (Test-Path -LiteralPath $week37Runtime)) {
+    throw "Missing runtime edge trace: $week37Runtime"
+}
 if (-not (Test-Path -LiteralPath $brknRuntime)) {
     throw "Missing runtime trace: $brknRuntime"
 }
@@ -202,7 +209,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed building pc_only reference for c64_lorenz_brkn_edge_ref"
 }
 
-"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
+"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36/week37 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
 }
 finally {
     $env:PATH = $savedPath

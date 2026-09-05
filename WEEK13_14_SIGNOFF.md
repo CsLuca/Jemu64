@@ -232,6 +232,16 @@
   - runtime: `week36_drive_catalog_runtime.csv`
   - reference: `reference/edge/week36_drive_catalog_trace.csv`
 
+## Week37 Drive ATN Command-Gate Hard-Ref
+
+- Added dedicated 1541 ATN command-gate battery across drive revisions (1541/1541C/1541-II) for:
+  - LISTEN/TALK command rejection when command-state sees ATN high,
+  - acceptance when ATN is asserted low,
+  - follow-up SA0/UNLISTEN/UNTALK transition consistency.
+- Hard reference trace:
+  - runtime: `week37_drive_atn_gate_runtime.csv`
+  - reference: `reference/edge/week37_drive_atn_gate_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -309,6 +319,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week34_drive_alloc_map_trace.csv`
     - `reference/edge/week35_drive_ptr_dir_trace.csv`
     - `reference/edge/week36_drive_catalog_trace.csv`
+    - `reference/edge/week37_drive_atn_gate_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

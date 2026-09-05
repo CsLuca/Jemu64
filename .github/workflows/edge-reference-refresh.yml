@@ -90,4 +90,5 @@ jobs:
             week34_drive_alloc_map_runtime.csv
             week35_drive_ptr_dir_runtime.csv
             week36_drive_catalog_runtime.csv
+            week37_drive_atn_gate_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

@@ -186,6 +186,9 @@ $metrics = [ordered]@{
     week36_drive_catalog_rows = 0
     week36_drive_catalog_used_max = 0
     week36_drive_catalog_error_rows = 0
+    week37_drive_atn_rows = 0
+    week37_drive_atn_blocked_rows = 0
+    week37_drive_atn_accept_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -626,6 +629,26 @@ try {
             }
             $metrics.week36_drive_catalog_used_max = $usedMax
             $metrics.week36_drive_catalog_error_rows = $errorRows
+        }
+    }
+    $week37Ref = Join-Path -Path $repo -ChildPath "reference\edge\week37_drive_atn_gate_trace.csv"
+    if (Test-Path -LiteralPath $week37Ref) {
+        $rows37 = @(Get-Content -LiteralPath $week37Ref)
+        if ($rows37.Count -gt 1) {
+            $metrics.week37_drive_atn_rows = $rows37.Count - 1
+            $blockedRows = 0
+            $acceptRows = 0
+            foreach ($line in $rows37) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 11) {
+                    $phase = $parts[1]
+                    $ok = $parts[3]
+                    if (($phase -like '*blocked*') -and ($ok -eq '0')) { $blockedRows++ }
+                    if (($phase -like '*ok*' -or $phase -eq 'talk_sa0') -and ($ok -eq '1')) { $acceptRows++ }
+                }
+            }
+            $metrics.week37_drive_atn_blocked_rows = $blockedRows
+            $metrics.week37_drive_atn_accept_rows = $acceptRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
