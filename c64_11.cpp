@@ -8458,6 +8458,7 @@ static void runWeek41DriveClose15DropEdgeHardReference();
 static void runWeek42DriveStatusRebuildEdgeHardReference();
 static void runWeek43DriveDirModeFilterEdgeHardReference();
 static void runWeek44DriveCmdRespTerminatorEdgeHardReference();
+static void runWeek45DriveFinalFreezeEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8496,6 +8497,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek42DriveStatusRebuildEdgeHardReference();
     runWeek43DriveDirModeFilterEdgeHardReference();
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
+    runWeek45DriveFinalFreezeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8535,6 +8537,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek42DriveStatusRebuildEdgeHardReference();
     runWeek43DriveDirModeFilterEdgeHardReference();
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
+    runWeek45DriveFinalFreezeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -12754,6 +12757,146 @@ static void runWeek44DriveCmdRespTerminatorEdgeHardReference() {
     }
 
     std::cout << "[WEEK44][HARDREF] PASS: drive command-response terminator trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek45DriveFinalFreezeRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(160);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    auto pushRow = [&](const char *phase, uint64_t step, bool opOk) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << (opOk ? 1 : 0)
+            << "," << drive.iecCommandDispatchCount
+            << "," << drive.iecDataDispatchCount
+            << "," << drive.iecCommandSyntaxErrorCount
+            << "," << int(drive.memory[0x0400])
+            << "," << int(drive.memory[0x0401])
+            << "," << drive.iecTxQueue.size()
+            << "," << drive.iecAllocatedBlockCount
+            << "," << drive.iecStatusLine;
+        rows.push_back(oss.str());
+    };
+
+    auto feedData = [&](const std::string &cmd) {
+        bool ok = true;
+        for (char c : cmd) {
+            if (!drive.processIecDataByte(static_cast<uint8_t>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        return ok;
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++, true);
+
+    const bool listen = drive.processIecCommandByte(0x28);
+    pushRow("listen8", step++, listen);
+
+    const bool sa15 = drive.processIecCommandByte(0xFF);
+    pushRow("sa15", step++, sa15);
+
+    const bool mwData = feedData("M-W,0400,00,02,AA,55");
+    pushRow("mw_buffered", step++, mwData);
+
+    const bool unlistenMw = drive.processIecCommandByte(0x3F);
+    pushRow("unlisten_mw_commit", step++, unlistenMw);
+
+    const bool listen2 = drive.processIecCommandByte(0x28);
+    pushRow("listen8_again", step++, listen2);
+
+    const bool sa15_2 = drive.processIecCommandByte(0xFF);
+    pushRow("sa15_again", step++, sa15_2);
+
+    const bool mrData = feedData("M-R,0400,00,02");
+    pushRow("mr_buffered", step++, mrData);
+
+    const bool unlistenMr = drive.processIecCommandByte(0x3F);
+    pushRow("unlisten_mr_commit", step++, unlistenMr);
+
+    const bool talk = drive.processIecCommandByte(0x48);
+    pushRow("talk8", step++, talk);
+
+    const bool talkSa15 = drive.processIecCommandByte(0x6F);
+    pushRow("talk_sa15_payload", step++, talkSa15);
+
+    const bool untalk = drive.processIecCommandByte(0x5F);
+    pushRow("untalk", step++, untalk);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek45DriveFinalFreezeEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek45DriveFinalFreezeRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek45DriveFinalFreezeRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek45DriveFinalFreezeRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek45DriveFinalFreezeEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,op_ok,cmd_dispatch,data_dispatch,syntax_err,mem_0400,mem_0401,txq_size,alloc_count,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek45DriveFinalFreezeEdgeHardReference() {
+    const std::string runtimePath = "week45_drive_final_freeze_runtime.csv";
+    const std::string refPath = "reference/edge/week45_drive_final_freeze_trace.csv";
+
+    const std::vector<std::string> got = buildWeek45DriveFinalFreezeEdgeTraceRows();
+    writeWeek45DriveFinalFreezeEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK45_BOOTSTRAP_FINALFREEZE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek45DriveFinalFreezeEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK45-1541][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK45-1541][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK45-1541][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK45-1541][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK45-1541][HARDREF] PASS: drive final-freeze trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
