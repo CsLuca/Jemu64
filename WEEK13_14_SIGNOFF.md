@@ -322,6 +322,18 @@
   - runtime: `week45_drive_final_freeze_runtime.csv`
   - reference: `reference/edge/week45_drive_final_freeze_trace.csv`
 
+## Week46 Drive IEC Timing-Grade Hard-Ref
+
+- Added IEC timing-grade hard reference battery across drive revisions (1541/1541C/1541-II) for:
+  - ATN handshake visibility and listener byte-ack progression,
+  - EOI pending path with explicit 200-us guard window,
+  - deterministic EOI timeout crossing against current timeout tick budget.
+- Timing source used for thresholds/gates:
+  - `https://janderogee.com/projects/1541-III/files/pdf/IEC_disected-IEC_1541_info.pdf`
+- Hard reference trace:
+  - runtime: `week46_drive_iec_timing_grade_runtime.csv`
+  - reference: `reference/edge/week46_drive_iec_timing_grade_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -408,6 +420,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week43_drive_dirmode_trace.csv`
     - `reference/edge/week44_drive_cmdresp_term_trace.csv`
     - `reference/edge/week45_drive_final_freeze_trace.csv`
+    - `reference/edge/week46_drive_iec_timing_grade_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

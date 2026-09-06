@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Software-level tolerance policy for per-revision signoff metrics",
+  "description": "Software-level + IEC timing-grade tolerance policy for per-revision signoff metrics",
   "metrics": {
     "strict_6510_exit": { "min": 0, "max": 0 },
     "strict_8500_exit": { "min": 0, "max": 0 },
@@ -82,6 +82,9 @@
     "week44_drive_cmdresp_term_status_rows": { "min": 3, "max": 6 },
     "week45_drive_final_rows": { "min": 24, "max": 48 },
     "week45_drive_final_payload_rows": { "min": 3, "max": 6 },
-    "week45_drive_final_mem_written_rows": { "min": 6, "max": 30 }
+    "week45_drive_final_mem_written_rows": { "min": 6, "max": 30 },
+    "week46_drive_iec_timing_rows": { "min": 21, "max": 36 },
+    "week46_drive_iec_eoi_timeout_rows": { "min": 3, "max": 6 },
+    "week46_drive_iec_eoi_wait_200_guard_rows": { "min": 3, "max": 6 }
   }
 }
