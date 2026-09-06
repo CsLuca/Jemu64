@@ -89,6 +89,10 @@
     "week47_host_timing_rows": { "min": 180, "max": 220 },
     "week47_host_aec_low_windows": { "min": 16, "max": 40 },
     "week47_host_rdy_low_pulses": { "min": 8, "max": 24 },
-    "week47_host_dd00_edge_jitter_max": { "min": 0, "max": 6 }
+    "week47_host_dd00_edge_jitter_max": { "min": 0, "max": 6 },
+    "week48_drive_core_rows": { "min": 60, "max": 90 },
+    "week48_drive_core_cpu_step_max": { "min": 8, "max": 30 },
+    "week48_drive_core_via_access_rows": { "min": 60, "max": 90 },
+    "week48_drive_core_iec_effect_rows": { "min": 0, "max": 90 }
   }
 }

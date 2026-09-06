@@ -348,6 +348,16 @@
   - runtime: `week47_host_timing_runtime.csv`
   - reference: `reference/edge/week47_host_timing_trace.csv`
 
+## Week48 Drive Core Timing Baseline Hard-Ref
+
+- Added baseline drive core timing instrumentation across drive revisions (1541/1541C/1541-II) for:
+  - per-tick drive CPU progress (`cpu_step_count`, `cpu_last_opcode`),
+  - explicit VIA access tagging (`via_access`, `via1_ifr`, `via2_ifr`),
+  - IEC line side-effect visibility (`iec_effect`) while running deterministic line patterns.
+- Hard reference trace:
+  - runtime: `week48_drive_core_timing_runtime.csv`
+  - reference: `reference/edge/week48_drive_core_timing_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -451,6 +461,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week45_drive_final_freeze_trace.csv`
     - `reference/edge/week46_drive_iec_timing_grade_trace.csv`
     - `reference/edge/week47_host_timing_trace.csv`
+    - `reference/edge/week48_drive_core_timing_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
