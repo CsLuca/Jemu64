@@ -204,6 +204,9 @@ $metrics = [ordered]@{
     week42_drive_status_rows = 0
     week42_drive_status_74_rows = 0
     week42_drive_status_30_rows = 0
+    week43_drive_dirmode_rows = 0
+    week43_drive_dirmode_negated_rows = 0
+    week43_drive_dirmode_all_mode_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -761,6 +764,25 @@ try {
             }
             $metrics.week42_drive_status_74_rows = $rows74
             $metrics.week42_drive_status_30_rows = $rows30
+        }
+    }
+    $week43Ref = Join-Path -Path $repo -ChildPath "reference\edge\week43_drive_dirmode_trace.csv"
+    if (Test-Path -LiteralPath $week43Ref) {
+        $rows43 = @(Get-Content -LiteralPath $week43Ref)
+        if ($rows43.Count -gt 1) {
+            $metrics.week43_drive_dirmode_rows = $rows43.Count - 1
+            $negRows = 0
+            $allModeRows = 0
+            foreach ($line in $rows43) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 10) {
+                    $phase = $parts[1]
+                    if (($phase -eq 'mode_not_w') -and ($parts[8] -eq '1')) { $negRows++ }
+                    if (($phase -eq 'mode_all') -and ($parts[7] -eq '1')) { $allModeRows++ }
+                }
+            }
+            $metrics.week43_drive_dirmode_negated_rows = $negRows
+            $metrics.week43_drive_dirmode_all_mode_rows = $allModeRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

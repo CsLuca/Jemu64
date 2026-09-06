@@ -1,0 +1,16 @@
+rev,phase,step,op_ok,txq_size,mode_w_rows,mode_r_rows,mode_a_rows,negated,mode_filter
+1541,baseline,0,1,0,0,0,0,0,
+1541,mode_w,1,1,72,1,0,0,0,W
+1541,mode_r,2,1,72,0,1,0,0,R
+1541,mode_not_w,3,1,91,0,1,1,1,W
+1541,mode_all,4,1,110,1,1,1,0,
+1541C,baseline,0,1,0,0,0,0,0,
+1541C,mode_w,1,1,72,1,0,0,0,W
+1541C,mode_r,2,1,72,0,1,0,0,R
+1541C,mode_not_w,3,1,91,0,1,1,1,W
+1541C,mode_all,4,1,110,1,1,1,0,
+1541II,baseline,0,1,0,0,0,0,0,
+1541II,mode_w,1,1,72,1,0,0,0,W
+1541II,mode_r,2,1,72,0,1,0,0,R
+1541II,mode_not_w,3,1,91,0,1,1,1,W
+1541II,mode_all,4,1,110,1,1,1,0,

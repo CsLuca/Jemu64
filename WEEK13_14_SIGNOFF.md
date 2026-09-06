@@ -292,6 +292,16 @@
   - runtime: `week42_drive_status_rebuild_runtime.csv`
   - reference: `reference/edge/week42_drive_status_rebuild_trace.csv`
 
+## Week43 Drive Directory Mode-Filter Hard-Ref
+
+- Added dedicated 1541 directory mode-filter battery across drive revisions (1541/1541C/1541-II) for:
+  - mode-positive filter paths (`W`, `R`) with stable row discrimination,
+  - negated mode filter (`!W`) consistency,
+  - unfiltered baseline (`mode_all`) retention of all SEQ modes.
+- Hard reference trace:
+  - runtime: `week43_drive_dirmode_runtime.csv`
+  - reference: `reference/edge/week43_drive_dirmode_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -375,6 +385,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
     - `reference/edge/week41_drive_close15_drop_trace.csv`
     - `reference/edge/week42_drive_status_rebuild_trace.csv`
+    - `reference/edge/week43_drive_dirmode_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
