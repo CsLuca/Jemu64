@@ -8459,6 +8459,7 @@ static void runWeek42DriveStatusRebuildEdgeHardReference();
 static void runWeek43DriveDirModeFilterEdgeHardReference();
 static void runWeek44DriveCmdRespTerminatorEdgeHardReference();
 static void runWeek45DriveFinalFreezeEdgeHardReference();
+static void runWeek46DriveIecTimingGradeEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8498,6 +8499,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek43DriveDirModeFilterEdgeHardReference();
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runWeek45DriveFinalFreezeEdgeHardReference();
+    runWeek46DriveIecTimingGradeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8538,6 +8540,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek43DriveDirModeFilterEdgeHardReference();
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runWeek45DriveFinalFreezeEdgeHardReference();
+    runWeek46DriveIecTimingGradeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -12897,6 +12900,184 @@ static void runWeek45DriveFinalFreezeEdgeHardReference() {
     }
 
     std::cout << "[WEEK45-1541][HARDREF] PASS: drive final-freeze trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek46DriveIecTimingGradeRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(160);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.iecEnableAtnAck = true;
+    drive.iecEnableListenerByteAck = true;
+    drive.iecListening = true;
+
+    auto pushRow = [&](const char *phase, uint64_t step) {
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << int(drive.iecAtnAckTicks)
+            << "," << int(drive.iecRxByteAckTicks)
+            << "," << int(drive.iecEoiWaitTicks)
+            << "," << drive.iecEoiTimeoutCount
+            << "," << drive.iecEoiAckCount
+            << "," << (drive.iecAtnAckPullDATA ? 1 : 0)
+            << "," << (drive.iecRxByteAckPullDATA ? 1 : 0)
+            << "," << (drive.iecEoiPendingAck ? 1 : 0)
+            << "," << drive.iecStatusLine;
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++);
+
+    drive.setIecLines(false, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("atn_fall", step++);
+
+    drive.setIecLines(false, false, true);
+    drive.tickIecHalfCycle();
+    pushRow("atn_clock_low", step++);
+
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("atn_release", step++);
+
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, false);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, false, true);
+    drive.tickIecHalfCycle();
+    drive.setIecLines(true, true, false);
+    drive.tickIecHalfCycle();
+    pushRow("listen_byte_complete", step++);
+
+    drive.setIecLines(true, true, true);
+    drive.tickIecHalfCycle();
+    pushRow("listen_byte_ack_release", step++);
+
+    drive.iecListening = false;
+    drive.iecTalking = true;
+    drive.iecActiveTalkChannel = 0;
+    drive.iecTalkSecondary = 0;
+    drive.iecTalkSa0Confirmed = true;
+    drive.iecOpenTalkChannels[0] = true;
+    drive.iecTxQueue.clear();
+    drive.iecTxQueue.push_back(0x41);
+    drive.setIecLines(true, true, true);
+
+    for (int i = 0; i < 48; ++i) {
+        drive.setIecLines(true, false, true);
+        drive.tickIecHalfCycle();
+        drive.setIecLines(true, true, true);
+        drive.tickIecHalfCycle();
+        if (drive.iecEoiPendingAck) {
+            break;
+        }
+    }
+    pushRow("talk_eoi_pending", step++);
+
+    drive.setIecLines(true, true, true);
+    for (int i = 0; i < 200; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    pushRow("eoi_wait_200us_guard", step++);
+
+    for (int i = 0; i < 80; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    pushRow("eoi_timeout_cross", step++);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek46DriveIecTimingGradeEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek46DriveIecTimingGradeRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek46DriveIecTimingGradeRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek46DriveIecTimingGradeRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek46DriveIecTimingGradeEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,atn_ack_ticks,rx_ack_ticks,eoi_wait_ticks,eoi_timeout_count,eoi_ack_count,atn_ack_pull,rx_ack_pull,eoi_pending,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek46DriveIecTimingGradeEdgeHardReference() {
+    const std::string runtimePath = "week46_drive_iec_timing_grade_runtime.csv";
+    const std::string refPath = "reference/edge/week46_drive_iec_timing_grade_trace.csv";
+
+    const std::vector<std::string> got = buildWeek46DriveIecTimingGradeEdgeTraceRows();
+    writeWeek46DriveIecTimingGradeEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK46_BOOTSTRAP_IECTIMING_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek46DriveIecTimingGradeEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK46-IEC][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK46-IEC][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK46-IEC][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK46-IEC][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK46-IEC][HARDREF] PASS: drive IEC timing-grade trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

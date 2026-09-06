@@ -1,0 +1,28 @@
+rev,phase,step,atn_ack_ticks,rx_ack_ticks,eoi_wait_ticks,eoi_timeout_count,eoi_ack_count,atn_ack_pull,rx_ack_pull,eoi_pending,status
+1541,baseline,0,0,0,0,0,0,0,0,0,00,OK,00,00
+1541,atn_fall,1,16,0,0,0,0,1,0,0,00,OK,00,00
+1541,atn_clock_low,2,15,0,0,0,0,1,0,0,00,OK,00,00
+1541,atn_release,3,0,0,0,0,0,0,0,0,00,OK,00,00
+1541,listen_byte_complete,4,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541,listen_byte_ack_release,5,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541,talk_eoi_pending,6,0,0,0,0,0,0,0,1,70,NO CHANNEL,00,00
+1541,eoi_wait_200us_guard,7,0,0,200,0,0,0,0,1,70,NO CHANNEL,00,00
+1541,eoi_timeout_cross,8,0,0,0,1,0,0,0,0,74,DRIVE NOT READY,00,00
+1541C,baseline,0,0,0,0,0,0,0,0,0,00,OK,00,00
+1541C,atn_fall,1,7,0,0,0,0,1,0,0,00,OK,00,00
+1541C,atn_clock_low,2,6,0,0,0,0,1,0,0,00,OK,00,00
+1541C,atn_release,3,0,0,0,0,0,0,0,0,00,OK,00,00
+1541C,listen_byte_complete,4,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541C,listen_byte_ack_release,5,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541C,talk_eoi_pending,6,0,0,0,0,0,0,0,1,70,NO CHANNEL,00,00
+1541C,eoi_wait_200us_guard,7,0,0,200,0,0,0,0,1,70,NO CHANNEL,00,00
+1541C,eoi_timeout_cross,8,0,0,0,1,0,0,0,0,74,DRIVE NOT READY,00,00
+1541II,baseline,0,0,0,0,0,0,0,0,0,00,OK,00,00
+1541II,atn_fall,1,5,0,0,0,0,1,0,0,00,OK,00,00
+1541II,atn_clock_low,2,4,0,0,0,0,1,0,0,00,OK,00,00
+1541II,atn_release,3,0,0,0,0,0,0,0,0,00,OK,00,00
+1541II,listen_byte_complete,4,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541II,listen_byte_ack_release,5,0,0,0,0,0,0,0,0,70,NO CHANNEL,00,00
+1541II,talk_eoi_pending,6,0,0,0,0,0,0,0,1,70,NO CHANNEL,00,00
+1541II,eoi_wait_200us_guard,7,0,0,200,0,0,0,0,1,70,NO CHANNEL,00,00
+1541II,eoi_timeout_cross,8,0,0,0,1,0,0,0,0,74,DRIVE NOT READY,00,00

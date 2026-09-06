@@ -80,6 +80,9 @@
                     "week44_drive_cmdresp_term_status_rows":  3,
                     "week45_drive_final_rows":  36,
                     "week45_drive_final_payload_rows":  3,
-                    "week45_drive_final_mem_written_rows":  24
+                    "week45_drive_final_mem_written_rows":  24,
+                    "week46_drive_iec_timing_rows":  27,
+                    "week46_drive_iec_eoi_timeout_rows":  3,
+                    "week46_drive_iec_eoi_wait_200_guard_rows":  3
                 }
 }
