@@ -330,9 +330,23 @@
   - deterministic EOI timeout crossing against current timeout tick budget.
 - Timing source used for thresholds/gates:
   - `https://janderogee.com/projects/1541-III/files/pdf/IEC_disected-IEC_1541_info.pdf`
+  - secondary host-side scope reference: `http://tech.guitarsite.de/c64_scope.html`
 - Hard reference trace:
   - runtime: `week46_drive_iec_timing_grade_runtime.csv`
   - reference: `reference/edge/week46_drive_iec_timing_grade_trace.csv`
+
+## Week47 Host Timing Stabilization Hard-Ref
+
+- Added host-side timing stabilization hard reference to anchor IEC-related host behavior for:
+  - AEC low-window stability (`week47_host_aec_low_windows`),
+  - RDY low pulse cadence (`week47_host_rdy_low_pulses`),
+  - DD00 edge-gap jitter guard (`week47_host_dd00_edge_jitter_max`).
+- Sources used for host-side expectations:
+  - primary host waveform reference: `http://tech.guitarsite.de/c64_scope.html`
+  - IEC timing source for cross-check context: `https://janderogee.com/projects/1541-III/files/pdf/IEC_disected-IEC_1541_info.pdf`
+- Hard reference trace:
+  - runtime: `week47_host_timing_runtime.csv`
+  - reference: `reference/edge/week47_host_timing_trace.csv`
 
 ## Exit Criteria Results
 
@@ -384,6 +398,21 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Add automated capture/refresh pipeline for new `reference/edge/*.csv` artifacts (same bootstrap discipline as VICE refs).
 - Continue replacing any remaining proxy references with direct VICE/x64sc captures where feasible.
 
+## Week47 Proposal (Host-Side Timing Stabilization)
+
+- Goal:
+  - add host-side timing checks that support IEC robustness in pure mode, without changing protocol semantics.
+- Proposed metrics:
+  - `week47_host_aec_low_windows`: count stable AEC-low windows during KERNAL IEC E2E (must be non-zero and deterministic banded).
+  - `week47_host_rdy_low_pulses`: count RDY low pulses and bound drift against the same run profile.
+  - `week47_host_dd00_edge_jitter_max`: max edge-gap jitter from DD00 transition history during E2E.
+- Initial policy strategy:
+  - start with wide min/max tolerance bands on first bootstrap,
+  - tighten after 3-5 consecutive green runs.
+- Sources:
+  - primary IEC timing reference: `https://janderogee.com/projects/1541-III/files/pdf/IEC_disected-IEC_1541_info.pdf`
+  - host waveforms/reference behavior: `http://tech.guitarsite.de/c64_scope.html`
+
 ## Reference Refresh Commands
 
 - `run_prepare_pc_only_references.ps1`
@@ -421,6 +450,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week44_drive_cmdresp_term_trace.csv`
     - `reference/edge/week45_drive_final_freeze_trace.csv`
     - `reference/edge/week46_drive_iec_timing_grade_trace.csv`
+    - `reference/edge/week47_host_timing_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

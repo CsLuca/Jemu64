@@ -85,6 +85,10 @@
     "week45_drive_final_mem_written_rows": { "min": 6, "max": 30 },
     "week46_drive_iec_timing_rows": { "min": 21, "max": 36 },
     "week46_drive_iec_eoi_timeout_rows": { "min": 3, "max": 6 },
-    "week46_drive_iec_eoi_wait_200_guard_rows": { "min": 3, "max": 6 }
+    "week46_drive_iec_eoi_wait_200_guard_rows": { "min": 3, "max": 6 },
+    "week47_host_timing_rows": { "min": 180, "max": 220 },
+    "week47_host_aec_low_windows": { "min": 16, "max": 40 },
+    "week47_host_rdy_low_pulses": { "min": 8, "max": 24 },
+    "week47_host_dd00_edge_jitter_max": { "min": 0, "max": 6 }
   }
 }
