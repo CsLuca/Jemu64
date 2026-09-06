@@ -70,6 +70,9 @@
     "week40_drive_cmdbuf_syntax_rows": { "min": 3, "max": 6 },
     "week41_drive_close_drop_rows": { "min": 24, "max": 48 },
     "week41_drive_close_drop_buffer_rows": { "min": 6, "max": 12 },
-    "week41_drive_close_drop_execute_rows": { "min": 3, "max": 6 }
+    "week41_drive_close_drop_execute_rows": { "min": 3, "max": 6 },
+    "week42_drive_status_rows": { "min": 18, "max": 36 },
+    "week42_drive_status_74_rows": { "min": 3, "max": 6 },
+    "week42_drive_status_30_rows": { "min": 3, "max": 6 }
   }
 }

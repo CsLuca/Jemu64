@@ -95,4 +95,5 @@ jobs:
             week39_drive_cmdresp_fallback_runtime.csv
             week40_drive_cmdbuf_commit_runtime.csv
             week41_drive_close15_drop_runtime.csv
+            week42_drive_status_rebuild_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

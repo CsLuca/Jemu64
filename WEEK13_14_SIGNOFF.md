@@ -282,6 +282,16 @@
   - runtime: `week41_drive_close15_drop_runtime.csv`
   - reference: `reference/edge/week41_drive_close15_drop_trace.csv`
 
+## Week42 Drive TALK Status Rebuild Hard-Ref
+
+- Added dedicated 1541 TALK status rebuild battery across drive revisions (1541/1541C/1541-II) for:
+  - repeated SA15 status payload generation from evolving status strings,
+  - deterministic transition across `00,OK` -> `74,DRIVE NOT READY` -> `30,SYNTAX ERROR`,
+  - post-UNTALK SA15 command rejection consistency.
+- Hard reference trace:
+  - runtime: `week42_drive_status_rebuild_runtime.csv`
+  - reference: `reference/edge/week42_drive_status_rebuild_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -364,6 +374,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
     - `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
     - `reference/edge/week41_drive_close15_drop_trace.csv`
+    - `reference/edge/week42_drive_status_rebuild_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -201,6 +201,9 @@ $metrics = [ordered]@{
     week41_drive_close_drop_rows = 0
     week41_drive_close_drop_buffer_rows = 0
     week41_drive_close_drop_execute_rows = 0
+    week42_drive_status_rows = 0
+    week42_drive_status_74_rows = 0
+    week42_drive_status_30_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -739,6 +742,25 @@ try {
             }
             $metrics.week41_drive_close_drop_buffer_rows = $bufferRows
             $metrics.week41_drive_close_drop_execute_rows = $executeRows
+        }
+    }
+    $week42Ref = Join-Path -Path $repo -ChildPath "reference\edge\week42_drive_status_rebuild_trace.csv"
+    if (Test-Path -LiteralPath $week42Ref) {
+        $rows42 = @(Get-Content -LiteralPath $week42Ref)
+        if ($rows42.Count -gt 1) {
+            $metrics.week42_drive_status_rows = $rows42.Count - 1
+            $rows74 = 0
+            $rows30 = 0
+            foreach ($line in $rows42) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 9) {
+                    $phase = $parts[1]
+                    if ($phase -eq 'talk_sa15_status74') { $rows74++ }
+                    if ($phase -eq 'talk_sa15_status30') { $rows30++ }
+                }
+            }
+            $metrics.week42_drive_status_74_rows = $rows74
+            $metrics.week42_drive_status_30_rows = $rows30
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
