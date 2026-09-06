@@ -272,6 +272,16 @@
   - runtime: `week40_drive_cmdbuf_commit_runtime.csv`
   - reference: `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
 
+## Week41 Drive CLOSE15 Drop/Commit Hard-Ref
+
+- Added dedicated 1541 CLOSE15 drop/commit battery across drive revisions (1541/1541C/1541-II) for:
+  - command-buffer drop path when channel 15 is closed before UNLISTEN,
+  - clean re-open of LISTEN/SA15 and subsequent data buffering,
+  - deterministic UNLISTEN commit for the re-opened command path.
+- Hard reference trace:
+  - runtime: `week41_drive_close15_drop_runtime.csv`
+  - reference: `reference/edge/week41_drive_close15_drop_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -353,6 +363,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week38_drive_talkch_close_trace.csv`
     - `reference/edge/week39_drive_cmdresp_fallback_trace.csv`
     - `reference/edge/week40_drive_cmdbuf_commit_trace.csv`
+    - `reference/edge/week41_drive_close15_drop_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

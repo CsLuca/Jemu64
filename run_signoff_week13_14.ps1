@@ -198,6 +198,9 @@ $metrics = [ordered]@{
     week40_drive_cmdbuf_rows = 0
     week40_drive_cmdbuf_commit_rows = 0
     week40_drive_cmdbuf_syntax_rows = 0
+    week41_drive_close_drop_rows = 0
+    week41_drive_close_drop_buffer_rows = 0
+    week41_drive_close_drop_execute_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -717,6 +720,25 @@ try {
             }
             $metrics.week40_drive_cmdbuf_commit_rows = $commitRows
             $metrics.week40_drive_cmdbuf_syntax_rows = $syntaxRows
+        }
+    }
+    $week41Ref = Join-Path -Path $repo -ChildPath "reference\edge\week41_drive_close15_drop_trace.csv"
+    if (Test-Path -LiteralPath $week41Ref) {
+        $rows41 = @(Get-Content -LiteralPath $week41Ref)
+        if ($rows41.Count -gt 1) {
+            $metrics.week41_drive_close_drop_rows = $rows41.Count - 1
+            $bufferRows = 0
+            $executeRows = 0
+            foreach ($line in $rows41) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 12) {
+                    $phase = $parts[1]
+                    if (($phase -like 'data_buffered_*') -and ($parts[6] -eq '17')) { $bufferRows++ }
+                    if (($phase -eq 'unlisten_execute') -and ($parts[10] -eq '171')) { $executeRows++ }
+                }
+            }
+            $metrics.week41_drive_close_drop_buffer_rows = $bufferRows
+            $metrics.week41_drive_close_drop_execute_rows = $executeRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

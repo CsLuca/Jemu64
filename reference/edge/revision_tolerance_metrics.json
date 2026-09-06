@@ -65,6 +65,9 @@
                     "week39_drive_cmdresp_status_rows":  3,
                     "week40_drive_cmdbuf_rows":  36,
                     "week40_drive_cmdbuf_commit_rows":  6,
-                    "week40_drive_cmdbuf_syntax_rows":  3
+                    "week40_drive_cmdbuf_syntax_rows":  3,
+                    "week41_drive_close_drop_rows":  30,
+                    "week41_drive_close_drop_buffer_rows":  6,
+                    "week41_drive_close_drop_execute_rows":  3
                 }
 }
