@@ -8456,6 +8456,7 @@ static void runWeek39DriveCmdResponseFallbackEdgeHardReference();
 static void runWeek40DriveCmdBufferCommitEdgeHardReference();
 static void runWeek41DriveClose15DropEdgeHardReference();
 static void runWeek42DriveStatusRebuildEdgeHardReference();
+static void runWeek43DriveDirModeFilterEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8492,6 +8493,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek40DriveCmdBufferCommitEdgeHardReference();
     runWeek41DriveClose15DropEdgeHardReference();
     runWeek42DriveStatusRebuildEdgeHardReference();
+    runWeek43DriveDirModeFilterEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8529,6 +8531,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek40DriveCmdBufferCommitEdgeHardReference();
     runWeek41DriveClose15DropEdgeHardReference();
     runWeek42DriveStatusRebuildEdgeHardReference();
+    runWeek43DriveDirModeFilterEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -12490,6 +12493,150 @@ static void runWeek42DriveStatusRebuildEdgeHardReference() {
     }
 
     std::cout << "[WEEK42][HARDREF] PASS: drive TALK status rebuild trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek43DriveDirModeFilterRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(128);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    drive.iecChannelOpenName[0] = "DOCA";
+    drive.iecChannelOpenNameValid[0] = true;
+    drive.iecChannelOpenType[0] = "SEQ";
+    drive.iecChannelOpenMode[0] = "W";
+    (void)drive.allocateVirtualBlock(0x11, 0x01, 0x00);
+
+    drive.iecChannelOpenName[1] = "DOCB";
+    drive.iecChannelOpenNameValid[1] = true;
+    drive.iecChannelOpenType[1] = "SEQ";
+    drive.iecChannelOpenMode[1] = "R";
+    (void)drive.allocateVirtualBlock(0x11, 0x02, 0x01);
+
+    drive.iecChannelOpenName[2] = "DOCC";
+    drive.iecChannelOpenNameValid[2] = true;
+    drive.iecChannelOpenType[2] = "SEQ";
+    drive.iecChannelOpenMode[2] = "A";
+    (void)drive.allocateVirtualBlock(0x11, 0x03, 0x02);
+
+    auto countModeRows = [&](char modeCh) {
+        uint32_t hits = 0;
+        for (size_t i = 0; i + 1 < drive.iecTxQueue.size(); ++i) {
+            if (drive.iecTxQueue[i] == static_cast<uint8_t>(',' ) && drive.iecTxQueue[i + 1] == static_cast<uint8_t>(modeCh)) {
+                hits++;
+            }
+        }
+        return hits;
+    };
+
+    auto pushRow = [&](const char *phase, uint64_t step, bool opOk) {
+        const uint32_t modeW = countModeRows('W');
+        const uint32_t modeR = countModeRows('R');
+        const uint32_t modeA = countModeRows('A');
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << (opOk ? 1 : 0)
+            << "," << drive.iecTxQueue.size()
+            << "," << modeW
+            << "," << modeR
+            << "," << modeA
+            << "," << (drive.iecDirectoryModeFilterNegated ? 1 : 0)
+            << "," << drive.iecDirectoryModeFilter;
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++, true);
+
+    drive.iecDirectoryWildcardPattern = "DOC*";
+    drive.iecDirectoryTypeFilter = "SEQ";
+    drive.iecDirectoryModeFilter = "W";
+    drive.iecDirectoryModeFilterNegated = false;
+    drive.buildDirectoryStubPayload();
+    pushRow("mode_w", step++, true);
+
+    drive.iecDirectoryModeFilter = "R";
+    drive.iecDirectoryModeFilterNegated = false;
+    drive.buildDirectoryStubPayload();
+    pushRow("mode_r", step++, true);
+
+    drive.iecDirectoryModeFilter = "W";
+    drive.iecDirectoryModeFilterNegated = true;
+    drive.buildDirectoryStubPayload();
+    pushRow("mode_not_w", step++, true);
+
+    drive.iecDirectoryModeFilter.clear();
+    drive.iecDirectoryModeFilterNegated = false;
+    drive.buildDirectoryStubPayload();
+    pushRow("mode_all", step++, true);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek43DriveDirModeFilterEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek43DriveDirModeFilterRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek43DriveDirModeFilterRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek43DriveDirModeFilterRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek43DriveDirModeFilterEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,op_ok,txq_size,mode_w_rows,mode_r_rows,mode_a_rows,negated,mode_filter\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek43DriveDirModeFilterEdgeHardReference() {
+    const std::string runtimePath = "week43_drive_dirmode_runtime.csv";
+    const std::string refPath = "reference/edge/week43_drive_dirmode_trace.csv";
+
+    const std::vector<std::string> got = buildWeek43DriveDirModeFilterEdgeTraceRows();
+    writeWeek43DriveDirModeFilterEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK43_BOOTSTRAP_DIRMODE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek43DriveDirModeFilterEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK43][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK43][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK43][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK43][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK43][HARDREF] PASS: drive directory mode-filter trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
