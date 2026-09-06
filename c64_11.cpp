@@ -8457,6 +8457,7 @@ static void runWeek40DriveCmdBufferCommitEdgeHardReference();
 static void runWeek41DriveClose15DropEdgeHardReference();
 static void runWeek42DriveStatusRebuildEdgeHardReference();
 static void runWeek43DriveDirModeFilterEdgeHardReference();
+static void runWeek44DriveCmdRespTerminatorEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8494,6 +8495,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek41DriveClose15DropEdgeHardReference();
     runWeek42DriveStatusRebuildEdgeHardReference();
     runWeek43DriveDirModeFilterEdgeHardReference();
+    runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8532,6 +8534,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek41DriveClose15DropEdgeHardReference();
     runWeek42DriveStatusRebuildEdgeHardReference();
     runWeek43DriveDirModeFilterEdgeHardReference();
+    runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -12637,6 +12640,120 @@ static void runWeek43DriveDirModeFilterEdgeHardReference() {
     }
 
     std::cout << "[WEEK43][HARDREF] PASS: drive directory mode-filter trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek44DriveCmdRespTerminatorRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(128);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    auto pushRow = [&](const char *phase, uint64_t step, bool opOk) {
+        const int txHead = drive.iecTxQueue.empty() ? -1 : int(drive.iecTxQueue.front());
+        const int txTail = drive.iecTxQueue.empty() ? -1 : int(drive.iecTxQueue.back());
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << step
+            << "," << (opOk ? 1 : 0)
+            << "," << (drive.iecTalking ? 1 : 0)
+            << "," << int(drive.iecTalkSecondary)
+            << "," << drive.iecCommandResponseQueue.size()
+            << "," << drive.iecTxQueue.size()
+            << "," << txHead
+            << "," << txTail;
+        rows.push_back(oss.str());
+    };
+
+    uint64_t step = 0;
+    pushRow("baseline", step++, true);
+
+    drive.iecCommandResponseQueue.clear();
+    drive.iecCommandResponseQueue.push_back(0x10);
+    drive.iecCommandResponseQueue.push_back(0x20);
+    drive.iecCommandResponseQueue.push_back(0x30);
+    pushRow("seed_respq", step++, true);
+
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    const bool talkCmd = drive.processIecCommandByte(0x48);
+    pushRow("talk_cmd", step++, talkCmd);
+
+    const bool talkSa15Resp = drive.processIecCommandByte(0x6F);
+    pushRow("talk_sa15_resp", step++, talkSa15Resp);
+
+    const bool talkSa15Again = drive.processIecCommandByte(0x6F);
+    pushRow("talk_sa15_again_status", step++, talkSa15Again);
+
+    const bool untalk = drive.processIecCommandByte(0x5F);
+    pushRow("untalk", step++, untalk);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek44DriveCmdRespTerminatorEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek44DriveCmdRespTerminatorRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek44DriveCmdRespTerminatorRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek44DriveCmdRespTerminatorRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek44DriveCmdRespTerminatorEdgeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,op_ok,talking,talk_sa,respq,txq,tx_head,tx_tail\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek44DriveCmdRespTerminatorEdgeHardReference() {
+    const std::string runtimePath = "week44_drive_cmdresp_term_runtime.csv";
+    const std::string refPath = "reference/edge/week44_drive_cmdresp_term_trace.csv";
+
+    const std::vector<std::string> got = buildWeek44DriveCmdRespTerminatorEdgeTraceRows();
+    writeWeek44DriveCmdRespTerminatorEdgeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK44_BOOTSTRAP_CMDRESPTERM_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek44DriveCmdRespTerminatorEdgeTraceCsv(refPath, got);
+        std::cout << "[WEEK44][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK44][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK44][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK44][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK44][HARDREF] PASS: drive command-response terminator trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
