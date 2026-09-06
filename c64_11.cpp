@@ -8460,6 +8460,7 @@ static void runWeek43DriveDirModeFilterEdgeHardReference();
 static void runWeek44DriveCmdRespTerminatorEdgeHardReference();
 static void runWeek45DriveFinalFreezeEdgeHardReference();
 static void runWeek46DriveIecTimingGradeEdgeHardReference();
+static void runWeek47HostTimingStabilizationEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8500,6 +8501,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runWeek45DriveFinalFreezeEdgeHardReference();
     runWeek46DriveIecTimingGradeEdgeHardReference();
+    runWeek47HostTimingStabilizationEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8541,6 +8543,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek44DriveCmdRespTerminatorEdgeHardReference();
     runWeek45DriveFinalFreezeEdgeHardReference();
     runWeek46DriveIecTimingGradeEdgeHardReference();
+    runWeek47HostTimingStabilizationEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -13078,6 +13081,151 @@ static void runWeek46DriveIecTimingGradeEdgeHardReference() {
     }
 
     std::cout << "[WEEK46-IEC][HARDREF] PASS: drive IEC timing-grade trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek47HostTimingStabilizationTraceRows() {
+    std::vector<std::string> rows;
+    rows.reserve(256);
+
+    Bus bus;
+    VICII vic;
+    CIA6526 cia1;
+    CIA6526 cia2;
+    SID sid;
+    bus.vic = &vic;
+    bus.cia1 = &cia1;
+    bus.cia2 = &cia2;
+    bus.sid = &sid;
+    vic.bus = &bus;
+    CPU6510 cpu(bus);
+
+    bool lastVicHadBus = false;
+    bool prevAecHigh = true;
+    bool prevRdyLow = false;
+
+    uint32_t aecLowWindows = 0;
+    uint32_t rdyLowPulses = 0;
+
+    uint8_t dd00 = 0x97;
+    uint32_t dd00EdgeCount = 0;
+    int dd00StepsSinceEdge = 0;
+    int dd00PrevGap = 0;
+    int dd00Gap = 0;
+    int dd00JitterMax = 0;
+    size_t dd00Phase = 0;
+    const std::array<int, 6> dd00GapPattern = {5, 7, 6, 8, 5, 9};
+    int dd00EdgeCountdown = dd00GapPattern[0];
+
+    for (uint32_t step = 0; step < 192; ++step) {
+        const bool aecHigh = !(((step % 16) < 3) || ((step % 29) == 11));
+        const bool baHigh = !(((step % 21) < 2) || ((step % 37) == 19));
+        vic.aecLine = aecHigh;
+        vic.baLine = baHigh;
+
+        tickCpuWithVicContention(bus, cpu, lastVicHadBus);
+        tickPeripherals(bus);
+        syncInterruptLines(bus, cpu);
+
+        const bool rdyLow = !baHigh;
+        if (prevAecHigh && !aecHigh) {
+            aecLowWindows++;
+        }
+        if (!prevRdyLow && rdyLow) {
+            rdyLowPulses++;
+        }
+        prevAecHigh = aecHigh;
+        prevRdyLow = rdyLow;
+
+        dd00StepsSinceEdge++;
+        dd00EdgeCountdown--;
+        bool dd00Edge = false;
+        if (dd00EdgeCountdown <= 0) {
+            dd00Edge = true;
+            dd00EdgeCount++;
+            dd00Gap = dd00StepsSinceEdge;
+            if (dd00PrevGap > 0) {
+                const int jitter = std::abs(dd00Gap - dd00PrevGap);
+                if (jitter > dd00JitterMax) {
+                    dd00JitterMax = jitter;
+                }
+            }
+            dd00PrevGap = dd00Gap;
+            dd00StepsSinceEdge = 0;
+            dd00 = static_cast<uint8_t>((dd00 << 1) | (dd00 >> 7));
+            dd00 ^= static_cast<uint8_t>(0x10 | ((step & 0x03) << 5));
+            dd00Phase = (dd00Phase + 1) % dd00GapPattern.size();
+            dd00EdgeCountdown = dd00GapPattern[dd00Phase];
+        }
+
+        std::ostringstream oss;
+        oss << step
+            << "," << (aecHigh ? 1 : 0)
+            << "," << (baHigh ? 1 : 0)
+            << "," << (rdyLow ? 1 : 0)
+            << "," << std::hex << std::uppercase << int(dd00)
+            << std::dec
+            << "," << (dd00Edge ? 1 : 0)
+            << "," << dd00Gap
+            << "," << dd00JitterMax
+            << "," << aecLowWindows
+            << "," << rdyLowPulses
+            << "," << dd00EdgeCount
+            << "," << cpu.getTotalHalfCycles();
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+static void writeWeek47HostTimingStabilizationTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "step,aec_high,ba_high,rdy_low,dd00_hex,dd00_edge,dd00_gap,dd00_jitter_max,aec_low_windows,rdy_low_pulses,dd00_edge_count,total_halfcycles\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek47HostTimingStabilizationEdgeHardReference() {
+    const std::string runtimePath = "week47_host_timing_runtime.csv";
+    const std::string refPath = "reference/edge/week47_host_timing_trace.csv";
+
+    const std::vector<std::string> got = buildWeek47HostTimingStabilizationTraceRows();
+    writeWeek47HostTimingStabilizationTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK47_BOOTSTRAP_HOSTTIMING_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek47HostTimingStabilizationTraceCsv(refPath, got);
+        std::cout << "[WEEK47-HOST][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK47-HOST][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK47-HOST][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK47-HOST][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK47-HOST][HARDREF] PASS: host timing stabilization trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

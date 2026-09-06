@@ -83,6 +83,10 @@
                     "week45_drive_final_mem_written_rows":  24,
                     "week46_drive_iec_timing_rows":  27,
                     "week46_drive_iec_eoi_timeout_rows":  3,
-                    "week46_drive_iec_eoi_wait_200_guard_rows":  3
+                    "week46_drive_iec_eoi_wait_200_guard_rows":  3,
+                    "week47_host_timing_rows":  192,
+                    "week47_host_aec_low_windows":  17,
+                    "week47_host_rdy_low_pulses":  14,
+                    "week47_host_dd00_edge_jitter_max":  4
                 }
 }
