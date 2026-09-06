@@ -87,6 +87,10 @@
                     "week47_host_timing_rows":  192,
                     "week47_host_aec_low_windows":  17,
                     "week47_host_rdy_low_pulses":  14,
-                    "week47_host_dd00_edge_jitter_max":  4
+                    "week47_host_dd00_edge_jitter_max":  4,
+                    "week48_drive_core_rows":  72,
+                    "week48_drive_core_cpu_step_max":  9,
+                    "week48_drive_core_via_access_rows":  72,
+                    "week48_drive_core_iec_effect_rows":  0
                 }
 }

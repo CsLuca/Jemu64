@@ -8461,6 +8461,7 @@ static void runWeek44DriveCmdRespTerminatorEdgeHardReference();
 static void runWeek45DriveFinalFreezeEdgeHardReference();
 static void runWeek46DriveIecTimingGradeEdgeHardReference();
 static void runWeek47HostTimingStabilizationEdgeHardReference();
+static void runWeek48DriveCoreTimingBaselineEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8502,6 +8503,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek45DriveFinalFreezeEdgeHardReference();
     runWeek46DriveIecTimingGradeEdgeHardReference();
     runWeek47HostTimingStabilizationEdgeHardReference();
+    runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8544,6 +8546,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek45DriveFinalFreezeEdgeHardReference();
     runWeek46DriveIecTimingGradeEdgeHardReference();
     runWeek47HostTimingStabilizationEdgeHardReference();
+    runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -13226,6 +13229,136 @@ static void runWeek47HostTimingStabilizationEdgeHardReference() {
     }
 
     std::cout << "[WEEK47-HOST][HARDREF] PASS: host timing stabilization trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek48DriveCoreTimingRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(128);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9; // LDA #$01
+    drive.memory[0xC001] = 0x01;
+    drive.memory[0xC002] = 0xA2; // LDX #$02
+    drive.memory[0xC003] = 0x02;
+    drive.memory[0xC004] = 0xA0; // LDY #$03
+    drive.memory[0xC005] = 0x03;
+    drive.memory[0xC006] = 0xD0; // BNE +2
+    drive.memory[0xC007] = 0x02;
+    drive.memory[0xC008] = 0xEA; // NOP
+    drive.memory[0xC009] = 0xEA; // NOP
+    drive.memory[0xC00A] = 0x4C; // JMP $C000
+    drive.memory[0xC00B] = 0x00;
+    drive.memory[0xC00C] = 0xC0;
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    for (uint64_t step = 0; step < 24; ++step) {
+        char busRw = 'I';
+        const char *viaAccess = "none";
+        const uint16_t viaAddr = ((step & 0x02u) == 0u) ? 0x1800 : 0x1C00;
+        if ((step & 0x01u) == 0u) {
+            (void)drive.read(viaAddr);
+            busRw = 'R';
+            viaAccess = ((step & 0x02u) == 0u) ? "v1r00" : "v2r00";
+        } else {
+            drive.write(viaAddr, static_cast<uint8_t>((0x30u + step) & 0xFFu));
+            busRw = 'W';
+            viaAccess = ((step & 0x02u) == 0u) ? "v1w00" : "v2w00";
+        }
+
+        const bool atnHigh = (((step + 1u) % 6u) != 0u);
+        const bool clkHigh = ((step % 3u) != 0u);
+        const bool dataHigh = (((step + 2u) % 5u) != 0u);
+        drive.setIecLines(atnHigh, clkHigh, dataHigh);
+        drive.tickIecHalfCycle();
+
+        const int iecEffect = (drive.iecDrivePullCLK ? 1 : 0) | (drive.iecDrivePullDATA ? 2 : 0);
+
+        std::ostringstream oss;
+        oss << label
+            << ",tick"
+            << "," << step
+            << "," << drive.cpuStepCount
+            << "," << int(drive.cpuLastOpcode)
+            << "," << busRw
+            << "," << viaAccess
+            << "," << int(drive.via1.regs[0x0D])
+            << "," << int(drive.via2.regs[0x0D])
+            << "," << iecEffect
+            << "," << drive.cycles;
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek48DriveCoreTimingBaselineEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek48DriveCoreTimingRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek48DriveCoreTimingRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek48DriveCoreTimingRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek48DriveCoreTimingBaselineTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cpu_step_count,cpu_last_opcode,bus_rw,via_access,via1_ifr,via2_ifr,iec_effect,cycles\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek48DriveCoreTimingBaselineEdgeHardReference() {
+    const std::string runtimePath = "week48_drive_core_timing_runtime.csv";
+    const std::string refPath = "reference/edge/week48_drive_core_timing_trace.csv";
+
+    const std::vector<std::string> got = buildWeek48DriveCoreTimingBaselineEdgeTraceRows();
+    writeWeek48DriveCoreTimingBaselineTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK48_BOOTSTRAP_DRIVECORE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek48DriveCoreTimingBaselineTraceCsv(refPath, got);
+        std::cout << "[WEEK48-CORE][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK48-CORE][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK48-CORE][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK48-CORE][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK48-CORE][HARDREF] PASS: drive core timing baseline trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
