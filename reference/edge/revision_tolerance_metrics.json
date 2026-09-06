@@ -74,6 +74,9 @@
                     "week42_drive_status_30_rows":  3,
                     "week43_drive_dirmode_rows":  15,
                     "week43_drive_dirmode_negated_rows":  3,
-                    "week43_drive_dirmode_all_mode_rows":  3
+                    "week43_drive_dirmode_all_mode_rows":  3,
+                    "week44_drive_cmdresp_term_rows":  18,
+                    "week44_drive_cmdresp_term_payload_rows":  3,
+                    "week44_drive_cmdresp_term_status_rows":  3
                 }
 }

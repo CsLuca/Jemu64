@@ -302,6 +302,16 @@
   - runtime: `week43_drive_dirmode_runtime.csv`
   - reference: `reference/edge/week43_drive_dirmode_trace.csv`
 
+## Week44 Drive Command-Response Terminator Hard-Ref
+
+- Added dedicated 1541 command-response terminator battery across drive revisions (1541/1541C/1541-II) for:
+  - SA15 command-response payload generation with explicit response queue seed,
+  - response-queue drain + fallback on immediate re-issue,
+  - stable TALK/UNTALK transition after payload/status boundary.
+- Hard reference trace:
+  - runtime: `week44_drive_cmdresp_term_runtime.csv`
+  - reference: `reference/edge/week44_drive_cmdresp_term_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -386,6 +396,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week41_drive_close15_drop_trace.csv`
     - `reference/edge/week42_drive_status_rebuild_trace.csv`
     - `reference/edge/week43_drive_dirmode_trace.csv`
+    - `reference/edge/week44_drive_cmdresp_term_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
