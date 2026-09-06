@@ -98,4 +98,5 @@ jobs:
             week42_drive_status_rebuild_runtime.csv
             week43_drive_dirmode_runtime.csv
             week44_drive_cmdresp_term_runtime.csv
+            week45_drive_final_freeze_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

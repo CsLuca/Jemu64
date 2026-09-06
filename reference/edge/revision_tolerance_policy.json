@@ -79,6 +79,9 @@
     "week43_drive_dirmode_all_mode_rows": { "min": 3, "max": 6 },
     "week44_drive_cmdresp_term_rows": { "min": 15, "max": 30 },
     "week44_drive_cmdresp_term_payload_rows": { "min": 3, "max": 6 },
-    "week44_drive_cmdresp_term_status_rows": { "min": 3, "max": 6 }
+    "week44_drive_cmdresp_term_status_rows": { "min": 3, "max": 6 },
+    "week45_drive_final_rows": { "min": 24, "max": 48 },
+    "week45_drive_final_payload_rows": { "min": 3, "max": 6 },
+    "week45_drive_final_mem_written_rows": { "min": 6, "max": 30 }
   }
 }

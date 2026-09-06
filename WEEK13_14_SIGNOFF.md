@@ -312,6 +312,16 @@
   - runtime: `week44_drive_cmdresp_term_runtime.csv`
   - reference: `reference/edge/week44_drive_cmdresp_term_trace.csv`
 
+## Week45 Drive Final Freeze Hard-Ref
+
+- Added final 1541 freeze battery across drive revisions (1541/1541C/1541-II) for:
+  - command-channel write/read commit chain (`M-W` then `M-R`) under SA15,
+  - deterministic payload availability on TALK/SA15,
+  - memory-write persistence (`$0400=$AA`, `$0401=$55`) across the full command/talk sequence.
+- Hard reference trace:
+  - runtime: `week45_drive_final_freeze_runtime.csv`
+  - reference: `reference/edge/week45_drive_final_freeze_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -397,6 +407,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week42_drive_status_rebuild_trace.csv`
     - `reference/edge/week43_drive_dirmode_trace.csv`
     - `reference/edge/week44_drive_cmdresp_term_trace.csv`
+    - `reference/edge/week45_drive_final_freeze_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

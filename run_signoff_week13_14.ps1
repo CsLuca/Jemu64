@@ -210,6 +210,9 @@ $metrics = [ordered]@{
     week44_drive_cmdresp_term_rows = 0
     week44_drive_cmdresp_term_payload_rows = 0
     week44_drive_cmdresp_term_status_rows = 0
+    week45_drive_final_rows = 0
+    week45_drive_final_payload_rows = 0
+    week45_drive_final_mem_written_rows = 0
 }
 
 $savedPath = $env:PATH
@@ -805,6 +808,25 @@ try {
             }
             $metrics.week44_drive_cmdresp_term_payload_rows = $payloadRows
             $metrics.week44_drive_cmdresp_term_status_rows = $statusRows
+        }
+    }
+    $week45Ref = Join-Path -Path $repo -ChildPath "reference\edge\week45_drive_final_freeze_trace.csv"
+    if (Test-Path -LiteralPath $week45Ref) {
+        $rows45 = @(Get-Content -LiteralPath $week45Ref)
+        if ($rows45.Count -gt 1) {
+            $metrics.week45_drive_final_rows = $rows45.Count - 1
+            $payloadRows = 0
+            $memRows = 0
+            foreach ($line in $rows45) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 12) {
+                    $phase = $parts[1]
+                    if ($phase -eq 'talk_sa15_payload') { $payloadRows++ }
+                    if ($parts[7] -eq '170' -and $parts[8] -eq '85') { $memRows++ }
+                }
+            }
+            $metrics.week45_drive_final_payload_rows = $payloadRows
+            $metrics.week45_drive_final_mem_written_rows = $memRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
