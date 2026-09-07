@@ -125,6 +125,11 @@
                     "week56_drive_iec_phase_edge_count":  322,
                     "week56_drive_iec_phase_latency_min":  0,
                     "week56_drive_iec_phase_latency_max":  0,
-                    "week56_drive_iec_phase_kernel_path_rows":  146
+                    "week56_drive_iec_phase_kernel_path_rows":  146,
+                    "week53_drive_iec_phase_rows":  192,
+                    "week53_drive_iec_phase_edge_count":  322,
+                    "week53_drive_iec_phase_latency_min":  0,
+                    "week53_drive_iec_phase_latency_max":  0,
+                    "week53_drive_iec_phase_kernel_path_rows":  146
                 }
 }

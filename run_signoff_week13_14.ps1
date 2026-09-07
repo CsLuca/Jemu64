@@ -264,6 +264,11 @@ $metrics = [ordered]@{
     week53_cpu_via_iec_cpu_advanced_rows = 0
     week53_cpu_via_iec_irq_overlap_rows = 0
     week53_cpu_via_iec_cadence_gap_max = 0
+    week53_drive_iec_phase_rows = 0
+    week53_drive_iec_phase_edge_count = 0
+    week53_drive_iec_phase_latency_min = 0
+    week53_drive_iec_phase_latency_max = 0
+    week53_drive_iec_phase_kernel_path_rows = 0
     week54_irq_bridge_rows = 0
     week54_irq_bridge_cpu_advanced_rows = 0
     week54_irq_bridge_via_irq_or_rows = 0
@@ -1161,6 +1166,11 @@ try {
             $metrics.week56_drive_iec_phase_latency_min = $latMin
             $metrics.week56_drive_iec_phase_latency_max = $latMax
             $metrics.week56_drive_iec_phase_kernel_path_rows = $kernelRows
+            $metrics.week53_drive_iec_phase_rows = $rows56.Count - 1
+            $metrics.week53_drive_iec_phase_edge_count = $edgeCount
+            $metrics.week53_drive_iec_phase_latency_min = $latMin
+            $metrics.week53_drive_iec_phase_latency_max = $latMax
+            $metrics.week53_drive_iec_phase_kernel_path_rows = $kernelRows
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
