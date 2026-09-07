@@ -8466,6 +8466,7 @@ static void runWeek49DriveCpuCadenceEdgeHardReference();
 static void runWeek50DriveCpuOpcodeTimingEdgeHardReference();
 static void runWeek51ViaTimerIrqWindowEdgeHardReference();
 static void runWeek52ViaShiftEdgeLatchEdgeHardReference();
+static void runWeek53CpuViaIecIntegrationEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8512,6 +8513,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek50DriveCpuOpcodeTimingEdgeHardReference();
     runWeek51ViaTimerIrqWindowEdgeHardReference();
     runWeek52ViaShiftEdgeLatchEdgeHardReference();
+    runWeek53CpuViaIecIntegrationEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8559,6 +8561,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek50DriveCpuOpcodeTimingEdgeHardReference();
     runWeek51ViaTimerIrqWindowEdgeHardReference();
     runWeek52ViaShiftEdgeLatchEdgeHardReference();
+    runWeek53CpuViaIecIntegrationEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -13901,6 +13904,172 @@ static void runWeek52ViaShiftEdgeLatchEdgeHardReference() {
     }
 
     std::cout << "[WEEK52-VIA][HARDREF] PASS: VIA shift edge/latch trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek53CpuViaIecIntegrationRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(144);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9; // LDA #$10
+    drive.memory[0xC001] = 0x10;
+    drive.memory[0xC002] = 0x20; // JSR $C00A
+    drive.memory[0xC003] = 0x0A;
+    drive.memory[0xC004] = 0xC0;
+    drive.memory[0xC005] = 0xD0; // BNE +1
+    drive.memory[0xC006] = 0x01;
+    drive.memory[0xC007] = 0xEA; // NOP
+    drive.memory[0xC008] = 0x4C; // JMP $C000
+    drive.memory[0xC009] = 0x00;
+    drive.memory[0xC00A] = 0xA2; // LDX #$20
+    drive.memory[0xC00B] = 0x20;
+    drive.memory[0xC00C] = 0x60; // RTS
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.cpuP = 0x20;
+
+    drive.via1.write(0x0E, 0xC0); // enable T1 IRQ
+    drive.via1.write(0x04, 0x05);
+    drive.via1.write(0x05, 0x00);
+    drive.via2.write(0x0E, 0x84); // enable SR IRQ
+    drive.via2.write(0x0B, 0x1C);
+    drive.via2.write(0x0A, 0x3C);
+
+    uint64_t prevCpuStep = 0;
+    uint64_t cadenceGap = 0;
+    uint64_t cadenceGapMax = 0;
+
+    for (uint64_t step = 0; step < 36; ++step) {
+        if ((step % 4u) == 0u) {
+            drive.via1.write(0x02, 0x60); // DDRB: CLK/DATA outputs enabled
+            drive.via1.write(0x00, 0x00); // pull both low
+        } else if ((step % 4u) == 2u) {
+            drive.via1.write(0x00, 0x60); // release both
+        }
+
+        if (step == 14) {
+            drive.via1.write(0x0D, 0x40); // clear T1 IRQ for release-window capture
+        }
+        if (step == 20) {
+            drive.via2.write(0x0D, 0x04); // clear SR IRQ and observe re-assert behavior
+        }
+
+        const bool atnHigh = (((step + 1u) % 7u) != 0u);
+        const bool clkHigh = ((step % 3u) != 0u);
+        const bool dataHigh = (((step + 2u) % 5u) != 0u);
+        drive.setIecLines(atnHigh, clkHigh, dataHigh);
+        drive.tickIecHalfCycle();
+
+        const bool cpuAdvanced = (drive.cpuStepCount > prevCpuStep);
+        if (cpuAdvanced) {
+            if (cadenceGap > cadenceGapMax) {
+                cadenceGapMax = cadenceGap;
+            }
+            cadenceGap = 0;
+        } else {
+            cadenceGap++;
+        }
+
+        const uint8_t via1IfRead = drive.via1.read(0x0D);
+        const uint8_t via2IfRead = drive.via2.read(0x0D);
+        const bool t1Irq = ((via1IfRead & 0x40) != 0);
+        const bool srIrq = ((via2IfRead & 0x04) != 0);
+
+        std::ostringstream oss;
+        oss << label
+            << ",integrated"
+            << "," << step
+            << "," << drive.cycles
+            << "," << drive.cpuStepCount
+            << "," << int(drive.pc)
+            << "," << int(drive.cpuLastOpcode)
+            << "," << (cpuAdvanced ? 1 : 0)
+            << "," << int(drive.via1.ifr)
+            << "," << int(drive.via2.ifr)
+            << "," << (t1Irq ? 1 : 0)
+            << "," << (srIrq ? 1 : 0)
+            << "," << (drive.iecDrivePullCLK ? 1 : 0)
+            << "," << (drive.iecDrivePullDATA ? 1 : 0)
+            << "," << int(drive.via1.timer1Counter)
+            << "," << int(drive.via2.serialShiftBitsRemaining)
+            << "," << static_cast<int>(drive.iecSerialState)
+            << "," << (drive.iecEoiPendingAck ? 1 : 0)
+            << "," << cadenceGapMax;
+        rows.push_back(oss.str());
+
+        prevCpuStep = drive.cpuStepCount;
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek53CpuViaIecIntegrationEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek53CpuViaIecIntegrationRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek53CpuViaIecIntegrationRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek53CpuViaIecIntegrationRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek53CpuViaIecIntegrationTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cycles,cpu_step_count,pc,cpu_last_opcode,cpu_advanced,via1_ifr,via2_ifr,via1_t1_irq,via2_sr_irq,iec_pull_clk,iec_pull_data,via1_t1_counter,via2_shift_bits,iec_state,eoi_pending,cadence_gap_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek53CpuViaIecIntegrationEdgeHardReference() {
+    const std::string runtimePath = "week53_cpu_via_iec_integration_runtime.csv";
+    const std::string refPath = "reference/edge/week53_cpu_via_iec_integration_trace.csv";
+
+    const std::vector<std::string> got = buildWeek53CpuViaIecIntegrationEdgeTraceRows();
+    writeWeek53CpuViaIecIntegrationTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK53_BOOTSTRAP_CPUVIAIEC_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek53CpuViaIecIntegrationTraceCsv(refPath, got);
+        std::cout << "[WEEK53-INTEG][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK53-INTEG][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK53-INTEG][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK53-INTEG][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK53-INTEG][HARDREF] PASS: CPU<->VIA<->IEC integration trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
