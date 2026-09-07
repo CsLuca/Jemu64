@@ -440,6 +440,17 @@
   - runtime: `week56_drive_iec_phase_map_runtime.csv`
   - reference: `reference/edge/week56_drive_iec_phase_map_trace.csv`
 
+## Fase 5 Week54 Pure-Mode Stabilization
+
+- Stabilized pure mode execution for `run_kernel_iec_e2e.ps1 -Mode pure` by hardening the KERNAL IEC bootstrap path when no compat helpers are enabled.
+- Added repeat-run pure stability gate (`10-20` runs target) with explicit no-fallback requirement in runner output:
+  - `pass_runs=N/N`
+  - `host_fallback_no=True`
+- Added tolerance metrics for pure stability closure:
+  - `week54_pure_stability_runs`
+  - `week54_pure_stability_pass_runs`
+  - `week54_pure_stability_host_fallback_no`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS

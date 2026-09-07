@@ -8,6 +8,7 @@ param(
     [ValidateSet("all", "6510", "8500")]
     [string]$RevisionSlot = "all",
     [int]$KernelMaxHalfCycles = 700000,
+    [int]$PureStabilityRuns = 12,
     [switch]$SkipFastExternal
 )
 
@@ -285,6 +286,9 @@ $metrics = [ordered]@{
     week56_drive_iec_phase_latency_min = 0
     week56_drive_iec_phase_latency_max = 0
     week56_drive_iec_phase_kernel_path_rows = 0
+    week54_pure_stability_runs = 0
+    week54_pure_stability_pass_runs = 0
+    week54_pure_stability_host_fallback_no = 0
 }
 
 $savedPath = $env:PATH
@@ -362,12 +366,12 @@ try {
     Copy-Item -LiteralPath "$repo\c64_11_fast_signoff.exe" -Destination "$repo\c64_11.exe" -Force
 
     $results += Invoke-Step -Name "run-pure" -Action {
-        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -MaxHalfCycles $KernelMaxHalfCycles -Quiet -UseTestOnlyPureCmdGuard
+        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -MaxHalfCycles $KernelMaxHalfCycles -Repeat $PureStabilityRuns -Quiet
     } -Assert {
         param($o, $e)
         if ($e -ne 0) { return $false }
         $txt = ($o | Out-String)
-        return ($txt -match "\[RUNNER\] mode=pure" -and $txt -match "pass=True")
+        return ($txt -match "\[RUNNER\] mode=pure" -and $txt -match "pass=True" -and $txt -match "host_fallback_no=True")
     }
 
     $results += Invoke-Step -Name "run-compat" -Action {
@@ -377,6 +381,24 @@ try {
         if ($e -ne 0) { return $false }
         $txt = ($o | Out-String)
         return ($txt -match "\[RUNNER\] mode=compat" -and $txt -match "pass=True")
+    }
+
+    $pureResult = $results | Where-Object { $_.Name -eq "run-pure" } | Select-Object -First 1
+    if ($pureResult -ne $null) {
+        $pureText = ($pureResult.Output | Out-String)
+        $passRuns = 0
+        $totalRuns = 0
+        if ($pureText -match 'pass_runs=([0-9]+)/([0-9]+)') {
+            $passRuns = [int]$matches[1]
+            $totalRuns = [int]$matches[2]
+        }
+        $metrics.week54_pure_stability_runs = $totalRuns
+        $metrics.week54_pure_stability_pass_runs = $passRuns
+        if ($pureText -match 'host_fallback_no=True') {
+            $metrics.week54_pure_stability_host_fallback_no = 1
+        } else {
+            $metrics.week54_pure_stability_host_fallback_no = 0
+        }
     }
 
     "[SIGNOFF] ----------------------------------------"

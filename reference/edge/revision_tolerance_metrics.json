@@ -130,6 +130,9 @@
                     "week53_drive_iec_phase_edge_count":  322,
                     "week53_drive_iec_phase_latency_min":  0,
                     "week53_drive_iec_phase_latency_max":  0,
-                    "week53_drive_iec_phase_kernel_path_rows":  146
+                    "week53_drive_iec_phase_kernel_path_rows":  146,
+                    "week54_pure_stability_runs":  12,
+                    "week54_pure_stability_pass_runs":  12,
+                    "week54_pure_stability_host_fallback_no":  1
                 }
 }

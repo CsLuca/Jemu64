@@ -132,6 +132,9 @@
     "week56_drive_iec_phase_edge_count": { "min": 300, "max": 700 },
     "week56_drive_iec_phase_latency_min": { "min": 0, "max": 8 },
     "week56_drive_iec_phase_latency_max": { "min": 0, "max": 24 },
-    "week56_drive_iec_phase_kernel_path_rows": { "min": 100, "max": 220 }
+    "week56_drive_iec_phase_kernel_path_rows": { "min": 100, "max": 220 },
+    "week54_pure_stability_runs": { "min": 10, "max": 20 },
+    "week54_pure_stability_pass_runs": { "min": 10, "max": 20 },
+    "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }
   }
 }
