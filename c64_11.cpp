@@ -8464,6 +8464,8 @@ static void runWeek47HostTimingStabilizationEdgeHardReference();
 static void runWeek48DriveCoreTimingBaselineEdgeHardReference();
 static void runWeek49DriveCpuCadenceEdgeHardReference();
 static void runWeek50DriveCpuOpcodeTimingEdgeHardReference();
+static void runWeek51ViaTimerIrqWindowEdgeHardReference();
+static void runWeek52ViaShiftEdgeLatchEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8508,6 +8510,8 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runWeek49DriveCpuCadenceEdgeHardReference();
     runWeek50DriveCpuOpcodeTimingEdgeHardReference();
+    runWeek51ViaTimerIrqWindowEdgeHardReference();
+    runWeek52ViaShiftEdgeLatchEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8553,6 +8557,8 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runWeek49DriveCpuCadenceEdgeHardReference();
     runWeek50DriveCpuOpcodeTimingEdgeHardReference();
+    runWeek51ViaTimerIrqWindowEdgeHardReference();
+    runWeek52ViaShiftEdgeLatchEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -13692,6 +13698,209 @@ static void runWeek50DriveCpuOpcodeTimingEdgeHardReference() {
     }
 
     std::cout << "[WEEK50-CPU][HARDREF] PASS: drive CPU opcode timing trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek51ViaTimerIrqRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(96);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    VIA6522 &via = drive.via1;
+    via.write(0x0E, 0xC0); // enable T1 IRQ
+    via.write(0x04, 0x04); // T1 low
+    via.write(0x05, 0x00); // T1 high/start
+
+    for (uint64_t step = 0; step < 22; ++step) {
+        const uint8_t ifrRead = via.read(0x0D);
+        const bool irqAsserted = ((ifrRead & 0x80) != 0);
+        const bool underflowSet = ((ifrRead & 0x40) != 0);
+
+        std::ostringstream oss;
+        oss << label
+            << ",timer"
+            << "," << step
+            << "," << via.timer1Counter
+            << "," << int(via.ifr)
+            << "," << int(via.ier)
+            << "," << (underflowSet ? 1 : 0)
+            << "," << (irqAsserted ? 1 : 0)
+            << "," << (via.timer1Running ? 1 : 0);
+        rows.push_back(oss.str());
+
+        if (step == 10) {
+            via.write(0x0D, 0x40); // clear T1 IFR and observe IRQ release window
+        }
+        via.tick();
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek51ViaTimerIrqWindowEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek51ViaTimerIrqRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek51ViaTimerIrqRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek51ViaTimerIrqRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek51ViaTimerIrqWindowTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,t1_counter,ifr,ier,t1_underflow,irq_asserted,t1_running\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek51ViaTimerIrqWindowEdgeHardReference() {
+    const std::string runtimePath = "week51_via_timer_irq_runtime.csv";
+    const std::string refPath = "reference/edge/week51_via_timer_irq_trace.csv";
+
+    const std::vector<std::string> got = buildWeek51ViaTimerIrqWindowEdgeTraceRows();
+    writeWeek51ViaTimerIrqWindowTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK51_BOOTSTRAP_VIATIMER_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek51ViaTimerIrqWindowTraceCsv(refPath, got);
+        std::cout << "[WEEK51-VIA][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK51-VIA][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK51-VIA][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK51-VIA][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK51-VIA][HARDREF] PASS: VIA timer/IRQ window trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek52ViaShiftRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(96);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+
+    VIA6522 &via = drive.via2;
+    via.write(0x0E, 0x84); // enable SR IRQ
+    via.write(0x0B, 0x1C); // shift mode enabled
+    via.write(0x0A, 0xA5); // load SR and start shifting
+
+    for (uint64_t step = 0; step < 20; ++step) {
+        const uint8_t ifrRead = via.read(0x0D);
+        const bool shiftIrq = ((ifrRead & 0x04) != 0);
+        const bool irqAsserted = ((ifrRead & 0x80) != 0);
+
+        std::ostringstream oss;
+        oss << label
+            << ",shift"
+            << "," << step
+            << "," << int(via.regs[0x0A])
+            << "," << int(via.serialShiftBitsRemaining)
+            << "," << via.serialShiftEdgeCount
+            << "," << int(via.ifr)
+            << "," << (shiftIrq ? 1 : 0)
+            << "," << (irqAsserted ? 1 : 0)
+            << "," << (via.serialShiftActive ? 1 : 0);
+        rows.push_back(oss.str());
+
+        if (step == 12) {
+            via.write(0x0D, 0x04); // clear shift IRQ bit and observe latch order
+        }
+        via.tick();
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek52ViaShiftEdgeLatchEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek52ViaShiftRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek52ViaShiftRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek52ViaShiftRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek52ViaShiftEdgeLatchTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,sr,bits_remaining,edge_count,ifr,shift_irq,irq_asserted,shift_active\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek52ViaShiftEdgeLatchEdgeHardReference() {
+    const std::string runtimePath = "week52_via_shift_runtime.csv";
+    const std::string refPath = "reference/edge/week52_via_shift_trace.csv";
+
+    const std::vector<std::string> got = buildWeek52ViaShiftEdgeLatchEdgeTraceRows();
+    writeWeek52ViaShiftEdgeLatchTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK52_BOOTSTRAP_VIASHIFT_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek52ViaShiftEdgeLatchTraceCsv(refPath, got);
+        std::cout << "[WEEK52-VIA][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK52-VIA][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK52-VIA][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK52-VIA][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK52-VIA][HARDREF] PASS: VIA shift edge/latch trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

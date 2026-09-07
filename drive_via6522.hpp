@@ -16,6 +16,11 @@ public:
     uint16_t timer2Latch = 0xFFFF;
     bool timer2Running = false;
 
+    uint8_t serialShiftReg = 0;
+    uint8_t serialShiftBitsRemaining = 0;
+    bool serialShiftActive = false;
+    uint64_t serialShiftEdgeCount = 0;
+
     uint8_t ifr = 0;
     uint8_t ier = 0;
 
@@ -63,6 +68,12 @@ public:
             case 0x0B:
                 timer1Continuous = (val & 0x40) == 0;
                 break;
+            case 0x0A:
+                serialShiftReg = val;
+                serialShiftBitsRemaining = 8;
+                serialShiftActive = true;
+                ifr = static_cast<uint8_t>(ifr & static_cast<uint8_t>(~0x04));
+                break;
             case 0x0D:
                 ifr = static_cast<uint8_t>(ifr & static_cast<uint8_t>(~(val & 0x7F)));
                 break;
@@ -101,10 +112,22 @@ public:
             }
         }
 
+        const bool shiftEnabled = ((regs[0x0B] & 0x1C) != 0);
+        if (shiftEnabled && serialShiftActive && serialShiftBitsRemaining > 0) {
+            serialShiftReg = static_cast<uint8_t>((serialShiftReg << 1) & 0xFE);
+            serialShiftBitsRemaining = static_cast<uint8_t>(serialShiftBitsRemaining - 1);
+            serialShiftEdgeCount++;
+            if (serialShiftBitsRemaining == 0) {
+                serialShiftActive = false;
+                ifr = static_cast<uint8_t>(ifr | 0x04);
+            }
+        }
+
         regs[0x04] = static_cast<uint8_t>(timer1Counter & 0xFF);
         regs[0x05] = static_cast<uint8_t>((timer1Counter >> 8) & 0xFF);
         regs[0x08] = static_cast<uint8_t>(timer2Counter & 0xFF);
         regs[0x09] = static_cast<uint8_t>((timer2Counter >> 8) & 0xFF);
+        regs[0x0A] = serialShiftReg;
         regs[0x0D] = ifr;
         regs[0x0E] = ier;
     }
