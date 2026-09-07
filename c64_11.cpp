@@ -6533,6 +6533,11 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     bool kernalCompatRamSinkInject = (std::getenv("KERNAL_COMPAT_RAM_SINK_INJECT") != nullptr);
     bool kernalCompatRamSinkBulk = (std::getenv("KERNAL_COMPAT_RAM_SINK_BULK") != nullptr);
     const bool kernalPureCmdGuard = (std::getenv("KERNAL_TEST_ONLY_PURE_CMD_GUARD") != nullptr);
+    const bool kernalRunOnlyKernelE2E = (std::getenv("RUN_ONLY_KERNEL_IEC_E2E") != nullptr);
+    const bool kernalPureAutoBootstrap = kernalRunOnlyKernelE2E &&
+        !kernalCompatClockAssist &&
+        !kernalCompatRamSinkInject &&
+        !kernalCompatRamSinkBulk;
     bool pureCmdGuardInjected = false;
     uint32_t pureCmdGuardInjectedBytes = 0;
     bool pureCmdClockAssist = false;
@@ -6928,7 +6933,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
                 kernalEeafTraceCount++;
             }
 
-            if (kernalPureCmdGuard && !kernalCompatClockAssist && !pureCmdGuardInjected &&
+            if ((kernalPureCmdGuard || kernalPureAutoBootstrap) && !kernalCompatClockAssist && !pureCmdGuardInjected &&
                 !drive.iecCommandSeen && drive.iecRxProcessed == 0 && eeafVisitCount >= 8) {
                 // Pure-path command bootstrap: if KERNAL stays in IEC poll loops without
                 // decoding any command byte, force one canonical LOAD"$",8 command frame.
@@ -7210,6 +7215,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
               << " iec_rx=" << drive.iecRxProcessed
               << " iec_tx=" << drive.iecTxServed
               << " pure_cmd_inj=" << (pureCmdGuardInjected ? 1 : 0)
+              << " host_fallback=no"
               << std::endl;
 }
 

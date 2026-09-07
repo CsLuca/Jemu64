@@ -13,6 +13,7 @@ param(
     [switch]$EnableDriveAutoDirOnTalk0,
     [switch]$EnableDriveForceTalkOnDd0d8,
     [string]$IecPolarity,
+    [int]$Repeat = 1,
     [switch]$Quiet
 )
 
@@ -85,31 +86,61 @@ try {
         }
     }
 
-    $output = & $exe 2>&1 | ForEach-Object { "$_" }
-    $exitCode = $LASTEXITCODE
+    if ($Repeat -lt 1) { $Repeat = 1 }
 
-    if (-not $Quiet) {
-        foreach ($line in $output) {
-            $line
+    $passCount = 0
+    $lastTx = -1
+    $lastRx = -1
+    $lastExit = 0
+    $allHostFallbackNo = $true
+    $failedRun = 0
+
+    for ($run = 1; $run -le $Repeat; $run++) {
+        $output = & $exe 2>&1 | ForEach-Object { "$_" }
+        $exitCode = $LASTEXITCODE
+        $lastExit = $exitCode
+
+        if (-not $Quiet) {
+            foreach ($line in $output) {
+                $line
+            }
         }
-    }
 
-    $text = ($output | Out-String)
-    $pass = ($text -match '\[KERNAL IEC E2E\] PASS')
-    $tx = -1
-    $rx = -1
-    if ($text -match 'iec_tx=([0-9]+)') {
-        $tx = [int]$matches[1]
-    }
-    if ($text -match 'iec_rx=([0-9]+)') {
-        $rx = [int]$matches[1]
+        $text = ($output | Out-String)
+        $pass = ($text -match '\[KERNAL IEC E2E\] PASS')
+        $tx = -1
+        $rx = -1
+        if ($text -match 'iec_tx=([0-9]+)') {
+            $tx = [int]$matches[1]
+        }
+        if ($text -match 'iec_rx=([0-9]+)') {
+            $rx = [int]$matches[1]
+        }
+
+        $hostFallbackNo = ($text -match 'host_fallback=no')
+        if (-not $hostFallbackNo) {
+            $allHostFallbackNo = $false
+        }
+
+        if ($exitCode -eq 0 -and $pass) {
+            $passCount++
+        } elseif ($failedRun -eq 0) {
+            $failedRun = $run
+        }
+
+        $lastTx = $tx
+        $lastRx = $rx
     }
 
     $bulkState = if ($Mode -eq 'compat' -and -not $NoBulk) { 'on' } elseif ($Mode -eq 'compat') { 'off' } else { 'n/a' }
-    "[RUNNER] mode=$Mode bulk=$bulkState pass=$pass iec_tx=$tx iec_rx=$rx exit=$exitCode"
+    $allPass = ($passCount -eq $Repeat)
+    "[RUNNER] mode=$Mode bulk=$bulkState repeat=$Repeat pass_runs=$passCount/$Repeat pass=$allPass host_fallback_no=$allHostFallbackNo iec_tx=$lastTx iec_rx=$lastRx exit=$lastExit"
 
-    if ($exitCode -ne 0) {
-        exit $exitCode
+    if (-not $allPass -or -not $allHostFallbackNo) {
+        if ($failedRun -gt 0) {
+            "[RUNNER] first_failed_run=$failedRun"
+        }
+        exit 1
     }
 } finally {
     foreach ($k in $saved.Keys) {
