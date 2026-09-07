@@ -150,6 +150,9 @@
     "week59_iec_analog_turnaround_jitter_max": { "min": 0, "max": 20 },
     "week59_iec_analog_turnaround_max": { "min": 0, "max": 30 },
     "week59_iec_analog_turnaround_min": { "min": 0, "max": 20 },
+    "week60_iec_contention_rows": { "min": 260, "max": 320 },
+    "week60_iec_release_latency_max": { "min": 0, "max": 16 },
+    "week60_iec_illegal_overlap_rows": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

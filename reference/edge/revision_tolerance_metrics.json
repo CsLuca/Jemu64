@@ -150,6 +150,9 @@
                     "week59_iec_analog_pulse_max_ticks":  2,
                     "week59_iec_analog_turnaround_jitter_max":  0,
                     "week59_iec_analog_turnaround_max":  0,
-                    "week59_iec_analog_turnaround_min":  0
+                    "week59_iec_analog_turnaround_min":  0,
+                    "week60_iec_contention_rows":  288,
+                    "week60_iec_release_latency_max":  0,
+                    "week60_iec_illegal_overlap_rows":  0
                 }
 }

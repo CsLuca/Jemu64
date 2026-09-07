@@ -497,6 +497,17 @@
   - runtime: `week59_iec_analog_pulse_window_runtime.csv`
   - reference: `reference/edge/week59_iec_analog_pulse_window_trace.csv`
 
+## Week60 Bus Contention & Drive/Host Interaction
+
+- Added a deterministic contention/release hard-reference layer for host/drive IEC ownership transitions across TALK/LISTEN/EOI windows.
+- Coverage focus:
+  - contention-window coverage count (`week60_iec_contention_rows`),
+  - release ownership latency bound (`week60_iec_release_latency_max`),
+  - illegal overlap guard (`week60_iec_illegal_overlap_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week60_iec_contention_release_runtime.csv`
+  - reference: `reference/edge/week60_iec_contention_release_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -612,6 +623,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week57_iec_signal_window_trace.csv`
     - `reference/edge/week58_iec_analog_edge_model_trace.csv`
     - `reference/edge/week59_iec_analog_pulse_window_trace.csv`
+    - `reference/edge/week60_iec_contention_release_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
