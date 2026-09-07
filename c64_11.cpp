@@ -8476,6 +8476,7 @@ static void runWeek53CpuViaIecIntegrationEdgeHardReference();
 static void runWeek54CpuViaIecIrqBridgeEdgeHardReference();
 static void runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
 static void runWeek56DriveIecPhaseMapEdgeHardReference();
+static void runWeek57IecSignalWindowEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8526,6 +8527,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek54CpuViaIecIrqBridgeEdgeHardReference();
     runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
     runWeek56DriveIecPhaseMapEdgeHardReference();
+    runWeek57IecSignalWindowEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8577,6 +8579,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek54CpuViaIecIrqBridgeEdgeHardReference();
     runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
     runWeek56DriveIecPhaseMapEdgeHardReference();
+    runWeek57IecSignalWindowEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -14738,6 +14741,240 @@ static void runWeek56DriveIecPhaseMapEdgeHardReference() {
     }
 
     std::cout << "[WEEK56-PHASE][HARDREF] PASS: drive IEC phase map trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek57IecSignalWindowRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(264);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9; // LDA #$31
+    drive.memory[0xC001] = 0x31;
+    drive.memory[0xC002] = 0x20; // JSR $C00A
+    drive.memory[0xC003] = 0x0A;
+    drive.memory[0xC004] = 0xC0;
+    drive.memory[0xC005] = 0x4C; // JMP $C000
+    drive.memory[0xC006] = 0x00;
+    drive.memory[0xC007] = 0xC0;
+    drive.memory[0xC00A] = 0xA2; // LDX #$77
+    drive.memory[0xC00B] = 0x77;
+    drive.memory[0xC00C] = 0x60; // RTS
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.cpuP = 0x20;
+
+    drive.via1.write(0x0E, 0xC0);
+    drive.via1.write(0x04, 0x09);
+    drive.via1.write(0x05, 0x00);
+    drive.via2.write(0x0E, 0x84);
+    drive.via2.write(0x0B, 0x1C);
+    drive.via2.write(0x0A, 0x96);
+
+    uint64_t prevCpuStep = 0;
+    uint64_t prevRxProcessed = drive.iecRxProcessed;
+    uint64_t prevTxServed = drive.iecTxServed;
+    uint64_t cadenceGap = 0;
+    uint64_t cadenceGapMax = 0;
+
+    bool prevEffClk = true;
+    bool prevEffData = true;
+    int edgeSlewTicks = 0;
+    int lastTurnaroundTicks = -1;
+    int pendingTurnaroundTicks = -1;
+    int mode = 0;
+    int prevMode = 0;
+
+    for (uint64_t step = 0; step < 72; ++step) {
+        if ((step % 7u) == 0u) {
+            drive.via1.write(0x02, 0x60);
+            drive.via1.write(0x00, 0x00);
+        } else if ((step % 7u) == 3u) {
+            drive.via1.write(0x00, 0x60);
+        }
+
+        if (step == 8) {
+            drive.enqueueIecCommandByte(0x28);
+            drive.enqueueIecCommandByte(0xF0);
+            drive.enqueueIecDataByte(0x24);
+            drive.enqueueIecCommandByte(0x3F);
+        }
+        if (step == 18) {
+            drive.iecTalking = true;
+            drive.iecListening = false;
+            drive.iecActiveTalkChannel = 0;
+            drive.iecTalkSecondary = 0;
+            drive.iecTalkSa0Confirmed = true;
+            drive.iecOpenTalkChannels[0] = true;
+            drive.iecTxQueue.push_back(0x41);
+            drive.iecTxQueue.push_back(0x42);
+            drive.iecTxQueue.push_back(0x0D);
+        }
+        if (step == 42) {
+            drive.iecTalking = false;
+            drive.iecListening = true;
+            drive.enqueueIecDataByte(0x2A);
+        }
+        if (step == 52) {
+            drive.iecListening = false;
+        }
+
+        if (step == 24 || step == 48) {
+            drive.via1.write(0x0D, 0x40);
+        }
+        if (step == 30 || step == 54) {
+            drive.via2.write(0x0D, 0x04);
+        }
+
+        bool atnHigh = (((step + 1u) % 9u) != 0u);
+        bool clkHigh = (((step + 2u) % 5u) != 0u);
+        bool dataHigh = (((step + 3u) % 6u) != 0u);
+        if ((step >= 18 && step <= 28) || (step >= 42 && step <= 48)) {
+            atnHigh = true;
+        }
+
+        drive.setIecLines(atnHigh, clkHigh, dataHigh);
+        drive.tickIecHalfCycle();
+
+        const bool effClk = (drive.iecCLK && !drive.iecDrivePullCLK);
+        const bool effData = (drive.iecDATA && !drive.iecDrivePullDATA);
+        if (effClk != prevEffClk || effData != prevEffData) {
+            edgeSlewTicks = 0;
+        } else {
+            edgeSlewTicks++;
+        }
+
+        if (drive.iecTalking) {
+            mode = 2;
+        } else if (drive.iecListening || !drive.iecATN) {
+            mode = 1;
+        } else {
+            mode = 0;
+        }
+        if (mode != prevMode) {
+            pendingTurnaroundTicks = 0;
+        }
+        if (pendingTurnaroundTicks >= 0) {
+            if (drive.iecRxProcessed > prevRxProcessed || drive.iecTxServed > prevTxServed) {
+                lastTurnaroundTicks = pendingTurnaroundTicks;
+                pendingTurnaroundTicks = -1;
+            } else {
+                pendingTurnaroundTicks++;
+            }
+        }
+
+        const bool cpuAdvanced = (drive.cpuStepCount > prevCpuStep);
+        if (cpuAdvanced) {
+            if (cadenceGap > cadenceGapMax) {
+                cadenceGapMax = cadenceGap;
+            }
+            cadenceGap = 0;
+        } else {
+            cadenceGap++;
+        }
+
+        const int polarityMismatch = (mode == 2 && drive.iecDrivePullCLK && drive.iecDrivePullDATA) ? 1 : 0;
+
+        std::ostringstream oss;
+        oss << label
+            << ",signal"
+            << "," << step
+            << "," << drive.cycles
+            << "," << mode
+            << "," << (drive.iecATN ? 1 : 0)
+            << "," << (effClk ? 1 : 0)
+            << "," << (effData ? 1 : 0)
+            << "," << (drive.iecDrivePullCLK ? 1 : 0)
+            << "," << (drive.iecDrivePullDATA ? 1 : 0)
+            << "," << edgeSlewTicks
+            << "," << polarityMismatch
+            << "," << lastTurnaroundTicks
+            << "," << static_cast<int>(drive.iecSerialState)
+            << "," << drive.pendingIecRx()
+            << "," << drive.pendingIecTx()
+            << "," << drive.iecRxProcessed
+            << "," << drive.iecTxServed
+            << "," << drive.cpuStepCount
+            << "," << cadenceGapMax;
+        rows.push_back(oss.str());
+
+        prevCpuStep = drive.cpuStepCount;
+        prevRxProcessed = drive.iecRxProcessed;
+        prevTxServed = drive.iecTxServed;
+        prevEffClk = effClk;
+        prevEffData = effData;
+        prevMode = mode;
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek57IecSignalWindowEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek57IecSignalWindowRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek57IecSignalWindowRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek57IecSignalWindowRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek57IecSignalWindowTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cycles,mode,atn,clk,data,pull_clk,pull_data,edge_slew_ticks,polarity_mismatch,turnaround_ticks,iec_state,pending_rx,pending_tx,rx_processed,tx_served,cpu_step_count,cadence_gap_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek57IecSignalWindowEdgeHardReference() {
+    const std::string runtimePath = "week57_iec_signal_window_runtime.csv";
+    const std::string refPath = "reference/edge/week57_iec_signal_window_trace.csv";
+
+    const std::vector<std::string> got = buildWeek57IecSignalWindowEdgeTraceRows();
+    writeWeek57IecSignalWindowTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK57_BOOTSTRAP_SIGNALWINDOW_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek57IecSignalWindowTraceCsv(refPath, got);
+        std::cout << "[WEEK57-SIGNAL][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK57-SIGNAL][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK57-SIGNAL][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK57-SIGNAL][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK57-SIGNAL][HARDREF] PASS: IEC signal window trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
