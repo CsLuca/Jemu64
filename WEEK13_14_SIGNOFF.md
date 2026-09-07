@@ -368,6 +368,16 @@
   - runtime: `week49_drive_cpu_cadence_runtime.csv`
   - reference: `reference/edge/week49_drive_cpu_cadence_trace.csv`
 
+## Week50 Drive CPU Opcode Timing Hard-Ref
+
+- Added drive CPU opcode timing hard reference across 1541/1541C/1541-II for:
+  - branch timing split between not-taken and page-cross taken path,
+  - JSR/RTS cadence and stack-side visibility (`$01FE/$01FF`),
+  - per-tick opcode cadence guard (`cadence_gap_max`) under deterministic IEC toggling.
+- Hard reference trace:
+  - runtime: `week50_drive_cpu_opcode_timing_runtime.csv`
+  - reference: `reference/edge/week50_drive_cpu_opcode_timing_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -473,6 +483,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week47_host_timing_trace.csv`
     - `reference/edge/week48_drive_core_timing_trace.csv`
     - `reference/edge/week49_drive_cpu_cadence_trace.csv`
+    - `reference/edge/week50_drive_cpu_opcode_timing_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

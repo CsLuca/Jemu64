@@ -97,6 +97,10 @@
     "week49_drive_cpu_rows": { "min": 90, "max": 130 },
     "week49_drive_cpu_advance_events_max": { "min": 5, "max": 25 },
     "week49_drive_cpu_pc_advance_events_max": { "min": 5, "max": 25 },
-    "week49_drive_cpu_cadence_gap_max": { "min": 0, "max": 16 }
+    "week49_drive_cpu_cadence_gap_max": { "min": 0, "max": 16 },
+    "week50_drive_opcode_rows": { "min": 210, "max": 270 },
+    "week50_drive_opcode_branch_cross_rows": { "min": 60, "max": 90 },
+    "week50_drive_opcode_jsr_rts_stack_rows": { "min": 80, "max": 120 },
+    "week50_drive_opcode_cadence_gap_max": { "min": 0, "max": 18 }
   }
 }
