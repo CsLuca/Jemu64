@@ -8469,6 +8469,7 @@ static void runWeek52ViaShiftEdgeLatchEdgeHardReference();
 static void runWeek53CpuViaIecIntegrationEdgeHardReference();
 static void runWeek54CpuViaIecIrqBridgeEdgeHardReference();
 static void runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
+static void runWeek56DriveIecPhaseMapEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8518,6 +8519,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek53CpuViaIecIntegrationEdgeHardReference();
     runWeek54CpuViaIecIrqBridgeEdgeHardReference();
     runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
+    runWeek56DriveIecPhaseMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8568,6 +8570,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek53CpuViaIecIntegrationEdgeHardReference();
     runWeek54CpuViaIecIrqBridgeEdgeHardReference();
     runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
+    runWeek56DriveIecPhaseMapEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -14492,6 +14495,243 @@ static void runWeek55CpuViaIecTimeoutBridgeEdgeHardReference() {
     }
 
     std::cout << "[WEEK55-INTEG][HARDREF] PASS: CPU<->VIA<->IEC timeout bridge trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek56DriveIecPhaseMapRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(240);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9; // LDA #$21
+    drive.memory[0xC001] = 0x21;
+    drive.memory[0xC002] = 0x20; // JSR $C00A
+    drive.memory[0xC003] = 0x0A;
+    drive.memory[0xC004] = 0xC0;
+    drive.memory[0xC005] = 0xD0; // BNE +1
+    drive.memory[0xC006] = 0x01;
+    drive.memory[0xC007] = 0xEA; // NOP
+    drive.memory[0xC008] = 0x4C; // JMP $C000
+    drive.memory[0xC009] = 0x00;
+    drive.memory[0xC00A] = 0xA2; // LDX #$66
+    drive.memory[0xC00B] = 0x66;
+    drive.memory[0xC00C] = 0x60; // RTS
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.cpuP = 0x20;
+
+    drive.via1.write(0x0E, 0xC0);
+    drive.via1.write(0x04, 0x08);
+    drive.via1.write(0x05, 0x00);
+    drive.via2.write(0x0E, 0x84);
+    drive.via2.write(0x0B, 0x1C);
+    drive.via2.write(0x0A, 0xA5);
+
+    uint64_t prevCpuStep = 0;
+    uint64_t cadenceGap = 0;
+    uint64_t cadenceGapMax = 0;
+    int pendingViaToIecLatency = -1;
+    int lastViaToIecLatency = -1;
+    int phaseBucket = 0;
+
+    bool prevAtn = drive.iecATN;
+    bool prevClk = drive.iecCLK;
+    bool prevData = drive.iecDATA;
+    bool prevPullClk = drive.iecDrivePullCLK;
+    bool prevPullData = drive.iecDrivePullDATA;
+
+    for (uint64_t step = 0; step < 64; ++step) {
+        int viaAccess = 0;
+        if ((step % 6u) == 0u) {
+            drive.via1.write(0x02, 0x60);
+            drive.via1.write(0x00, 0x00);
+            viaAccess = 1;
+            pendingViaToIecLatency = 0;
+        } else if ((step % 6u) == 2u) {
+            drive.via1.write(0x00, 0x60);
+            viaAccess = 2;
+            pendingViaToIecLatency = 0;
+        } else if ((step % 10u) == 5u) {
+            drive.via2.write(0x0A, static_cast<uint8_t>(0x80u | (step & 0x1Fu)));
+            viaAccess = 3;
+            pendingViaToIecLatency = 0;
+        }
+
+        if (step == 8) {
+            drive.enqueueIecCommandByte(0x28);
+            drive.enqueueIecCommandByte(0xF0);
+            drive.enqueueIecDataByte(0x24);
+        }
+        if (step == 9) {
+            drive.enqueueIecCommandByte(0x3F);
+        }
+        if (step == 18) {
+            drive.iecTalking = true;
+            drive.iecActiveTalkChannel = 0;
+            drive.iecTalkSecondary = 0;
+            drive.iecTalkSa0Confirmed = true;
+            drive.iecOpenTalkChannels[0] = true;
+            drive.iecTxQueue.push_back(0x43);
+            drive.iecTxQueue.push_back(0x0D);
+        }
+
+        if (step == 22 || step == 38) {
+            drive.via1.write(0x0D, 0x40);
+        }
+        if (step == 30 || step == 46) {
+            drive.via2.write(0x0D, 0x04);
+        }
+
+        bool atnHigh = (((step + 1u) % 8u) != 0u);
+        bool clkHigh = (((step + 2u) % 5u) != 0u);
+        bool dataHigh = (((step + 3u) % 4u) != 0u);
+        if ((step >= 18 && step <= 26) || (step >= 42 && step <= 48)) {
+            atnHigh = true;
+        }
+
+        drive.setIecLines(atnHigh, clkHigh, dataHigh);
+        drive.tickIecHalfCycle();
+
+        int iecEdge = 0;
+        if (prevAtn != drive.iecATN) iecEdge++;
+        if (prevClk != drive.iecCLK) iecEdge++;
+        if (prevData != drive.iecDATA) iecEdge++;
+        if (prevPullClk != drive.iecDrivePullCLK) iecEdge++;
+        if (prevPullData != drive.iecDrivePullDATA) iecEdge++;
+
+        if (pendingViaToIecLatency >= 0) {
+            if (iecEdge > 0) {
+                lastViaToIecLatency = pendingViaToIecLatency;
+                pendingViaToIecLatency = -1;
+            } else {
+                pendingViaToIecLatency++;
+            }
+        }
+
+        const bool cpuAdvanced = (drive.cpuStepCount > prevCpuStep);
+        if (cpuAdvanced) {
+            if (cadenceGap > cadenceGapMax) {
+                cadenceGapMax = cadenceGap;
+            }
+            cadenceGap = 0;
+        } else {
+            cadenceGap++;
+        }
+
+        if (!drive.iecATN) {
+            phaseBucket = 1; // command/listen command phase
+        } else if (drive.iecTalking) {
+            phaseBucket = 2; // talk path
+        } else if (drive.iecListening) {
+            phaseBucket = 3; // listen data path
+        } else {
+            phaseBucket = 0; // idle/neutral
+        }
+
+        std::ostringstream oss;
+        oss << label
+            << ",phase_map"
+            << "," << step
+            << "," << drive.cycles
+            << "," << drive.cpuStepCount
+            << "," << int(drive.pc)
+            << "," << int(drive.cpuLastOpcode)
+            << "," << viaAccess
+            << "," << iecEdge
+            << "," << (pendingViaToIecLatency >= 0 ? pendingViaToIecLatency : -1)
+            << "," << lastViaToIecLatency
+            << "," << phaseBucket
+            << "," << static_cast<int>(drive.iecSerialState)
+            << "," << (drive.iecATN ? 1 : 0)
+            << "," << (drive.iecCLK ? 1 : 0)
+            << "," << (drive.iecDATA ? 1 : 0)
+            << "," << (drive.iecDrivePullCLK ? 1 : 0)
+            << "," << (drive.iecDrivePullDATA ? 1 : 0)
+            << "," << drive.pendingIecRx()
+            << "," << drive.pendingIecTx()
+            << "," << drive.iecRxProcessed
+            << "," << drive.iecTxServed
+            << "," << (cpuAdvanced ? 1 : 0)
+            << "," << cadenceGapMax;
+        rows.push_back(oss.str());
+
+        prevCpuStep = drive.cpuStepCount;
+        prevAtn = drive.iecATN;
+        prevClk = drive.iecCLK;
+        prevData = drive.iecDATA;
+        prevPullClk = drive.iecDrivePullCLK;
+        prevPullData = drive.iecDrivePullDATA;
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek56DriveIecPhaseMapEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek56DriveIecPhaseMapRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek56DriveIecPhaseMapRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek56DriveIecPhaseMapRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek56DriveIecPhaseMapTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cycles,cpu_step_count,pc,cpu_last_opcode,via_access,iec_edge_count,pending_via_to_iec_latency,last_via_to_iec_latency,phase_bucket,iec_state,atn,clk,data,pull_clk,pull_data,pending_rx,pending_tx,rx_processed,tx_served,cpu_advanced,cadence_gap_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek56DriveIecPhaseMapEdgeHardReference() {
+    const std::string runtimePath = "week56_drive_iec_phase_map_runtime.csv";
+    const std::string refPath = "reference/edge/week56_drive_iec_phase_map_trace.csv";
+
+    const std::vector<std::string> got = buildWeek56DriveIecPhaseMapEdgeTraceRows();
+    writeWeek56DriveIecPhaseMapTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK56_BOOTSTRAP_PHASEMAP_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek56DriveIecPhaseMapTraceCsv(refPath, got);
+        std::cout << "[WEEK56-PHASE][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK56-PHASE][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK56-PHASE][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK56-PHASE][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK56-PHASE][HARDREF] PASS: drive IEC phase map trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
