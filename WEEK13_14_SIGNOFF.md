@@ -407,6 +407,17 @@
   - runtime: `week53_cpu_via_iec_integration_runtime.csv`
   - reference: `reference/edge/week53_cpu_via_iec_integration_trace.csv`
 
+## Week54 CPU<->VIA<->IEC IRQ Bridge Hard-Ref
+
+- Added a second integration hard reference focused on IRQ bridging behavior across 1541/1541C/1541-II while CPU, VIA, and IEC state evolve together.
+- Coverage focus:
+  - OR-window visibility of drive-side VIA IRQ sources (`via_irq_or`) while CPU cadence progresses,
+  - IEC command/data exchange pressure and talk-side service progression (`iec_rx_processed`, `iec_tx_served`, pending queues),
+  - cadence stability guard under integrated load (`cadence_gap_max`).
+- Hard reference trace:
+  - runtime: `week54_cpu_via_iec_irq_bridge_runtime.csv`
+  - reference: `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -516,6 +527,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week51_via_timer_irq_trace.csv`
     - `reference/edge/week52_via_shift_trace.csv`
     - `reference/edge/week53_cpu_via_iec_integration_trace.csv`
+    - `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

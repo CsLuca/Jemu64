@@ -107,4 +107,5 @@ jobs:
             week51_via_timer_irq_runtime.csv
             week52_via_shift_runtime.csv
             week53_cpu_via_iec_integration_runtime.csv
+            week54_cpu_via_iec_irq_bridge_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

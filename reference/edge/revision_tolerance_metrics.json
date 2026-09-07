@@ -109,6 +109,11 @@
                     "week53_cpu_via_iec_rows":  108,
                     "week53_cpu_via_iec_cpu_advanced_rows":  25,
                     "week53_cpu_via_iec_irq_overlap_rows":  30,
-                    "week53_cpu_via_iec_cadence_gap_max":  11
+                    "week53_cpu_via_iec_cadence_gap_max":  11,
+                    "week54_irq_bridge_rows":  126,
+                    "week54_irq_bridge_cpu_advanced_rows":  30,
+                    "week54_irq_bridge_via_irq_or_rows":  105,
+                    "week54_irq_bridge_iec_tx_served_max":  2,
+                    "week54_irq_bridge_cadence_gap_max":  11
                 }
 }

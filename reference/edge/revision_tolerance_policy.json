@@ -111,6 +111,11 @@
     "week53_cpu_via_iec_rows": { "min": 100, "max": 120 },
     "week53_cpu_via_iec_cpu_advanced_rows": { "min": 15, "max": 40 },
     "week53_cpu_via_iec_irq_overlap_rows": { "min": 20, "max": 40 },
-    "week53_cpu_via_iec_cadence_gap_max": { "min": 0, "max": 20 }
+    "week53_cpu_via_iec_cadence_gap_max": { "min": 0, "max": 20 },
+    "week54_irq_bridge_rows": { "min": 110, "max": 140 },
+    "week54_irq_bridge_cpu_advanced_rows": { "min": 20, "max": 60 },
+    "week54_irq_bridge_via_irq_or_rows": { "min": 80, "max": 120 },
+    "week54_irq_bridge_iec_tx_served_max": { "min": 2, "max": 20 },
+    "week54_irq_bridge_cadence_gap_max": { "min": 0, "max": 20 }
   }
 }
