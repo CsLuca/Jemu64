@@ -378,6 +378,24 @@
   - runtime: `week50_drive_cpu_opcode_timing_runtime.csv`
   - reference: `reference/edge/week50_drive_cpu_opcode_timing_trace.csv`
 
+## Week51 VIA6522 Timer/IRQ Window Hard-Ref
+
+- Added VIA6522 timer/IRQ hard reference (drive side) across 1541/1541C/1541-II for:
+  - T1 underflow visibility and IFR bit-set ordering,
+  - IRQ assert/release window through IFR/IER interaction.
+- Hard reference trace:
+  - runtime: `week51_via_timer_irq_runtime.csv`
+  - reference: `reference/edge/week51_via_timer_irq_trace.csv`
+
+## Week52 VIA6522 Shift Edge/Latch Hard-Ref
+
+- Added VIA6522 shift/latch hard reference (drive side) across 1541/1541C/1541-II for:
+  - shift edge progression and bit countdown,
+  - shift-complete IFR/IRQ assertion and explicit IRQ clear ordering.
+- Hard reference trace:
+  - runtime: `week52_via_shift_runtime.csv`
+  - reference: `reference/edge/week52_via_shift_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -484,6 +502,8 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week48_drive_core_timing_trace.csv`
     - `reference/edge/week49_drive_cpu_cadence_trace.csv`
     - `reference/edge/week50_drive_cpu_opcode_timing_trace.csv`
+    - `reference/edge/week51_via_timer_irq_trace.csv`
+    - `reference/edge/week52_via_shift_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

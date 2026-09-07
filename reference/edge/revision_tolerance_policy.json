@@ -101,6 +101,12 @@
     "week50_drive_opcode_rows": { "min": 210, "max": 270 },
     "week50_drive_opcode_branch_cross_rows": { "min": 60, "max": 90 },
     "week50_drive_opcode_jsr_rts_stack_rows": { "min": 80, "max": 120 },
-    "week50_drive_opcode_cadence_gap_max": { "min": 0, "max": 18 }
+    "week50_drive_opcode_cadence_gap_max": { "min": 0, "max": 18 },
+    "week51_via_timer_rows": { "min": 60, "max": 80 },
+    "week51_via_timer_underflow_rows": { "min": 36, "max": 70 },
+    "week51_via_timer_irq_assert_rows": { "min": 36, "max": 70 },
+    "week52_via_shift_rows": { "min": 54, "max": 72 },
+    "week52_via_shift_irq_rows": { "min": 15, "max": 40 },
+    "week52_via_shift_edge_count_max": { "min": 8, "max": 12 }
   }
 }
