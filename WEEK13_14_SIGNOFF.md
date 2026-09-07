@@ -358,6 +358,16 @@
   - runtime: `week48_drive_core_timing_runtime.csv`
   - reference: `reference/edge/week48_drive_core_timing_trace.csv`
 
+## Week49 Drive CPU Cadence Hard-Ref
+
+- Added drive CPU cadence hard reference across 1541/1541C/1541-II for:
+  - per-tick CPU advance visibility (`cpu_advanced`, `cpu_step_count`),
+  - PC movement consistency (`pc_advanced`, `pc_advance_events`),
+  - cadence spacing guard (`cadence_gap_max`) while IEC lines are toggled deterministically.
+- Hard reference trace:
+  - runtime: `week49_drive_cpu_cadence_runtime.csv`
+  - reference: `reference/edge/week49_drive_cpu_cadence_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -462,6 +472,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week46_drive_iec_timing_grade_trace.csv`
     - `reference/edge/week47_host_timing_trace.csv`
     - `reference/edge/week48_drive_core_timing_trace.csv`
+    - `reference/edge/week49_drive_cpu_cadence_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

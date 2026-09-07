@@ -93,6 +93,10 @@
     "week48_drive_core_rows": { "min": 60, "max": 90 },
     "week48_drive_core_cpu_step_max": { "min": 8, "max": 30 },
     "week48_drive_core_via_access_rows": { "min": 60, "max": 90 },
-    "week48_drive_core_iec_effect_rows": { "min": 0, "max": 90 }
+    "week48_drive_core_iec_effect_rows": { "min": 0, "max": 90 },
+    "week49_drive_cpu_rows": { "min": 90, "max": 130 },
+    "week49_drive_cpu_advance_events_max": { "min": 5, "max": 25 },
+    "week49_drive_cpu_pc_advance_events_max": { "min": 5, "max": 25 },
+    "week49_drive_cpu_cadence_gap_max": { "min": 0, "max": 16 }
   }
 }

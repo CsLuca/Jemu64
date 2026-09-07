@@ -102,4 +102,5 @@ jobs:
             week46_drive_iec_timing_grade_runtime.csv
             week47_host_timing_runtime.csv
             week48_drive_core_timing_runtime.csv
+            week49_drive_cpu_cadence_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
