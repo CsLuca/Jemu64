@@ -396,6 +396,17 @@
   - runtime: `week52_via_shift_runtime.csv`
   - reference: `reference/edge/week52_via_shift_trace.csv`
 
+## Week53 CPU<->VIA<->IEC Integration Hard-Ref
+
+- Added integrated drive-side hard reference across 1541/1541C/1541-II that exercises CPU cadence, VIA IRQ windows, and IEC pull-line behavior together in one deterministic trace.
+- Coverage focus:
+  - CPU progress under mixed I/O pressure (`cpu_step_count`, `cpu_advanced`, `cadence_gap_max`),
+  - concurrent VIA observability (`via1_t1_irq`, `via2_sr_irq`, overlap windows),
+  - IEC line effects emitted from combined CPU/VIA state (`iec_pull_clk`, `iec_pull_data`, `iec_state`).
+- Hard reference trace:
+  - runtime: `week53_cpu_via_iec_integration_runtime.csv`
+  - reference: `reference/edge/week53_cpu_via_iec_integration_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -504,6 +515,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week50_drive_cpu_opcode_timing_trace.csv`
     - `reference/edge/week51_via_timer_irq_trace.csv`
     - `reference/edge/week52_via_shift_trace.csv`
+    - `reference/edge/week53_cpu_via_iec_integration_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

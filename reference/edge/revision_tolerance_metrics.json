@@ -105,6 +105,10 @@
                     "week51_via_timer_irq_assert_rows":  39,
                     "week52_via_shift_rows":  60,
                     "week52_via_shift_irq_rows":  15,
-                    "week52_via_shift_edge_count_max":  8
+                    "week52_via_shift_edge_count_max":  8,
+                    "week53_cpu_via_iec_rows":  108,
+                    "week53_cpu_via_iec_cpu_advanced_rows":  25,
+                    "week53_cpu_via_iec_irq_overlap_rows":  30,
+                    "week53_cpu_via_iec_cadence_gap_max":  11
                 }
 }
