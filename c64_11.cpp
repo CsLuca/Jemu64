@@ -8478,6 +8478,7 @@ static void runWeek55CpuViaIecTimeoutBridgeEdgeHardReference();
 static void runWeek56DriveIecPhaseMapEdgeHardReference();
 static void runWeek57IecSignalWindowEdgeHardReference();
 static void runWeek58IecAnalogEdgeModelEdgeHardReference();
+static void runWeek59IecAnalogPulseWindowEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8530,6 +8531,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek56DriveIecPhaseMapEdgeHardReference();
     runWeek57IecSignalWindowEdgeHardReference();
     runWeek58IecAnalogEdgeModelEdgeHardReference();
+    runWeek59IecAnalogPulseWindowEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8583,6 +8585,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek56DriveIecPhaseMapEdgeHardReference();
     runWeek57IecSignalWindowEdgeHardReference();
     runWeek58IecAnalogEdgeModelEdgeHardReference();
+    runWeek59IecAnalogPulseWindowEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -15230,6 +15233,275 @@ static void runWeek58IecAnalogEdgeModelEdgeHardReference() {
     }
 
     std::cout << "[WEEK58-ANALOG][HARDREF] PASS: IEC analog-aware edge model trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek59IecAnalogPulseRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(300);
+
+    struct AnalogLine {
+        int level = 1000;
+        bool logic = true;
+        int riseTicks = 0;
+        int fallTicks = 0;
+        int lastRiseTicks = 0;
+        int lastFallTicks = 0;
+
+        void update(bool targetHigh, int riseStep, int fallStep, int highTh, int lowTh) {
+            if (targetHigh) {
+                level += riseStep;
+                if (level > 1000) level = 1000;
+                riseTicks++;
+                fallTicks = 0;
+            } else {
+                level -= fallStep;
+                if (level < 0) level = 0;
+                fallTicks++;
+                riseTicks = 0;
+            }
+
+            if (!logic && level >= highTh) {
+                logic = true;
+                lastRiseTicks = riseTicks;
+            } else if (logic && level <= lowTh) {
+                logic = false;
+                lastFallTicks = fallTicks;
+            }
+        }
+    };
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9;
+    drive.memory[0xC001] = 0x31;
+    drive.memory[0xC002] = 0x20;
+    drive.memory[0xC003] = 0x0A;
+    drive.memory[0xC004] = 0xC0;
+    drive.memory[0xC005] = 0x4C;
+    drive.memory[0xC006] = 0x00;
+    drive.memory[0xC007] = 0xC0;
+    drive.memory[0xC00A] = 0xA2;
+    drive.memory[0xC00B] = 0x44;
+    drive.memory[0xC00C] = 0x60;
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.cpuP = 0x20;
+
+    drive.via1.write(0x0E, 0xC0);
+    drive.via1.write(0x04, 0x0C);
+    drive.via1.write(0x05, 0x00);
+    drive.via2.write(0x0E, 0x84);
+    drive.via2.write(0x0B, 0x1C);
+    drive.via2.write(0x0A, 0xA7);
+
+    AnalogLine atnLine;
+    AnalogLine clkLine;
+    AnalogLine dataLine;
+
+    uint64_t prevCpuStep = 0;
+    uint64_t cadenceGap = 0;
+    uint64_t cadenceGapMax = 0;
+    int pendingTurnaround = -1;
+    int lastTurnaround = -1;
+    int prevTurnaround = -1;
+    int prevMode = 0;
+    int clkHighPulse = 0;
+    int dataHighPulse = 0;
+
+    for (uint64_t step = 0; step < 84; ++step) {
+        if ((step % 11u) == 0u) {
+            drive.via1.write(0x02, 0x60);
+            drive.via1.write(0x00, 0x00);
+        } else if ((step % 11u) == 5u) {
+            drive.via1.write(0x00, 0x60);
+        }
+
+        if (step == 9) {
+            drive.enqueueIecCommandByte(0x28);
+            drive.enqueueIecCommandByte(0xF0);
+            drive.enqueueIecDataByte(0x24);
+            drive.enqueueIecDataByte(0x44);
+            drive.enqueueIecCommandByte(0x3F);
+        }
+        if (step == 22) {
+            drive.iecTalking = true;
+            drive.iecListening = false;
+            drive.iecActiveTalkChannel = 0;
+            drive.iecTalkSecondary = 0;
+            drive.iecTalkSa0Confirmed = true;
+            drive.iecOpenTalkChannels[0] = true;
+            drive.iecTxQueue.push_back(0x41);
+            drive.iecTxQueue.push_back(0x42);
+            drive.iecTxQueue.push_back(0x43);
+            drive.iecTxQueue.push_back(0x44);
+            drive.iecTxQueue.push_back(0x0D);
+        }
+        if (step == 56) {
+            drive.iecTalking = false;
+            drive.iecListening = true;
+            drive.enqueueIecDataByte(0x2A);
+        }
+        if (step == 67) {
+            drive.iecListening = false;
+        }
+
+        bool hostAtn = (((step + 1u) % 13u) != 0u);
+        bool hostClk = (((step + 2u) % 6u) < 4u);
+        bool hostData = (((step + 3u) % 7u) < 5u);
+        if (step >= 22 && step <= 39) {
+            hostAtn = true;
+            hostClk = ((step % 4u) != 0u);
+            hostData = ((step % 5u) != 0u);
+        }
+
+        const bool targetAtnHigh = hostAtn;
+        const bool targetClkHigh = (hostClk && !drive.iecDrivePullCLK);
+        const bool targetDataHigh = (hostData && !drive.iecDrivePullDATA);
+
+        atnLine.update(targetAtnHigh, 180, 520, 740, 260);
+        clkLine.update(targetClkHigh, 140, 610, 760, 250);
+        dataLine.update(targetDataHigh, 130, 650, 770, 240);
+
+        drive.setIecLines(atnLine.logic, clkLine.logic, dataLine.logic);
+        drive.tickIecHalfCycle();
+
+        int mode = 0;
+        if (drive.iecTalking) mode = 2;
+        else if (drive.iecListening || !drive.iecATN) mode = 1;
+
+        if (mode != prevMode) {
+            pendingTurnaround = 0;
+        }
+        if (pendingTurnaround >= 0) {
+            if (drive.iecRxProcessed > 0 || drive.iecTxServed > 0) {
+                lastTurnaround = pendingTurnaround;
+                pendingTurnaround = -1;
+            } else {
+                pendingTurnaround++;
+            }
+        }
+
+        const bool cpuAdvanced = (drive.cpuStepCount > prevCpuStep);
+        if (cpuAdvanced) {
+            if (cadenceGap > cadenceGapMax) cadenceGapMax = cadenceGap;
+            cadenceGap = 0;
+        } else {
+            cadenceGap++;
+        }
+
+        clkHighPulse = clkLine.logic ? (clkHighPulse + 1) : 0;
+        dataHighPulse = dataLine.logic ? (dataHighPulse + 1) : 0;
+
+        int turnaroundJitter = 0;
+        if (lastTurnaround >= 0 && prevTurnaround >= 0) {
+            turnaroundJitter = std::abs(lastTurnaround - prevTurnaround);
+        }
+        if (lastTurnaround >= 0) {
+            prevTurnaround = lastTurnaround;
+        }
+
+        const int pulseMin = std::min(clkHighPulse, dataHighPulse);
+        const int pulseMax = std::max(clkHighPulse, dataHighPulse);
+
+        std::ostringstream oss;
+        oss << label
+            << ",analog_pulse"
+            << "," << step
+            << "," << drive.cycles
+            << "," << mode
+            << "," << atnLine.level
+            << "," << clkLine.level
+            << "," << dataLine.level
+            << "," << clkLine.lastRiseTicks
+            << "," << clkLine.lastFallTicks
+            << "," << dataLine.lastRiseTicks
+            << "," << dataLine.lastFallTicks
+            << "," << pulseMin
+            << "," << pulseMax
+            << "," << lastTurnaround
+            << "," << turnaroundJitter
+            << "," << static_cast<int>(drive.iecSerialState)
+            << "," << drive.pendingIecRx()
+            << "," << drive.pendingIecTx()
+            << "," << drive.iecRxProcessed
+            << "," << drive.iecTxServed
+            << "," << drive.cpuStepCount
+            << "," << cadenceGapMax;
+        rows.push_back(oss.str());
+
+        prevCpuStep = drive.cpuStepCount;
+        prevMode = mode;
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek59IecAnalogPulseEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek59IecAnalogPulseRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek59IecAnalogPulseRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek59IecAnalogPulseRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek59IecAnalogPulseTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cycles,mode,atn_level,clk_level,data_level,clk_rise_ticks,clk_fall_ticks,data_rise_ticks,data_fall_ticks,pulse_min_ticks,pulse_max_ticks,turnaround_ticks,turnaround_jitter,iec_state,pending_rx,pending_tx,rx_processed,tx_served,cpu_step_count,cadence_gap_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek59IecAnalogPulseWindowEdgeHardReference() {
+    const std::string runtimePath = "week59_iec_analog_pulse_window_runtime.csv";
+    const std::string refPath = "reference/edge/week59_iec_analog_pulse_window_trace.csv";
+
+    const std::vector<std::string> got = buildWeek59IecAnalogPulseEdgeTraceRows();
+    writeWeek59IecAnalogPulseTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK59_BOOTSTRAP_ANALOGPULSE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek59IecAnalogPulseTraceCsv(refPath, got);
+        std::cout << "[WEEK59-ANALOG][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK59-ANALOG][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK59-ANALOG][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK59-ANALOG][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK59-ANALOG][HARDREF] PASS: IEC analog pulse-window trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
