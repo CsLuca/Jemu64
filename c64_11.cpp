@@ -8463,6 +8463,7 @@ static void runWeek46DriveIecTimingGradeEdgeHardReference();
 static void runWeek47HostTimingStabilizationEdgeHardReference();
 static void runWeek48DriveCoreTimingBaselineEdgeHardReference();
 static void runWeek49DriveCpuCadenceEdgeHardReference();
+static void runWeek50DriveCpuOpcodeTimingEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8506,6 +8507,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek47HostTimingStabilizationEdgeHardReference();
     runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runWeek49DriveCpuCadenceEdgeHardReference();
+    runWeek50DriveCpuOpcodeTimingEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8550,6 +8552,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek47HostTimingStabilizationEdgeHardReference();
     runWeek48DriveCoreTimingBaselineEdgeHardReference();
     runWeek49DriveCpuCadenceEdgeHardReference();
+    runWeek50DriveCpuOpcodeTimingEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -13513,6 +13516,182 @@ static void runWeek49DriveCpuCadenceEdgeHardReference() {
     }
 
     std::cout << "[WEEK49-CPU][HARDREF] PASS: drive CPU cadence trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek50DriveCpuOpcodeRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(320);
+
+    auto appendCase = [&](const char *caseName,
+                          uint16_t startPc,
+                          uint8_t pInit,
+                          const std::vector<std::pair<uint16_t, uint8_t>> &prog,
+                          uint32_t tickCount) {
+        Drive1541 drive;
+        drive.setRevision(rev);
+        drive.reset();
+        drive.romLoaded = true;
+        drive.cpuEnabled = true;
+        drive.memory[0xFFFC] = static_cast<uint8_t>(startPc & 0xFFu);
+        drive.memory[0xFFFD] = static_cast<uint8_t>((startPc >> 8) & 0xFFu);
+        for (size_t i = 0; i < prog.size(); ++i) {
+            drive.memory[prog[i].first] = prog[i].second;
+        }
+        drive.reset();
+        drive.romLoaded = true;
+        drive.cpuEnabled = true;
+        drive.cpuP = pInit;
+
+        uint64_t prevCycles = 0;
+        uint64_t prevCpuStep = 0;
+        uint64_t cadenceGap = 0;
+        uint64_t cadenceGapMax = 0;
+
+        for (uint32_t step = 0; step < tickCount; ++step) {
+            const bool atnHigh = (((step + 1u) % 7u) != 0u);
+            const bool clkHigh = (((step + 2u) % 3u) != 0u);
+            const bool dataHigh = (((step + 3u) % 5u) != 0u);
+            drive.setIecLines(atnHigh, clkHigh, dataHigh);
+            drive.tickIecHalfCycle();
+
+            const bool cpuAdvanced = (drive.cpuStepCount > prevCpuStep);
+            if (cpuAdvanced) {
+                if (cadenceGap > cadenceGapMax) {
+                    cadenceGapMax = cadenceGap;
+                }
+                cadenceGap = 0;
+            } else {
+                cadenceGap++;
+            }
+
+            const uint64_t deltaCycles = drive.cycles - prevCycles;
+            const uint64_t deltaCpuSteps = drive.cpuStepCount - prevCpuStep;
+
+            std::ostringstream oss;
+            oss << label
+                << "," << caseName
+                << "," << step
+                << "," << drive.cycles
+                << "," << drive.cpuStepCount
+                << "," << int(drive.pc)
+                << "," << int(drive.cpuLastOpcode)
+                << "," << int(drive.cpuCyclesToNext)
+                << "," << (cpuAdvanced ? 1 : 0)
+                << "," << deltaCycles
+                << "," << deltaCpuSteps
+                << "," << int(drive.cpuSP)
+                << "," << int(drive.memory[0x01FE])
+                << "," << int(drive.memory[0x01FF])
+                << "," << cadenceGapMax;
+            rows.push_back(oss.str());
+
+            prevCycles = drive.cycles;
+            prevCpuStep = drive.cpuStepCount;
+        }
+    };
+
+    appendCase(
+        "branch_not_taken",
+        0xC000,
+        static_cast<uint8_t>(0x24),
+        {
+            {0xC000, 0xD0}, {0xC001, 0x02},
+            {0xC002, 0xEA},
+            {0xC003, 0x4C}, {0xC004, 0x00}, {0xC005, 0xC0}
+        },
+        24
+    );
+
+    appendCase(
+        "branch_taken_cross",
+        0xC0FD,
+        static_cast<uint8_t>(0x20),
+        {
+            {0xC0FD, 0xD0}, {0xC0FE, 0x02},
+            {0xC0FF, 0xEA},
+            {0xC100, 0xEA},
+            {0xC101, 0x4C}, {0xC102, 0xFD}, {0xC103, 0xC0}
+        },
+        24
+    );
+
+    appendCase(
+        "jsr_rts",
+        0xC000,
+        static_cast<uint8_t>(0x20),
+        {
+            {0xC000, 0x20}, {0xC001, 0x08}, {0xC002, 0xC0},
+            {0xC003, 0xEA},
+            {0xC004, 0x4C}, {0xC005, 0x00}, {0xC006, 0xC0},
+            {0xC008, 0xA0}, {0xC009, 0x33},
+            {0xC00A, 0x60}
+        },
+        28
+    );
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek50DriveCpuOpcodeTimingEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek50DriveCpuOpcodeRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek50DriveCpuOpcodeRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek50DriveCpuOpcodeRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek50DriveCpuOpcodeTimingTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,case,step,cycles,cpu_step_count,pc,cpu_last_opcode,cpu_cycles_to_next,cpu_advanced,delta_cycles,delta_cpu_steps,sp,stack_01fe,stack_01ff,cadence_gap_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek50DriveCpuOpcodeTimingEdgeHardReference() {
+    const std::string runtimePath = "week50_drive_cpu_opcode_timing_runtime.csv";
+    const std::string refPath = "reference/edge/week50_drive_cpu_opcode_timing_trace.csv";
+
+    const std::vector<std::string> got = buildWeek50DriveCpuOpcodeTimingEdgeTraceRows();
+    writeWeek50DriveCpuOpcodeTimingTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK50_BOOTSTRAP_DRIVEOPCODE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek50DriveCpuOpcodeTimingTraceCsv(refPath, got);
+        std::cout << "[WEEK50-CPU][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK50-CPU][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK50-CPU][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK50-CPU][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK50-CPU][HARDREF] PASS: drive CPU opcode timing trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

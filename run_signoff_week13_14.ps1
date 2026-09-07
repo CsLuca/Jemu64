@@ -75,6 +75,7 @@ function Run-Binary {
         [bool]$NeedWeek47,
         [bool]$NeedWeek48,
         [bool]$NeedWeek49,
+        [bool]$NeedWeek50,
         [bool]$NeedWeek12,
         [bool]$NeedExternal,
         [bool]$NeedNoFallback,
@@ -106,6 +107,7 @@ function Run-Binary {
         if ($NeedWeek47 -and ($text -notmatch "\[WEEK47-HOST\]\[HARDREF\] PASS")) { return ,@($false, $output, $exitCode) }
         if ($NeedWeek48 -and ($text -notmatch "\[WEEK48-CORE\]\[HARDREF\] PASS")) { return ,@($false, $output, $exitCode) }
         if ($NeedWeek49 -and ($text -notmatch "\[WEEK49-CPU\]\[HARDREF\] PASS")) { return ,@($false, $output, $exitCode) }
+        if ($NeedWeek50 -and ($text -notmatch "\[WEEK50-CPU\]\[HARDREF\] PASS")) { return ,@($false, $output, $exitCode) }
         if ($NeedWeek12 -and ($text -notmatch "\[WEEK12\] PASS: interrupt-boundary suite mismatches=0")) { return ,@($false, $output, $exitCode) }
         if ($NeedExternal -and ($text -notmatch "\[EXT\] External validation PASSED\.")) { return ,@($false, $output, $exitCode) }
         if ($NeedNoFallback -and ($text -notmatch "host_fallback=no")) { return ,@($false, $output, $exitCode) }
@@ -236,6 +238,10 @@ $metrics = [ordered]@{
     week49_drive_cpu_advance_events_max = 0
     week49_drive_cpu_pc_advance_events_max = 0
     week49_drive_cpu_cadence_gap_max = 0
+    week50_drive_opcode_rows = 0
+    week50_drive_opcode_branch_cross_rows = 0
+    week50_drive_opcode_jsr_rts_stack_rows = 0
+    week50_drive_opcode_cadence_gap_max = 0
 }
 
 $savedPath = $env:PATH
@@ -265,47 +271,47 @@ try {
             return
         }
         $fastManifestPath = Resolve-ManifestPath -ManifestInput $FastManifest -FallbackManifestInput $Manifest
-        $r = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fastManifestPath -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv $null
+        $r = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fastManifestPath -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek50:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv $null
         $script:__runFast = $r
         if (-not $r[0]) { foreach ($line in $r[1]) { $line }; exit $r[2] }
 
         if ($RevisionSlot -ne "8500") {
             $fast6510 = Resolve-ManifestPath -ManifestInput $FastManifest6510 -FallbackManifestInput $Manifest
-            $r6510 = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fast6510 -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '6510'; C64_VIC_REVISION = '6569'; C64_CIA_REVISION = '6526'; C64_OPENBUS_REVISION = 'nmos'; C64_DRIVE_REVISION = '1541' }
+            $r6510 = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fast6510 -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek50:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '6510'; C64_VIC_REVISION = '6569'; C64_CIA_REVISION = '6526'; C64_OPENBUS_REVISION = 'nmos'; C64_DRIVE_REVISION = '1541' }
             $metrics.fast_6510_exit = [int]$r6510[2]
             if (-not $r6510[0]) { foreach ($line in $r6510[1]) { $line }; exit $r6510[2] }
         }
 
         if ($RevisionSlot -ne "6510") {
             $fast8500 = Resolve-ManifestPath -ManifestInput $FastManifest8500 -FallbackManifestInput $Manifest
-            $r8500 = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fast8500 -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '8500'; C64_VIC_REVISION = '8565'; C64_CIA_REVISION = '6526A'; C64_OPENBUS_REVISION = 'hmos'; C64_DRIVE_REVISION = '1541C' }
+            $r8500 = Run-Binary -ExePath "$repo\c64_11_fast_signoff.exe" -ManifestPath $fast8500 -NeedWeek45:$false -NeedWeek46:$false -NeedWeek47:$false -NeedWeek48:$false -NeedWeek49:$false -NeedWeek50:$false -NeedWeek12:$false -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '8500'; C64_VIC_REVISION = '8565'; C64_CIA_REVISION = '6526A'; C64_OPENBUS_REVISION = 'hmos'; C64_DRIVE_REVISION = '1541C' }
             $metrics.fast_8500_exit = [int]$r8500[2]
             if (-not $r8500[0]) { foreach ($line in $r8500[1]) { $line }; exit $r8500[2] }
         }
     } -Assert { param($o, $e) $e -eq 0 }
 
     $results += Invoke-Step -Name "run-strict" -Action {
-        $r = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $Manifest -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv $null
+        $r = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $Manifest -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek50:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv $null
         $script:__runStrict = $r
         if (-not $r[0]) { foreach ($line in $r[1]) { $line }; exit $r[2] }
 
         if ($RevisionSlot -ne "8500") {
             $strict6510 = Resolve-ManifestPath -ManifestInput $Manifest6510 -FallbackManifestInput $Manifest
-            $r6510 = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $strict6510 -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '6510'; C64_VIC_REVISION = '6569'; C64_CIA_REVISION = '6526'; C64_OPENBUS_REVISION = 'nmos'; C64_DRIVE_REVISION = '1541' }
+            $r6510 = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $strict6510 -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek50:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '6510'; C64_VIC_REVISION = '6569'; C64_CIA_REVISION = '6526'; C64_OPENBUS_REVISION = 'nmos'; C64_DRIVE_REVISION = '1541' }
             $metrics.strict_6510_exit = [int]$r6510[2]
             if (-not $r6510[0]) { foreach ($line in $r6510[1]) { $line }; exit $r6510[2] }
         }
 
         if ($RevisionSlot -ne "6510") {
             $strict8500 = Resolve-ManifestPath -ManifestInput $Manifest8500 -FallbackManifestInput $Manifest
-            $r8500 = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $strict8500 -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '8500'; C64_VIC_REVISION = '8565'; C64_CIA_REVISION = '6526A'; C64_OPENBUS_REVISION = 'hmos'; C64_DRIVE_REVISION = '1541C' }
+            $r8500 = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $strict8500 -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek50:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -ExtraEnv @{ C64_CPU_REVISION = '8500'; C64_VIC_REVISION = '8565'; C64_CIA_REVISION = '6526A'; C64_OPENBUS_REVISION = 'hmos'; C64_DRIVE_REVISION = '1541C' }
             $metrics.strict_8500_exit = [int]$r8500[2]
             if (-not $r8500[0]) { foreach ($line in $r8500[1]) { $line }; exit $r8500[2] }
         }
     } -Assert { param($o, $e) $e -eq 0 }
 
     $results += Invoke-Step -Name "run-full" -Action {
-        $r = Run-Binary -ExePath "$repo\c64_11_full_signoff.exe" -ManifestPath $Manifest -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek12:$true -NeedExternal:$false -NeedNoFallback:$false -ExtraEnv $null
+        $r = Run-Binary -ExePath "$repo\c64_11_full_signoff.exe" -ManifestPath $Manifest -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek50:$true -NeedWeek12:$true -NeedExternal:$false -NeedNoFallback:$false -ExtraEnv $null
         $script:__runFull = $r
         if (-not $r[0]) { foreach ($line in $r[1]) { $line }; exit $r[2] }
     } -Assert { param($o, $e) $e -eq 0 }
@@ -339,6 +345,7 @@ try {
     "[SIGNOFF] week47 host timing stabilization hard-ref: PASS"
     "[SIGNOFF] week48 drive core timing baseline hard-ref: PASS"
     "[SIGNOFF] week49 drive CPU cadence hard-ref: PASS"
+    "[SIGNOFF] week50 drive CPU opcode timing hard-ref: PASS"
     "[SIGNOFF] interrupt boundary: zero mismatch ([WEEK12] PASS)"
     "[SIGNOFF] no hidden fallback: enforced (host_fallback=no)"
     "[SIGNOFF] strict/full manifest: $Manifest"
@@ -943,6 +950,28 @@ try {
             $metrics.week49_drive_cpu_advance_events_max = $cpuAdvanceMax
             $metrics.week49_drive_cpu_pc_advance_events_max = $pcAdvanceMax
             $metrics.week49_drive_cpu_cadence_gap_max = $cadenceGapMax
+        }
+    }
+    $week50Ref = Join-Path -Path $repo -ChildPath "reference\edge\week50_drive_cpu_opcode_timing_trace.csv"
+    if (Test-Path -LiteralPath $week50Ref) {
+        $rows50 = @(Get-Content -LiteralPath $week50Ref)
+        if ($rows50.Count -gt 1) {
+            $metrics.week50_drive_opcode_rows = $rows50.Count - 1
+            $branchCrossRows = 0
+            $jsrRtsRows = 0
+            $gapMax = 0
+            foreach ($line in $rows50) {
+                $parts = $line.Split(',')
+                if ($parts.Count -ge 15) {
+                    if ($parts[1] -eq 'branch_taken_cross') { $branchCrossRows++ }
+                    if (($parts[1] -eq 'jsr_rts') -and (($parts[12] -ne '0') -or ($parts[13] -ne '0'))) { $jsrRtsRows++ }
+                    $gap = 0
+                    if ([int]::TryParse($parts[14], [ref]$gap)) { if ($gap -gt $gapMax) { $gapMax = $gap } }
+                }
+            }
+            $metrics.week50_drive_opcode_branch_cross_rows = $branchCrossRows
+            $metrics.week50_drive_opcode_jsr_rts_stack_rows = $jsrRtsRows
+            $metrics.week50_drive_opcode_cadence_gap_max = $gapMax
         }
     }
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"

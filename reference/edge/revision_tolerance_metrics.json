@@ -95,6 +95,10 @@
                     "week49_drive_cpu_rows":  108,
                     "week49_drive_cpu_advance_events_max":  11,
                     "week49_drive_cpu_pc_advance_events_max":  11,
-                    "week49_drive_cpu_cadence_gap_max":  11
+                    "week49_drive_cpu_cadence_gap_max":  11,
+                    "week50_drive_opcode_rows":  228,
+                    "week50_drive_opcode_branch_cross_rows":  72,
+                    "week50_drive_opcode_jsr_rts_stack_rows":  84,
+                    "week50_drive_opcode_cadence_gap_max":  11
                 }
 }
