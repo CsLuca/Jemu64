@@ -91,6 +91,10 @@
                     "week48_drive_core_rows":  72,
                     "week48_drive_core_cpu_step_max":  9,
                     "week48_drive_core_via_access_rows":  72,
-                    "week48_drive_core_iec_effect_rows":  0
+                    "week48_drive_core_iec_effect_rows":  0,
+                    "week49_drive_cpu_rows":  108,
+                    "week49_drive_cpu_advance_events_max":  11,
+                    "week49_drive_cpu_pc_advance_events_max":  11,
+                    "week49_drive_cpu_cadence_gap_max":  11
                 }
 }
