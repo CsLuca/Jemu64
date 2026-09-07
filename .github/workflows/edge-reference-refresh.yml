@@ -112,4 +112,5 @@ jobs:
             week56_drive_iec_phase_map_runtime.csv
             week57_iec_signal_window_runtime.csv
             week58_iec_analog_edge_model_runtime.csv
+            week59_iec_analog_pulse_window_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

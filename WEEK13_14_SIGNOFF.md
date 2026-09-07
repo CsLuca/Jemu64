@@ -486,6 +486,17 @@
   - runtime: `week58_iec_analog_edge_model_runtime.csv`
   - reference: `reference/edge/week58_iec_analog_edge_model_trace.csv`
 
+## Week59 IEC Analog-Aware Pulse-Window Refinement
+
+- Added a second analog-aware refinement layer focused on pulse-window observability and turnaround jitter under deterministic line dynamics.
+- Coverage focus:
+  - pulse-width envelope guards (`week59_iec_analog_pulse_min_ticks`, `week59_iec_analog_pulse_max_ticks`),
+  - turnaround jitter bound under mode transitions (`week59_iec_analog_turnaround_jitter_max`),
+  - turnaround min/max guard continuity under analog pulse shaping.
+- Hard reference trace:
+  - runtime: `week59_iec_analog_pulse_window_runtime.csv`
+  - reference: `reference/edge/week59_iec_analog_pulse_window_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -600,6 +611,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week56_drive_iec_phase_map_trace.csv`
     - `reference/edge/week57_iec_signal_window_trace.csv`
     - `reference/edge/week58_iec_analog_edge_model_trace.csv`
+    - `reference/edge/week59_iec_analog_pulse_window_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
