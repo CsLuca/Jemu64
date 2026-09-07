@@ -8479,6 +8479,7 @@ static void runWeek56DriveIecPhaseMapEdgeHardReference();
 static void runWeek57IecSignalWindowEdgeHardReference();
 static void runWeek58IecAnalogEdgeModelEdgeHardReference();
 static void runWeek59IecAnalogPulseWindowEdgeHardReference();
+static void runWeek60IecContentionReleaseEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8532,6 +8533,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek57IecSignalWindowEdgeHardReference();
     runWeek58IecAnalogEdgeModelEdgeHardReference();
     runWeek59IecAnalogPulseWindowEdgeHardReference();
+    runWeek60IecContentionReleaseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8586,6 +8588,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek57IecSignalWindowEdgeHardReference();
     runWeek58IecAnalogEdgeModelEdgeHardReference();
     runWeek59IecAnalogPulseWindowEdgeHardReference();
+    runWeek60IecContentionReleaseEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -15502,6 +15505,226 @@ static void runWeek59IecAnalogPulseWindowEdgeHardReference() {
     }
 
     std::cout << "[WEEK59-ANALOG][HARDREF] PASS: IEC analog pulse-window trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek60IecContentionReleaseRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(320);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.memory[0xFFFC] = 0x00;
+    drive.memory[0xFFFD] = 0xC0;
+    drive.memory[0xC000] = 0xA9;
+    drive.memory[0xC001] = 0x51;
+    drive.memory[0xC002] = 0x20;
+    drive.memory[0xC003] = 0x0A;
+    drive.memory[0xC004] = 0xC0;
+    drive.memory[0xC005] = 0x4C;
+    drive.memory[0xC006] = 0x00;
+    drive.memory[0xC007] = 0xC0;
+    drive.memory[0xC00A] = 0xA2;
+    drive.memory[0xC00B] = 0x55;
+    drive.memory[0xC00C] = 0x60;
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.cpuP = 0x20;
+
+    drive.via1.write(0x0E, 0xC0);
+    drive.via1.write(0x04, 0x10);
+    drive.via1.write(0x05, 0x00);
+    drive.via2.write(0x0E, 0x84);
+    drive.via2.write(0x0B, 0x1C);
+    drive.via2.write(0x0A, 0xA7);
+
+    int prevOwnership = 0;
+    int contentionRows = 0;
+    int releasePending = -1;
+    int releaseLatency = -1;
+
+    for (uint64_t step = 0; step < 96; ++step) {
+        if ((step % 12u) == 0u) {
+            drive.via1.write(0x02, 0x60);
+            drive.via1.write(0x00, 0x00);
+        } else if ((step % 12u) == 6u) {
+            drive.via1.write(0x00, 0x60);
+        }
+
+        if (step == 12) {
+            drive.enqueueIecCommandByte(0x28);
+            drive.enqueueIecCommandByte(0xF0);
+            drive.enqueueIecDataByte(0x24);
+            drive.enqueueIecDataByte(0x41);
+            drive.enqueueIecCommandByte(0x3F);
+        }
+        if (step == 26) {
+            drive.iecTalking = true;
+            drive.iecListening = false;
+            drive.iecActiveTalkChannel = 0;
+            drive.iecTalkSecondary = 0;
+            drive.iecTalkSa0Confirmed = true;
+            drive.iecOpenTalkChannels[0] = true;
+            drive.iecTxQueue.push_back(0x41);
+            drive.iecTxQueue.push_back(0x42);
+            drive.iecTxQueue.push_back(0x43);
+            drive.iecTxQueue.push_back(0x44);
+            drive.iecTxQueue.push_back(0x0D);
+        }
+        if (step == 62) {
+            drive.iecTalking = false;
+            drive.iecListening = true;
+            drive.enqueueIecDataByte(0x2A);
+            drive.enqueueIecDataByte(0x0D);
+        }
+        if (step == 78) {
+            drive.iecListening = false;
+        }
+
+        bool hostAtn = (((step + 1u) % 10u) != 0u);
+        bool hostClk = (((step + 2u) % 7u) < 5u);
+        bool hostData = (((step + 4u) % 9u) < 6u);
+
+        if (step >= 26 && step <= 46) {
+            hostAtn = true;
+            hostClk = ((step % 3u) != 0u);
+            hostData = ((step % 4u) != 0u);
+        }
+        if (step >= 62 && step <= 72) {
+            hostAtn = false;
+            hostClk = ((step % 5u) != 0u);
+            hostData = ((step % 3u) != 0u);
+        }
+
+        const bool drivePullClk = drive.iecDrivePullCLK;
+        const bool drivePullData = drive.iecDrivePullDATA;
+        const bool hostPullClk = !hostClk;
+        const bool hostPullData = !hostData;
+
+        const bool clkContention = drivePullClk && hostPullClk;
+        const bool dataContention = drivePullData && hostPullData;
+        const bool anyContention = clkContention || dataContention;
+        if (anyContention) {
+            contentionRows++;
+        }
+
+        int ownership = 0;
+        const bool driveOwns = drivePullClk || drivePullData;
+        const bool hostOwns = hostPullClk || hostPullData;
+        if (anyContention) ownership = 3;
+        else if (driveOwns) ownership = 2;
+        else if (hostOwns) ownership = 1;
+
+        if (prevOwnership == 2 && ownership == 1) {
+            releasePending = 0;
+        }
+        if (releasePending >= 0) {
+            if (ownership == 1 && !anyContention) {
+                releaseLatency = releasePending;
+                releasePending = -1;
+            } else {
+                releasePending++;
+            }
+        }
+
+        const bool illegalOverlap = (ownership == 3 && !anyContention);
+
+        drive.setIecLines(hostAtn, hostClk && !drivePullClk, hostData && !drivePullData);
+        drive.tickIecHalfCycle();
+
+        std::ostringstream oss;
+        oss << label
+            << ",contention"
+            << "," << step
+            << "," << drive.cycles
+            << "," << static_cast<int>(hostAtn)
+            << "," << static_cast<int>(hostClk)
+            << "," << static_cast<int>(hostData)
+            << "," << static_cast<int>(drivePullClk)
+            << "," << static_cast<int>(drivePullData)
+            << "," << static_cast<int>(clkContention)
+            << "," << static_cast<int>(dataContention)
+            << "," << static_cast<int>(anyContention)
+            << "," << ownership
+            << "," << releaseLatency
+            << "," << static_cast<int>(illegalOverlap)
+            << "," << contentionRows
+            << "," << drive.pendingIecRx()
+            << "," << drive.pendingIecTx()
+            << "," << drive.iecRxProcessed
+            << "," << drive.iecTxServed
+            << "," << static_cast<int>(drive.iecSerialState);
+        rows.push_back(oss.str());
+
+        prevOwnership = ownership;
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek60IecContentionReleaseEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek60IecContentionReleaseRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek60IecContentionReleaseRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek60IecContentionReleaseRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek60IecContentionReleaseTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,step,cycles,host_atn,host_clk,host_data,drive_pull_clk,drive_pull_data,clk_contention,data_contention,any_contention,ownership,release_latency,illegal_overlap,contention_rows,pending_rx,pending_tx,rx_processed,tx_served,iec_state\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek60IecContentionReleaseEdgeHardReference() {
+    const std::string runtimePath = "week60_iec_contention_release_runtime.csv";
+    const std::string refPath = "reference/edge/week60_iec_contention_release_trace.csv";
+
+    const std::vector<std::string> got = buildWeek60IecContentionReleaseEdgeTraceRows();
+    writeWeek60IecContentionReleaseTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK60_BOOTSTRAP_CONTENTION_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek60IecContentionReleaseTraceCsv(refPath, got);
+        std::cout << "[WEEK60-CONTENTION][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK60-CONTENTION][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK60-CONTENTION][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK60-CONTENTION][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK60-CONTENTION][HARDREF] PASS: IEC contention/release trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
