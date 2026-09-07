@@ -138,6 +138,12 @@
                     "week57_iec_signal_edge_slew_max":  3,
                     "week57_iec_signal_polarity_mismatch_rows":  24,
                     "week57_iec_signal_turnaround_max":  0,
-                    "week57_iec_signal_turnaround_min":  0
+                    "week57_iec_signal_turnaround_min":  0,
+                    "week58_iec_analog_rows":  240,
+                    "week58_iec_analog_rise_ticks_max":  4,
+                    "week58_iec_analog_fall_ticks_max":  2,
+                    "week58_iec_analog_polarity_glitch_rows":  81,
+                    "week58_iec_analog_turnaround_max":  0,
+                    "week58_iec_analog_turnaround_min":  0
                 }
 }

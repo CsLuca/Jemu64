@@ -475,6 +475,17 @@
   - runtime: `week57_iec_signal_window_runtime.csv`
   - reference: `reference/edge/week57_iec_signal_window_trace.csv`
 
+## Week58 IEC Analog-Aware First Refinement
+
+- Introduced the first analog-aware IEC refinement layer (deterministic RC-lite + hysteresis thresholds) on top of frozen core timing.
+- Coverage focus:
+  - rise/fall edge-duration observability (`*_rise_ticks`, `*_fall_ticks`),
+  - polarity/glitch guard during talk/listen transitions,
+  - turnaround window bounds under analog-modeled line transitions.
+- Hard reference trace:
+  - runtime: `week58_iec_analog_edge_model_runtime.csv`
+  - reference: `reference/edge/week58_iec_analog_edge_model_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -588,6 +599,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
     - `reference/edge/week56_drive_iec_phase_map_trace.csv`
     - `reference/edge/week57_iec_signal_window_trace.csv`
+    - `reference/edge/week58_iec_analog_edge_model_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

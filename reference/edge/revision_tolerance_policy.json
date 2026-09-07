@@ -138,6 +138,12 @@
     "week57_iec_signal_polarity_mismatch_rows": { "min": 20, "max": 40 },
     "week57_iec_signal_turnaround_max": { "min": 0, "max": 20 },
     "week57_iec_signal_turnaround_min": { "min": 0, "max": 12 },
+    "week58_iec_analog_rows": { "min": 220, "max": 260 },
+    "week58_iec_analog_rise_ticks_max": { "min": 1, "max": 20 },
+    "week58_iec_analog_fall_ticks_max": { "min": 1, "max": 20 },
+    "week58_iec_analog_polarity_glitch_rows": { "min": 70, "max": 100 },
+    "week58_iec_analog_turnaround_max": { "min": 0, "max": 30 },
+    "week58_iec_analog_turnaround_min": { "min": 0, "max": 20 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }
