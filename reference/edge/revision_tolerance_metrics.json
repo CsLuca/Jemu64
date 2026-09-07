@@ -133,6 +133,11 @@
                     "week53_drive_iec_phase_kernel_path_rows":  146,
                     "week54_pure_stability_runs":  12,
                     "week54_pure_stability_pass_runs":  12,
-                    "week54_pure_stability_host_fallback_no":  1
+                    "week54_pure_stability_host_fallback_no":  1,
+                    "week57_iec_signal_rows":  216,
+                    "week57_iec_signal_edge_slew_max":  3,
+                    "week57_iec_signal_polarity_mismatch_rows":  24,
+                    "week57_iec_signal_turnaround_max":  0,
+                    "week57_iec_signal_turnaround_min":  0
                 }
 }

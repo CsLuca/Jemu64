@@ -462,6 +462,19 @@
   - enforced sequence: `prepare -> signoff -> tolerance -> e2e compat`
   - gate is PASS only when all steps are green in order.
 
+## Fase 7 Week57 Scope (Signal-Level IEC Analog-Aware Bootstrap)
+
+- Scope definition:
+  - start signal-level IEC validation on top of frozen core timing (Phase 6),
+  - keep CPU/VIA cadence deterministic while introducing edge/window observability.
+- First signal-level metrics/gates:
+  - edge slew/window guard (`week57_iec_signal_edge_slew_max`),
+  - polarity mismatch guard (`week57_iec_signal_polarity_mismatch_rows`),
+  - turnaround window bounds (`week57_iec_signal_turnaround_min`, `week57_iec_signal_turnaround_max`).
+- Hard reference trace:
+  - runtime: `week57_iec_signal_window_runtime.csv`
+  - reference: `reference/edge/week57_iec_signal_window_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -574,6 +587,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
     - `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
     - `reference/edge/week56_drive_iec_phase_map_trace.csv`
+    - `reference/edge/week57_iec_signal_window_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

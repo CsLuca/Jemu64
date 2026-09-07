@@ -110,4 +110,5 @@ jobs:
             week54_cpu_via_iec_irq_bridge_runtime.csv
             week55_cpu_via_iec_timeout_bridge_runtime.csv
             week56_drive_iec_phase_map_runtime.csv
+            week57_iec_signal_window_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
