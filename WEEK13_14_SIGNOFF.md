@@ -451,6 +451,17 @@
   - `week54_pure_stability_pass_runs`
   - `week54_pure_stability_host_fallback_no`
 
+## Fase 6 Week55 Prerequisito Signal-Level IEC
+
+- Goal: close the prerequisite layer before analog-aware work by freezing CPU/VIA core timing behavior validated in phases 2-5.
+- Core-timing freeze policy:
+  - tightened tolerance bands to exact deterministic values for key CPU/VIA timing metrics (`week48`..`week56`) and pure-stability metrics.
+  - freeze focuses on cycle-accuracy invariance so future signal-level work can be isolated from core timing drift.
+- Sequential gate script added:
+  - `run_phase6_week55_prereq_gate.ps1`
+  - enforced sequence: `prepare -> signoff -> tolerance -> e2e compat`
+  - gate is PASS only when all steps are green in order.
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
