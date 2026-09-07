@@ -418,6 +418,17 @@
   - runtime: `week54_cpu_via_iec_irq_bridge_runtime.csv`
   - reference: `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
 
+## Week55 CPU<->VIA<->IEC Timeout Bridge Hard-Ref
+
+- Added an integration hard reference focused on timeout-path bridging while CPU/VIA/IEC interact deterministically across 1541/1541C/1541-II.
+- Coverage focus:
+  - explicit EOI/TX/RX timeout-path visibility (`eoi_timeout_count`, `tx_timeout_count`, `rx_timeout_count`),
+  - status-line propagation guard for timeout state (`status_code=74` windows),
+  - cadence stability under timeout pressure (`cadence_gap_max`) with concurrent VIA IRQ OR activity.
+- Hard reference trace:
+  - runtime: `week55_cpu_via_iec_timeout_bridge_runtime.csv`
+  - reference: `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -528,6 +539,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week52_via_shift_trace.csv`
     - `reference/edge/week53_cpu_via_iec_integration_trace.csv`
     - `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
+    - `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

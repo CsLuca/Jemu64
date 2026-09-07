@@ -114,6 +114,12 @@
                     "week54_irq_bridge_cpu_advanced_rows":  30,
                     "week54_irq_bridge_via_irq_or_rows":  105,
                     "week54_irq_bridge_iec_tx_served_max":  2,
-                    "week54_irq_bridge_cadence_gap_max":  11
+                    "week54_irq_bridge_cadence_gap_max":  11,
+                    "week55_timeout_bridge_rows":  168,
+                    "week55_timeout_bridge_eoi_timeout_max":  1,
+                    "week55_timeout_bridge_tx_timeout_max":  1,
+                    "week55_timeout_bridge_rx_timeout_max":  1,
+                    "week55_timeout_bridge_status74_rows":  102,
+                    "week55_timeout_bridge_cadence_gap_max":  11
                 }
 }

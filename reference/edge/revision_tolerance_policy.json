@@ -116,6 +116,12 @@
     "week54_irq_bridge_cpu_advanced_rows": { "min": 20, "max": 60 },
     "week54_irq_bridge_via_irq_or_rows": { "min": 80, "max": 120 },
     "week54_irq_bridge_iec_tx_served_max": { "min": 2, "max": 20 },
-    "week54_irq_bridge_cadence_gap_max": { "min": 0, "max": 20 }
+    "week54_irq_bridge_cadence_gap_max": { "min": 0, "max": 20 },
+    "week55_timeout_bridge_rows": { "min": 150, "max": 180 },
+    "week55_timeout_bridge_eoi_timeout_max": { "min": 1, "max": 10 },
+    "week55_timeout_bridge_tx_timeout_max": { "min": 1, "max": 10 },
+    "week55_timeout_bridge_rx_timeout_max": { "min": 1, "max": 10 },
+    "week55_timeout_bridge_status74_rows": { "min": 30, "max": 120 },
+    "week55_timeout_bridge_cadence_gap_max": { "min": 0, "max": 20 }
   }
 }
