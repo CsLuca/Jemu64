@@ -429,6 +429,17 @@
   - runtime: `week55_cpu_via_iec_timeout_bridge_runtime.csv`
   - reference: `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
 
+## Week56 Drive IEC Phase-Map Hard-Ref
+
+- Added a phase-mapping hard reference focused on temporal alignment between VIA accesses and IEC side effects while the drive CPU runs deterministic KERNAL-like command/talk/listen paths.
+- Coverage focus:
+  - access-to-edge temporal mapping (`via_access`, `iec_edge_count`, `last_via_to_iec_latency`),
+  - phase-bucket validation across command/listen/talk windows (`phase_bucket`, `iec_state`),
+  - integrated CPU cadence and queue progression under IEC path transitions.
+- Hard reference trace:
+  - runtime: `week56_drive_iec_phase_map_runtime.csv`
+  - reference: `reference/edge/week56_drive_iec_phase_map_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -540,6 +551,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week53_cpu_via_iec_integration_trace.csv`
     - `reference/edge/week54_cpu_via_iec_irq_bridge_trace.csv`
     - `reference/edge/week55_cpu_via_iec_timeout_bridge_trace.csv`
+    - `reference/edge/week56_drive_iec_phase_map_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

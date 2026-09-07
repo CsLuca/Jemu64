@@ -120,6 +120,11 @@
                     "week55_timeout_bridge_tx_timeout_max":  1,
                     "week55_timeout_bridge_rx_timeout_max":  1,
                     "week55_timeout_bridge_status74_rows":  102,
-                    "week55_timeout_bridge_cadence_gap_max":  11
+                    "week55_timeout_bridge_cadence_gap_max":  11,
+                    "week56_drive_iec_phase_rows":  192,
+                    "week56_drive_iec_phase_edge_count":  322,
+                    "week56_drive_iec_phase_latency_min":  0,
+                    "week56_drive_iec_phase_latency_max":  0,
+                    "week56_drive_iec_phase_kernel_path_rows":  146
                 }
 }

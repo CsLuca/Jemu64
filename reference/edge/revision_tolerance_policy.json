@@ -122,6 +122,11 @@
     "week55_timeout_bridge_tx_timeout_max": { "min": 1, "max": 10 },
     "week55_timeout_bridge_rx_timeout_max": { "min": 1, "max": 10 },
     "week55_timeout_bridge_status74_rows": { "min": 30, "max": 120 },
-    "week55_timeout_bridge_cadence_gap_max": { "min": 0, "max": 20 }
+    "week55_timeout_bridge_cadence_gap_max": { "min": 0, "max": 20 },
+    "week56_drive_iec_phase_rows": { "min": 180, "max": 220 },
+    "week56_drive_iec_phase_edge_count": { "min": 300, "max": 700 },
+    "week56_drive_iec_phase_latency_min": { "min": 0, "max": 8 },
+    "week56_drive_iec_phase_latency_max": { "min": 0, "max": 24 },
+    "week56_drive_iec_phase_kernel_path_rows": { "min": 100, "max": 220 }
   }
 }
