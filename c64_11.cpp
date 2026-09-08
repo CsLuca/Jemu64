@@ -8483,6 +8483,7 @@ static void runWeek60IecContentionReleaseEdgeHardReference();
 static void runWeek61DriveDosSemanticEdgeHardReference();
 static void runWeek62DiskFidelityGcrEdgeHardReference();
 static void runWeek63GcrDecodePathEdgeHardReference();
+static void runWeek64TrackLayoutRealismEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8540,6 +8541,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek61DriveDosSemanticEdgeHardReference();
     runWeek62DiskFidelityGcrEdgeHardReference();
     runWeek63GcrDecodePathEdgeHardReference();
+    runWeek64TrackLayoutRealismEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8598,6 +8600,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek61DriveDosSemanticEdgeHardReference();
     runWeek62DiskFidelityGcrEdgeHardReference();
     runWeek63GcrDecodePathEdgeHardReference();
+    runWeek64TrackLayoutRealismEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -16382,6 +16385,179 @@ static void runWeek63GcrDecodePathEdgeHardReference() {
     }
 
     std::cout << "[WEEK63-GCR][HARDREF] PASS: GCR decode-path trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek64TrackLayoutRealismRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(260);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    uint64_t rotTick = 0;
+    int trackSyncDensityRows = 0;
+    int gapClassMismatchRows = 0;
+    int headerDataBoundaryErrors = 0;
+
+    for (int track = 0; track < 3; ++track) {
+        const int trackNo = 0x11 + track;
+        for (int sector = 0; sector < 8; ++sector) {
+            int lastRegion = 0;
+            int strideWindow = (track * 2) + 1;
+
+            for (int pos = 0; pos < 8; ++pos) {
+                const bool syncMark = (pos <= 1);
+                int gapClass = 1;
+                if (pos >= 6) {
+                    gapClass = 2;
+                } else if (syncMark) {
+                    gapClass = 0;
+                }
+                int region = 0;
+                if (pos <= 3) {
+                    region = 1;
+                } else if (pos <= 5) {
+                    region = 2;
+                } else {
+                    region = 3;
+                }
+
+                const bool expectedHeaderDataBoundary = (pos == 4);
+                const bool observedHeaderDataBoundary = (lastRegion == 1 && region == 2);
+                if (expectedHeaderDataBoundary != observedHeaderDataBoundary) {
+                    headerDataBoundaryErrors++;
+                }
+
+                const int expectedGapClass = (region == 3 && pos >= 6) ? 2 : ((syncMark) ? 0 : 1);
+                if ((region == 3 && pos >= 6 && gapClass != 2) ||
+                    ((region != 3 || pos < 6) && !syncMark && gapClass != 1) ||
+                    (syncMark && gapClass != 0)) {
+                    gapClassMismatchRows++;
+                }
+
+                if (syncMark) {
+                    trackSyncDensityRows++;
+                }
+
+                if (pos == 3) {
+                    drive.processIecCommandByte(0x28);
+                    drive.processIecCommandByte(0xFF);
+                    std::ostringstream ba;
+                    ba << "B-A,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << trackNo
+                       << "," << std::setw(2) << (sector & 0x1F);
+                    const std::string baCmd = ba.str();
+                    for (char c : baCmd) {
+                        drive.processIecDataByte(static_cast<uint8_t>(c));
+                    }
+                    drive.processIecCommandByte(0x3F);
+                }
+                if (pos == 5) {
+                    drive.processIecCommandByte(0x28);
+                    drive.processIecCommandByte(0xFF);
+                    std::ostringstream br;
+                    br << "B-R,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << trackNo
+                       << "," << std::setw(2) << (sector & 0x1F);
+                    const std::string brCmd = br.str();
+                    for (char c : brCmd) {
+                        drive.processIecDataByte(static_cast<uint8_t>(c));
+                    }
+                    drive.processIecCommandByte(0x3F);
+                }
+
+                drive.tickIecHalfCycle();
+                rotTick += static_cast<uint64_t>(strideWindow + ((pos % 3 == 0) ? 1 : 0));
+
+                std::ostringstream oss;
+                oss << label
+                    << ",track_layout"
+                    << "," << rotTick
+                    << "," << trackNo
+                    << "," << sector
+                    << "," << pos
+                    << "," << (syncMark ? 1 : 0)
+                    << "," << gapClass
+                    << "," << expectedGapClass
+                    << "," << region
+                    << "," << (observedHeaderDataBoundary ? 1 : 0)
+                    << "," << (expectedHeaderDataBoundary ? 1 : 0)
+                    << "," << trackSyncDensityRows
+                    << "," << gapClassMismatchRows
+                    << "," << headerDataBoundaryErrors
+                    << "," << drive.iecAllocatedBlockCount
+                    << "," << drive.virtualBlocksFree();
+                rows.push_back(oss.str());
+
+                lastRegion = region;
+            }
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek64TrackLayoutRealismEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek64TrackLayoutRealismRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek64TrackLayoutRealismRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek64TrackLayoutRealismRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek64TrackLayoutRealismTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,track,sector,pos,sync_mark,gap_class,expected_gap_class,region,header_data_boundary,expected_boundary,track_sync_density_rows,gap_class_mismatch_rows,header_data_boundary_errors,alloc_count,blocks_free\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek64TrackLayoutRealismEdgeHardReference() {
+    const std::string runtimePath = "week64_track_layout_realism_runtime.csv";
+    const std::string refPath = "reference/edge/week64_track_layout_realism_trace.csv";
+
+    const std::vector<std::string> got = buildWeek64TrackLayoutRealismEdgeTraceRows();
+    writeWeek64TrackLayoutRealismTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK64_BOOTSTRAP_TRACKLAYOUT_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek64TrackLayoutRealismTraceCsv(refPath, got);
+        std::cout << "[WEEK64-LAYOUT][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK64-LAYOUT][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK64-LAYOUT][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK64-LAYOUT][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK64-LAYOUT][HARDREF] PASS: track-layout realism trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
