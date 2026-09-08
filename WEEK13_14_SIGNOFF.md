@@ -626,6 +626,17 @@
   - runtime: `week70_gcr_read_pipeline_runtime.csv`
   - reference: `reference/edge/week70_gcr_read_pipeline_trace.csv`
 
+## Week71 Write Path + Read-After-Write Realism (drift-controlled)
+
+- Added a write-path hard-reference layer with deterministic GCR-style RAW roundtrip verification on the following rotation, including controlled drift and bounded retry behavior.
+- Coverage focus:
+  - RAW roundtrip success accumulation (`w71_raw_roundtrip_ok_rows`),
+  - write verify fail guard (`w71_write_verify_fail_rows`, target `0` on baseline),
+  - post-write retry depth bound (`w71_postwrite_retry_max`).
+- Hard reference trace:
+  - runtime: `week71_gcr_write_roundtrip_runtime.csv`
+  - reference: `reference/edge/week71_gcr_write_roundtrip_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -752,6 +763,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week68_drive_cpu_ownership_trace.csv`
     - `reference/edge/week69_via_timing_grade_trace.csv`
     - `reference/edge/week70_gcr_read_pipeline_trace.csv`
+    - `reference/edge/week71_gcr_write_roundtrip_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

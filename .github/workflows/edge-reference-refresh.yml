@@ -124,4 +124,5 @@ jobs:
             week68_drive_cpu_ownership_runtime.csv
             week69_via_timing_grade_runtime.csv
             week70_gcr_read_pipeline_runtime.csv
+            week71_gcr_write_roundtrip_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

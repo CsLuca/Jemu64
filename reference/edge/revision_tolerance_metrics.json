@@ -183,6 +183,9 @@
         "w69_handshake_stall_rows": 0,
         "w70_gcr_header_decode_rows": 100,
         "w70_gcr_data_decode_rows": 100,
-        "w70_gcr_chain_break_rows": 0
+        "w70_gcr_chain_break_rows": 0,
+        "w71_raw_roundtrip_ok_rows": 27,
+        "w71_write_verify_fail_rows": 0,
+        "w71_postwrite_retry_max": 1
     }
 }
