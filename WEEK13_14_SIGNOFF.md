@@ -560,6 +560,17 @@
   - runtime: `week64_track_layout_realism_runtime.csv`
   - reference: `reference/edge/week64_track_layout_realism_trace.csv`
 
+## Week65 CRC/ECC Behavior + Error Map (DOS/channel15 + LOAD path)
+
+- Added a CRC/ECC behavior hard-reference layer with deterministic bad-sector map injection and retry/recovery semantics observable through command channel and LOAD-style block-read path.
+- Coverage focus:
+  - CRC success row accumulation (`week65_crc_ok_rows`),
+  - CRC error row accumulation (`week65_crc_error_rows`),
+  - retry recovery convergence bound (`week65_retry_recovery_convergence_max`).
+- Hard reference trace:
+  - runtime: `week65_crc_ecc_error_map_runtime.csv`
+  - reference: `reference/edge/week65_crc_ecc_error_map_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -680,6 +691,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week62_disk_fidelity_gcr_trace.csv`
     - `reference/edge/week63_gcr_decode_path_trace.csv`
     - `reference/edge/week64_track_layout_realism_trace.csv`
+    - `reference/edge/week65_crc_ecc_error_map_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
