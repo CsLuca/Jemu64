@@ -637,6 +637,20 @@
   - runtime: `week71_gcr_write_roundtrip_runtime.csv`
   - reference: `reference/edge/week71_gcr_write_roundtrip_trace.csv`
 
+## Week72 Physical Disk Effects Model (zones/jitter/slip/weak-bits)
+
+- Added a physical-disk hard-reference layer that models track-band speed zones, bounded parametric timing jitter, controlled bit-slip injection, and weak-bit observation windows.
+- Coverage focus:
+  - zone timing span bound (`w72_zone_timing_span_max`),
+  - bit-slip accumulation (`w72_bitslip_events_rows`),
+  - weak-bit observation accumulation (`w72_weakbit_observed_rows`).
+- Gate focus:
+  - stable zone-span bands across revisions,
+  - no regression in LOAD/e2e signoff suites.
+- Hard reference trace:
+  - runtime: `week72_physical_disk_effects_runtime.csv`
+  - reference: `reference/edge/week72_physical_disk_effects_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -764,6 +778,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week69_via_timing_grade_trace.csv`
     - `reference/edge/week70_gcr_read_pipeline_trace.csv`
     - `reference/edge/week71_gcr_write_roundtrip_trace.csv`
+    - `reference/edge/week72_physical_disk_effects_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

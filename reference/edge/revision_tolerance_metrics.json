@@ -186,6 +186,9 @@
         "w70_gcr_chain_break_rows": 0,
         "w71_raw_roundtrip_ok_rows": 27,
         "w71_write_verify_fail_rows": 0,
-        "w71_postwrite_retry_max": 1
+        "w71_postwrite_retry_max": 1,
+        "w72_zone_timing_span_max": 4,
+        "w72_bitslip_events_rows": 5,
+        "w72_weakbit_observed_rows": 3
     }
 }

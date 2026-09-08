@@ -186,6 +186,9 @@
     "w71_raw_roundtrip_ok_rows": { "min": 20, "max": 40 },
     "w71_write_verify_fail_rows": { "min": 0, "max": 0 },
     "w71_postwrite_retry_max": { "min": 0, "max": 3 },
+    "w72_zone_timing_span_max": { "min": 3, "max": 6 },
+    "w72_bitslip_events_rows": { "min": 4, "max": 12 },
+    "w72_weakbit_observed_rows": { "min": 2, "max": 8 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }
