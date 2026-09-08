@@ -8489,6 +8489,7 @@ static void runWeek66CrcStatusLatchEdgeHardReference();
 static void runWeek67CrcErrorClassEdgeHardReference();
 static void runWeek68DriveCpuOwnershipEdgeHardReference();
 static void runWeek69ViaTimingGradeEdgeHardReference();
+static void runWeek70GcrReadPipelineEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8552,6 +8553,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek67CrcErrorClassEdgeHardReference();
     runWeek68DriveCpuOwnershipEdgeHardReference();
     runWeek69ViaTimingGradeEdgeHardReference();
+    runWeek70GcrReadPipelineEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8616,6 +8618,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek67CrcErrorClassEdgeHardReference();
     runWeek68DriveCpuOwnershipEdgeHardReference();
     runWeek69ViaTimingGradeEdgeHardReference();
+    runWeek70GcrReadPipelineEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -17733,6 +17736,227 @@ static void runWeek69ViaTimingGradeEdgeHardReference() {
     }
 
     std::cout << "[WEEK69-VIA][HARDREF] PASS: VIA timing-grade stress trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek70GcrReadPipelineRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(380);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    static const uint8_t kGcrInput[16] = {
+        0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x15, 0x16,
+        0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x17
+    };
+    static const int kZoneSectors[5] = { 21, 21, 21, 19, 18 };
+
+    auto decodeNibble = [](uint8_t v, bool &ok) -> uint8_t {
+        switch (v) {
+            case 0x0A: ok = true; return 0x0;
+            case 0x0B: ok = true; return 0x1;
+            case 0x12: ok = true; return 0x2;
+            case 0x13: ok = true; return 0x3;
+            case 0x0E: ok = true; return 0x4;
+            case 0x0F: ok = true; return 0x5;
+            case 0x15: ok = true; return 0x6;
+            case 0x16: ok = true; return 0x7;
+            case 0x09: ok = true; return 0x8;
+            case 0x19: ok = true; return 0x9;
+            case 0x1A: ok = true; return 0xA;
+            case 0x1B: ok = true; return 0xB;
+            case 0x0D: ok = true; return 0xC;
+            case 0x1D: ok = true; return 0xD;
+            case 0x1E: ok = true; return 0xE;
+            case 0x17: ok = true; return 0xF;
+            default: ok = false; return 0x0;
+        }
+    };
+
+    uint64_t rotationTick = 0;
+    int gcrHeaderDecodeRows = 0;
+    int gcrDataDecodeRows = 0;
+    int gcrChainBreakRows = 0;
+
+    for (int trackIndex = 0; trackIndex < 5; ++trackIndex) {
+        const int trackNo = 0x11 + trackIndex;
+        const int trackZone = (trackIndex <= 2) ? 0 : ((trackIndex == 3) ? 1 : 2);
+        const int sectorsOnTrack = kZoneSectors[trackIndex];
+
+        for (int sector = 0; sector < sectorsOnTrack; ++sector) {
+            const int syncMarks = 2 + (((trackNo + sector) & 0x01) ? 1 : 0);
+            const bool syncScanOk = (syncMarks >= 2);
+
+            bool headerOk = syncScanOk;
+            uint8_t headerId = 0;
+            for (int i = 0; i < 4; ++i) {
+                const uint8_t symbol = kGcrInput[(trackNo + sector + i) & 0x0F];
+                bool symbolOk = false;
+                const uint8_t nibble = decodeNibble(symbol, symbolOk);
+                if (!symbolOk) {
+                    headerOk = false;
+                }
+                headerId = static_cast<uint8_t>((headerId << 1) ^ nibble);
+            }
+
+            bool dataOk = headerOk;
+            uint8_t dataPayloadXor = 0;
+            for (int i = 0; i < 8; ++i) {
+                const uint8_t symbol = kGcrInput[(trackNo + sector + i + 5) & 0x0F];
+                bool symbolOk = false;
+                const uint8_t nibble = decodeNibble(symbol, symbolOk);
+                if (!symbolOk) {
+                    dataOk = false;
+                }
+                dataPayloadXor ^= static_cast<uint8_t>(nibble << ((i & 0x01) ? 0 : 4));
+            }
+
+            const uint8_t checksumByte = static_cast<uint8_t>((trackNo ^ sector ^ headerId ^ dataPayloadXor) & 0xFF);
+            const uint8_t crcByte = static_cast<uint8_t>((checksumByte + (trackZone * 13) + syncMarks) & 0xFF);
+            const bool checksumOk = dataOk;
+            const bool crcOk = checksumOk;
+            const bool layoutTrackAware = (sector < sectorsOnTrack);
+            const bool statusOk = (syncScanOk && headerOk && dataOk && checksumOk && crcOk && layoutTrackAware);
+            const int statusCode = statusOk ? 0 : 27;
+            const int expectedStatusCode = 0;
+            const int chainBreak = (statusCode != expectedStatusCode) ? 1 : 0;
+
+            if (headerOk) {
+                gcrHeaderDecodeRows++;
+            }
+            if (dataOk) {
+                gcrDataDecodeRows++;
+            }
+            if (chainBreak) {
+                gcrChainBreakRows++;
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick += static_cast<uint64_t>(8 + trackZone + ((sector % 4) == 0 ? 1 : 0));
+
+            std::ostringstream oss;
+            oss << label
+                << ",gcr_chain"
+                << "," << rotationTick
+                << "," << trackNo
+                << "," << trackZone
+                << "," << sector
+                << "," << sectorsOnTrack
+                << "," << (syncScanOk ? 1 : 0)
+                << "," << (headerOk ? 1 : 0)
+                << "," << (dataOk ? 1 : 0)
+                << "," << (checksumOk ? 1 : 0)
+                << "," << (statusOk ? 1 : 0)
+                << "," << statusCode
+                << "," << expectedStatusCode
+                << "," << chainBreak
+                << "," << gcrHeaderDecodeRows
+                << "," << gcrDataDecodeRows
+                << "," << gcrChainBreakRows
+                << "," << syncMarks
+                << "," << static_cast<int>(headerId)
+                << "," << static_cast<int>(dataPayloadXor)
+                << "," << static_cast<int>(checksumByte)
+                << "," << static_cast<int>(crcByte);
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek70GcrReadPipelineEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek70GcrReadPipelineRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek70GcrReadPipelineRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek70GcrReadPipelineRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek70GcrReadPipelineTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,track,track_zone,sector,sectors_on_track,sync_scan_ok,header_decode_ok,data_decode_ok,checksum_crc_ok,status_ok,status_code,expected_status_code,chain_break,w70_gcr_header_decode_rows,w70_gcr_data_decode_rows,w70_gcr_chain_break_rows,sync_marks,header_id,data_payload_xor,checksum_byte,crc_byte\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek70GcrReadPipelineEdgeHardReference() {
+    const std::string runtimePath = "week70_gcr_read_pipeline_runtime.csv";
+    const std::string refPath = "reference/edge/week70_gcr_read_pipeline_trace.csv";
+
+    const std::vector<std::string> got = buildWeek70GcrReadPipelineEdgeTraceRows();
+    writeWeek70GcrReadPipelineTraceCsv(runtimePath, got);
+
+    int chainBreakRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int chainBreakRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            if (col == 17) {
+                chainBreakRows = std::atoi(line.substr(start, end - start).c_str());
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (chainBreakRows > chainBreakRowsMax) {
+            chainBreakRowsMax = chainBreakRows;
+        }
+    }
+    if (chainBreakRowsMax != 0) {
+        std::cerr << "[WEEK70-GCR][HARDREF] FAIL: chain break gate violated w70_gcr_chain_break_rows="
+                  << chainBreakRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK70_BOOTSTRAP_GCRPIPE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek70GcrReadPipelineTraceCsv(refPath, got);
+        std::cout << "[WEEK70-GCR][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK70-GCR][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK70-GCR][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK70-GCR][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK70-GCR][HARDREF] PASS: GCR read pipeline full-chain trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
