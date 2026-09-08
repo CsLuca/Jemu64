@@ -538,6 +538,17 @@
   - GCR bootstrap metrics are deterministic and within policy bounds across revision slots.
 - This closes bootstrap scope and enables subsequent phases toward deeper physical disk fidelity.
 
+## Week63 GCR Decode Path (Real Symbol Semantics)
+
+- Added a real-symbol GCR decode hard-reference layer on top of Week62 bootstrap, introducing deterministic symbol decode windows and sync-lock observability.
+- Coverage focus:
+  - decode-path row coverage (`week63_gcr_decode_rows`),
+  - illegal symbol guard (`week63_gcr_illegal_symbol_rows`, target `0`),
+  - sync-lock latency bound (`week63_gcr_sync_lock_latency_max`).
+- Hard reference trace:
+  - runtime: `week63_gcr_decode_path_runtime.csv`
+  - reference: `reference/edge/week63_gcr_decode_path_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -656,6 +667,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week60_iec_contention_release_trace.csv`
     - `reference/edge/week61_drive_dos_semantic_trace.csv`
     - `reference/edge/week62_disk_fidelity_gcr_trace.csv`
+    - `reference/edge/week63_gcr_decode_path_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -116,4 +116,5 @@ jobs:
             week60_iec_contention_release_runtime.csv
             week61_drive_dos_semantic_runtime.csv
             week62_disk_fidelity_gcr_runtime.csv
+            week63_gcr_decode_path_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

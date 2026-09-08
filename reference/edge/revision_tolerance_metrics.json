@@ -159,6 +159,9 @@
                     "week61_drive_cmd_retry_convergence_max":  1,
                     "week62_gcr_sync_detect_rows":  32,
                     "week62_gcr_read_window_jitter_max":  5,
-                    "week62_block_crc_error_rows":  1
+                    "week62_block_crc_error_rows":  1,
+                    "week63_gcr_decode_rows":  288,
+                    "week63_gcr_illegal_symbol_rows":  0,
+                    "week63_gcr_sync_lock_latency_max":  8
                 }
 }

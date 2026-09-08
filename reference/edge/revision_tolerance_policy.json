@@ -159,6 +159,9 @@
     "week62_gcr_sync_detect_rows": { "min": 30, "max": 40 },
     "week62_gcr_read_window_jitter_max": { "min": 1, "max": 16 },
     "week62_block_crc_error_rows": { "min": 1, "max": 4 },
+    "week63_gcr_decode_rows": { "min": 250, "max": 320 },
+    "week63_gcr_illegal_symbol_rows": { "min": 0, "max": 0 },
+    "week63_gcr_sync_lock_latency_max": { "min": 1, "max": 16 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }
