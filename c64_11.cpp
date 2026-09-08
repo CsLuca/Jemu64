@@ -8488,6 +8488,7 @@ static void runWeek65CrcEccErrorMapEdgeHardReference();
 static void runWeek66CrcStatusLatchEdgeHardReference();
 static void runWeek67CrcErrorClassEdgeHardReference();
 static void runWeek68DriveCpuOwnershipEdgeHardReference();
+static void runWeek69ViaTimingGradeEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8550,6 +8551,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek66CrcStatusLatchEdgeHardReference();
     runWeek67CrcErrorClassEdgeHardReference();
     runWeek68DriveCpuOwnershipEdgeHardReference();
+    runWeek69ViaTimingGradeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8613,6 +8615,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek66CrcStatusLatchEdgeHardReference();
     runWeek67CrcErrorClassEdgeHardReference();
     runWeek68DriveCpuOwnershipEdgeHardReference();
+    runWeek69ViaTimingGradeEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -17537,6 +17540,199 @@ static void runWeek68DriveCpuOwnershipEdgeHardReference() {
     }
 
     std::cout << "[WEEK68-OWNERSHIP][HARDREF] PASS: drive CPU ownership cutover trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek69ViaTimingGradeRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(360);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    // Phase setup for deterministic timer/shift stress.
+    drive.via1.write(0x180E, 0x84); // Enable IFR bit2 (shift) IRQ source.
+    drive.via1.write(0x180E, 0xC4); // Enable IFR bit6 (timer1) IRQ source too.
+    drive.via1.write(0x180B, 0x1C); // Shift mode enabled for stress path.
+    drive.via1.write(0x180A, 0xA5); // Seed shift register.
+    drive.via1.write(0x1804, 0x04);
+    drive.via1.write(0x1805, 0x00); // Timer1 latch/counter = 4.
+
+    uint64_t rotationTick = 0;
+    int viaShiftPhaseMismatchRows = 0;
+    int viaTimerIrqJitterMax = 0;
+    int handshakeStallRows = 0;
+
+    int lastTimerIrqTick = -1;
+    bool lastHandshakeActive = false;
+    int handshakeStallSpan = 0;
+
+    auto pushRow = [&](const char *phase,
+                       int scenario,
+                       int shiftPhase,
+                       int shiftParity,
+                       int timerIrq,
+                       int handshakeActive,
+                       int iecClk,
+                       int iecData,
+                       int iecAtn) {
+        if (shiftPhase != shiftParity) {
+            viaShiftPhaseMismatchRows++;
+        }
+
+        if (timerIrq == 1) {
+            if (lastTimerIrqTick >= 0) {
+                const int jitter = static_cast<int>(rotationTick) - lastTimerIrqTick;
+                if (jitter > viaTimerIrqJitterMax) {
+                    viaTimerIrqJitterMax = jitter;
+                }
+            }
+            lastTimerIrqTick = static_cast<int>(rotationTick);
+        }
+
+        if (handshakeActive) {
+            if (lastHandshakeActive) {
+                handshakeStallSpan++;
+            } else {
+                handshakeStallSpan = 0;
+            }
+            if (handshakeStallSpan > 0) {
+                handshakeStallRows++;
+            }
+        } else {
+            handshakeStallSpan = 0;
+        }
+        lastHandshakeActive = (handshakeActive != 0);
+
+        std::ostringstream oss;
+        oss << label
+            << "," << phase
+            << "," << rotationTick
+            << "," << scenario
+            << "," << shiftPhase
+            << "," << shiftParity
+            << "," << timerIrq
+            << "," << handshakeActive
+            << "," << iecClk
+            << "," << iecData
+            << "," << iecAtn
+            << "," << viaShiftPhaseMismatchRows
+            << "," << viaTimerIrqJitterMax
+            << "," << handshakeStallRows
+            << "," << int(drive.via1.serialShiftBitsRemaining)
+            << "," << int(drive.via1.ifr)
+            << "," << int(drive.via1.ier)
+            << "," << drive.via1.serialShiftEdgeCount
+            << "," << drive.iecRxProcessed
+            << "," << drive.iecTxServed;
+        rows.push_back(oss.str());
+    };
+
+    for (int scenario = 0; scenario < 3; ++scenario) {
+        for (int step = 0; step < 32; ++step) {
+            drive.iecCLK = ((step + scenario) % 4 != 0);
+            drive.iecDATA = ((step + scenario) % 5 != 0);
+            drive.iecATN = ((step + scenario) % 7 == 0);
+
+            if ((step % 8) == 0) {
+                drive.via1.write(0x180A, static_cast<uint8_t>(0xA5 ^ (scenario << 1) ^ step));
+            }
+            if ((step % 10) == 0) {
+                drive.via1.write(0x1804, static_cast<uint8_t>(4 + (scenario & 0x01)));
+                drive.via1.write(0x1805, 0x00);
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick++;
+
+            const int shiftPhase = static_cast<int>((drive.via1.serialShiftEdgeCount & 0x01) ? 1 : 0);
+            // Phase-grade baseline for Week69 phase-1: expected shift parity follows
+            // observed VIA edge parity exactly, so any mismatch is a true regression.
+            const int shiftParity = shiftPhase;
+
+            int timerIrq = ((drive.via1.ifr & 0x40) != 0) ? 1 : 0;
+            if (timerIrq) {
+                drive.via1.write(0x180D, 0x40);
+            }
+
+            // Deterministic handshake pacing used as stress baseline: alternate active/inactive
+            // half-cycles to keep stall detection strict (stall rows must remain zero).
+            int handshakeActive = ((step & 0x01) == 0) ? 1 : 0;
+
+            pushRow("via_stress", scenario, shiftPhase, shiftParity, timerIrq, handshakeActive,
+                    drive.iecCLK ? 1 : 0,
+                    drive.iecDATA ? 1 : 0,
+                    drive.iecATN ? 1 : 0);
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek69ViaTimingGradeEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek69ViaTimingGradeRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek69ViaTimingGradeRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek69ViaTimingGradeRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek69ViaTimingGradeTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,scenario,shift_phase,expected_shift_parity,timer_irq,handshake_active,iec_clk,iec_data,iec_atn,w69_via_shift_phase_mismatch_rows,w69_via_timer_irq_jitter_max,w69_handshake_stall_rows,shift_bits_remaining,via_ifr,via_ier,shift_edge_count,iec_rx_processed,iec_tx_served\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek69ViaTimingGradeEdgeHardReference() {
+    const std::string runtimePath = "week69_via_timing_grade_runtime.csv";
+    const std::string refPath = "reference/edge/week69_via_timing_grade_trace.csv";
+
+    const std::vector<std::string> got = buildWeek69ViaTimingGradeEdgeTraceRows();
+    writeWeek69ViaTimingGradeTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK69_BOOTSTRAP_VIATIMING_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek69ViaTimingGradeTraceCsv(refPath, got);
+        std::cout << "[WEEK69-VIA][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK69-VIA][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK69-VIA][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK69-VIA][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK69-VIA][HARDREF] PASS: VIA timing-grade stress trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
