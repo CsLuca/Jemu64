@@ -604,6 +604,17 @@
   - runtime: `week68_drive_cpu_ownership_runtime.csv`
   - reference: `reference/edge/week68_drive_cpu_ownership_trace.csv`
 
+## Week69 VIA 6522 Timing-Grade Expansion (shift/timer/handshake)
+
+- Added a VIA timing-grade hard-reference stress layer focused on realistic shift/timer/handshake edge behavior and IEC-facing timing impact across drive revisions.
+- Coverage focus:
+  - shift phase mismatch guard (`w69_via_shift_phase_mismatch_rows`, target `0`),
+  - timer IRQ jitter bound (`w69_via_timer_irq_jitter_max`),
+  - handshake stall guard (`w69_handshake_stall_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week69_via_timing_grade_runtime.csv`
+  - reference: `reference/edge/week69_via_timing_grade_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -728,6 +739,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week66_crc_status_latch_trace.csv`
     - `reference/edge/week67_crc_error_class_trace.csv`
     - `reference/edge/week68_drive_cpu_ownership_trace.csv`
+    - `reference/edge/week69_via_timing_grade_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

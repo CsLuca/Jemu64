@@ -177,6 +177,9 @@
     "w68_cpu_owned_cmd_rows": { "min": 6, "max": 20 },
     "w68_scaffold_fallback_rows": { "min": 1, "max": 6 },
     "w68_cmd_status_divergence_rows": { "min": 0, "max": 0 },
+    "w69_via_shift_phase_mismatch_rows": { "min": 0, "max": 0 },
+    "w69_via_timer_irq_jitter_max": { "min": 1, "max": 16 },
+    "w69_handshake_stall_rows": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

@@ -177,6 +177,9 @@
         "week67_load_recovery_profile_max": 3,
         "w68_cpu_owned_cmd_rows": 8,
         "w68_scaffold_fallback_rows": 2,
-        "w68_cmd_status_divergence_rows": 0
+        "w68_cmd_status_divergence_rows": 0,
+        "w69_via_shift_phase_mismatch_rows": 0,
+        "w69_via_timer_irq_jitter_max": 11,
+        "w69_handshake_stall_rows": 0
     }
 }

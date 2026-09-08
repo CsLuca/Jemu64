@@ -122,4 +122,5 @@ jobs:
             week66_crc_status_latch_runtime.csv
             week67_crc_error_class_runtime.csv
             week68_drive_cpu_ownership_runtime.csv
+            week69_via_timing_grade_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
