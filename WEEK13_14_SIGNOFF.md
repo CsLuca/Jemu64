@@ -519,6 +519,25 @@
   - runtime: `week61_drive_dos_semantic_runtime.csv`
   - reference: `reference/edge/week61_drive_dos_semantic_trace.csv`
 
+## Week62 Disk Fidelity Bootstrap (GCR-Oriented)
+
+- Added a first disk-fidelity bootstrap hard-reference layer with deterministic GCR/logical-block rotation ticks and baseline physical-style observability.
+- Coverage focus:
+  - sync-mark detection accumulation (`week62_gcr_sync_detect_rows`),
+  - read-window stability/jitter bound (`week62_gcr_read_window_jitter_max`),
+  - baseline CRC-error row accumulation (`week62_block_crc_error_rows`).
+- Hard reference trace:
+  - runtime: `week62_disk_fidelity_gcr_runtime.csv`
+  - reference: `reference/edge/week62_disk_fidelity_gcr_trace.csv`
+
+## Physical-Grade Readiness (Post Week62)
+
+- Baseline readiness target after Week62 is met when:
+  - Week45..Week62 hard-reference gates are green without regression,
+  - `LOAD"$",8` compatibility and pure paths remain PASS with no hidden fallback,
+  - GCR bootstrap metrics are deterministic and within policy bounds across revision slots.
+- This closes bootstrap scope and enables subsequent phases toward deeper physical disk fidelity.
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -636,6 +655,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week59_iec_analog_pulse_window_trace.csv`
     - `reference/edge/week60_iec_contention_release_trace.csv`
     - `reference/edge/week61_drive_dos_semantic_trace.csv`
+    - `reference/edge/week62_disk_fidelity_gcr_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

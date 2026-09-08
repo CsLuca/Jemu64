@@ -115,4 +115,5 @@ jobs:
             week59_iec_analog_pulse_window_runtime.csv
             week60_iec_contention_release_runtime.csv
             week61_drive_dos_semantic_runtime.csv
+            week62_disk_fidelity_gcr_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
