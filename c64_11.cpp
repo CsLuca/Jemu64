@@ -8485,6 +8485,7 @@ static void runWeek62DiskFidelityGcrEdgeHardReference();
 static void runWeek63GcrDecodePathEdgeHardReference();
 static void runWeek64TrackLayoutRealismEdgeHardReference();
 static void runWeek65CrcEccErrorMapEdgeHardReference();
+static void runWeek66CrcStatusLatchEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8544,6 +8545,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek63GcrDecodePathEdgeHardReference();
     runWeek64TrackLayoutRealismEdgeHardReference();
     runWeek65CrcEccErrorMapEdgeHardReference();
+    runWeek66CrcStatusLatchEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8604,6 +8606,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek63GcrDecodePathEdgeHardReference();
     runWeek64TrackLayoutRealismEdgeHardReference();
     runWeek65CrcEccErrorMapEdgeHardReference();
+    runWeek66CrcStatusLatchEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -16804,6 +16807,267 @@ static void runWeek65CrcEccErrorMapEdgeHardReference() {
     }
 
     std::cout << "[WEEK65-CRC][HARDREF] PASS: CRC/ECC error-map trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek66CrcStatusLatchRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(260);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    auto statusCodeOf = [](const std::string &status) {
+        if (status.size() >= 2 &&
+            std::isdigit(static_cast<unsigned char>(status[0])) &&
+            std::isdigit(static_cast<unsigned char>(status[1]))) {
+            return (status[0] - '0') * 10 + (status[1] - '0');
+        }
+        return -1;
+    };
+
+    auto feedData = [&](const std::string &cmd) {
+        bool ok = true;
+        for (char c : cmd) {
+            if (!drive.processIecDataByte(static_cast<uint8_t>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        return ok;
+    };
+
+    auto openCmdChannel = [&]() {
+        bool ok = drive.processIecCommandByte(0x28);
+        ok = ok && drive.processIecCommandByte(0xFF);
+        return ok;
+    };
+
+    auto commitCmdChannel = [&]() {
+        return drive.processIecCommandByte(0x3F);
+    };
+
+    uint64_t rotationTick = 0;
+    int crcStatusLatchRows = 0;
+    int retryBackoffSpanMax = 0;
+    int channel15ClearLatencyMax = 0;
+
+    auto pushRow = [&](const char *phase,
+                       int track,
+                       int sector,
+                       int retryDepth,
+                       int badMapHit,
+                       int statusPoll,
+                       int clearEvent,
+                       int backoffSpan,
+                       int clearLatency) {
+        const int statusCode = statusCodeOf(drive.iecStatusLine);
+        if (statusCode == 23 && statusPoll == 0 && clearEvent == 0) {
+            crcStatusLatchRows++;
+        }
+        if (backoffSpan > retryBackoffSpanMax) {
+            retryBackoffSpanMax = backoffSpan;
+        }
+        if (clearLatency > channel15ClearLatencyMax) {
+            channel15ClearLatencyMax = clearLatency;
+        }
+
+        std::ostringstream oss;
+        oss << label
+            << ",crc_status"
+            << "," << rotationTick
+            << "," << phase
+            << "," << track
+            << "," << sector
+            << "," << retryDepth
+            << "," << badMapHit
+            << "," << statusPoll
+            << "," << clearEvent
+            << "," << backoffSpan
+            << "," << clearLatency
+            << "," << crcStatusLatchRows
+            << "," << retryBackoffSpanMax
+            << "," << channel15ClearLatencyMax
+            << "," << statusCode
+            << "," << drive.iecAllocatedBlockCount
+            << "," << drive.virtualBlocksFree()
+            << "," << drive.iecStatusLine;
+        rows.push_back(oss.str());
+    };
+
+    for (int trackOff = 0; trackOff < 2; ++trackOff) {
+        const int track = 0x13 + trackOff;
+        for (int sector = 0; sector < 6; ++sector) {
+            const int badMapHit = (((track + sector) % 4) == 1) ? 1 : 0;
+
+            openCmdChannel();
+            {
+                std::ostringstream ba;
+                ba << "B-A,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                   << "," << std::setw(2) << sector;
+                feedData(ba.str());
+            }
+            commitCmdChannel();
+            drive.tickIecHalfCycle();
+            rotationTick++;
+            pushRow("alloc", track, sector, 0, badMapHit, 0, 0, 0, 0);
+
+            if (!badMapHit) {
+                openCmdChannel();
+                {
+                    std::ostringstream br;
+                    br << "B-R,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                       << "," << std::setw(2) << sector;
+                    feedData(br.str());
+                }
+                commitCmdChannel();
+                drive.iecStatusLine = "00,OK,00,00";
+                drive.tickIecHalfCycle();
+                rotationTick++;
+                pushRow("load_ok", track, sector, 0, badMapHit, 0, 0, 0, 0);
+                continue;
+            }
+
+            const int retriesNeeded = 2;
+            int lastErrorTick = 0;
+            for (int attempt = 1; attempt <= retriesNeeded; ++attempt) {
+                openCmdChannel();
+                {
+                    std::ostringstream u1;
+                    u1 << "U1,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                       << "," << std::setw(2) << sector;
+                    feedData(u1.str());
+                }
+                commitCmdChannel();
+
+                openCmdChannel();
+                {
+                    std::ostringstream br;
+                    br << "B-R,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                       << "," << std::setw(2) << sector;
+                    feedData(br.str());
+                }
+                commitCmdChannel();
+
+                std::ostringstream crcErr;
+                crcErr << "23,READ ERROR," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                       << "," << std::setw(2) << sector;
+                drive.iecStatusLine = crcErr.str();
+
+                drive.tickIecHalfCycle();
+                rotationTick++;
+                const int backoffSpan = attempt * (trackOff + 1);
+                pushRow("load_crc_error", track, sector, attempt, badMapHit, 0, 0, backoffSpan, 0);
+                lastErrorTick = static_cast<int>(rotationTick);
+
+                drive.processIecCommandByte(0x48);
+                drive.processIecCommandByte(0x6F);
+                drive.tickIecHalfCycle();
+                rotationTick++;
+                pushRow("channel15_poll_error", track, sector, attempt, badMapHit, 1, 0, backoffSpan, 0);
+                drive.processIecCommandByte(0x5F);
+            }
+
+            openCmdChannel();
+            {
+                std::ostringstream u1Recover;
+                u1Recover << "U1,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                          << "," << std::setw(2) << sector;
+                feedData(u1Recover.str());
+            }
+            commitCmdChannel();
+
+            openCmdChannel();
+            {
+                std::ostringstream brRecover;
+                brRecover << "B-R,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                          << "," << std::setw(2) << sector;
+                feedData(brRecover.str());
+            }
+            commitCmdChannel();
+            drive.iecStatusLine = "00,OK,00,00";
+
+            drive.tickIecHalfCycle();
+            rotationTick++;
+            const int clearLatency = static_cast<int>(rotationTick) - lastErrorTick;
+            pushRow("load_retry_recovered", track, sector, retriesNeeded, badMapHit, 0, 1, retriesNeeded * (trackOff + 1), clearLatency);
+
+            drive.processIecCommandByte(0x48);
+            drive.processIecCommandByte(0x6F);
+            drive.tickIecHalfCycle();
+            rotationTick++;
+            pushRow("channel15_poll_recovered", track, sector, retriesNeeded, badMapHit, 1, 1, retriesNeeded * (trackOff + 1), clearLatency);
+            drive.processIecCommandByte(0x5F);
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek66CrcStatusLatchEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek66CrcStatusLatchRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek66CrcStatusLatchRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek66CrcStatusLatchRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek66CrcStatusLatchTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,scenario,track,sector,retry_depth,bad_sector_map_hit,status_poll,clear_event,retry_backoff_span,clear_latency,crc_status_latch_rows,retry_backoff_span_max,channel15_clear_latency_max,status_code,alloc_count,blocks_free,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek66CrcStatusLatchEdgeHardReference() {
+    const std::string runtimePath = "week66_crc_status_latch_runtime.csv";
+    const std::string refPath = "reference/edge/week66_crc_status_latch_trace.csv";
+
+    const std::vector<std::string> got = buildWeek66CrcStatusLatchEdgeTraceRows();
+    writeWeek66CrcStatusLatchTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK66_BOOTSTRAP_CRCSTATUS_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek66CrcStatusLatchTraceCsv(refPath, got);
+        std::cout << "[WEEK66-CRC][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK66-CRC][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK66-CRC][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK66-CRC][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK66-CRC][HARDREF] PASS: CRC status-latch trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

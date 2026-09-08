@@ -1,0 +1,118 @@
+rev,phase,rotation_tick,scenario,track,sector,retry_depth,bad_sector_map_hit,status_poll,clear_event,retry_backoff_span,clear_latency,crc_status_latch_rows,retry_backoff_span_max,channel15_clear_latency_max,status_code,alloc_count,blocks_free,status
+1541,crc_status,1,alloc,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541,crc_status,2,load_ok,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541,crc_status,3,alloc,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541,crc_status,4,load_ok,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541,crc_status,5,alloc,19,2,0,1,0,0,0,0,0,0,0,0,3,661,00,OK,00,00
+1541,crc_status,6,load_crc_error,19,2,1,1,0,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541,crc_status,7,channel15_poll_error,19,2,1,1,1,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541,crc_status,8,load_crc_error,19,2,2,1,0,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541,crc_status,9,channel15_poll_error,19,2,2,1,1,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541,crc_status,10,load_retry_recovered,19,2,2,1,0,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541,crc_status,11,channel15_poll_recovered,19,2,2,1,1,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541,crc_status,12,alloc,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541,crc_status,13,load_ok,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541,crc_status,14,alloc,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541,crc_status,15,load_ok,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541,crc_status,16,alloc,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541,crc_status,17,load_ok,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541,crc_status,18,alloc,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541,crc_status,19,load_ok,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541,crc_status,20,alloc,20,1,0,1,0,0,0,0,2,2,2,0,8,656,00,OK,00,00
+1541,crc_status,21,load_crc_error,20,1,1,1,0,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541,crc_status,22,channel15_poll_error,20,1,1,1,1,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541,crc_status,23,load_crc_error,20,1,2,1,0,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541,crc_status,24,channel15_poll_error,20,1,2,1,1,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541,crc_status,25,load_retry_recovered,20,1,2,1,0,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541,crc_status,26,channel15_poll_recovered,20,1,2,1,1,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541,crc_status,27,alloc,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541,crc_status,28,load_ok,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541,crc_status,29,alloc,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541,crc_status,30,load_ok,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541,crc_status,31,alloc,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541,crc_status,32,load_ok,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541,crc_status,33,alloc,20,5,0,1,0,0,0,0,4,4,2,0,12,652,00,OK,00,00
+1541,crc_status,34,load_crc_error,20,5,1,1,0,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541,crc_status,35,channel15_poll_error,20,5,1,1,1,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541,crc_status,36,load_crc_error,20,5,2,1,0,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541,crc_status,37,channel15_poll_error,20,5,2,1,1,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541,crc_status,38,load_retry_recovered,20,5,2,1,0,1,4,2,6,4,2,0,12,652,00,OK,00,00
+1541,crc_status,39,channel15_poll_recovered,20,5,2,1,1,1,4,2,6,4,2,0,12,652,00,OK,00,00
+1541C,crc_status,1,alloc,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541C,crc_status,2,load_ok,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541C,crc_status,3,alloc,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541C,crc_status,4,load_ok,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541C,crc_status,5,alloc,19,2,0,1,0,0,0,0,0,0,0,0,3,661,00,OK,00,00
+1541C,crc_status,6,load_crc_error,19,2,1,1,0,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541C,crc_status,7,channel15_poll_error,19,2,1,1,1,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541C,crc_status,8,load_crc_error,19,2,2,1,0,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541C,crc_status,9,channel15_poll_error,19,2,2,1,1,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541C,crc_status,10,load_retry_recovered,19,2,2,1,0,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541C,crc_status,11,channel15_poll_recovered,19,2,2,1,1,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541C,crc_status,12,alloc,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541C,crc_status,13,load_ok,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541C,crc_status,14,alloc,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541C,crc_status,15,load_ok,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541C,crc_status,16,alloc,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541C,crc_status,17,load_ok,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541C,crc_status,18,alloc,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541C,crc_status,19,load_ok,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541C,crc_status,20,alloc,20,1,0,1,0,0,0,0,2,2,2,0,8,656,00,OK,00,00
+1541C,crc_status,21,load_crc_error,20,1,1,1,0,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541C,crc_status,22,channel15_poll_error,20,1,1,1,1,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541C,crc_status,23,load_crc_error,20,1,2,1,0,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541C,crc_status,24,channel15_poll_error,20,1,2,1,1,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541C,crc_status,25,load_retry_recovered,20,1,2,1,0,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541C,crc_status,26,channel15_poll_recovered,20,1,2,1,1,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541C,crc_status,27,alloc,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541C,crc_status,28,load_ok,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541C,crc_status,29,alloc,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541C,crc_status,30,load_ok,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541C,crc_status,31,alloc,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541C,crc_status,32,load_ok,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541C,crc_status,33,alloc,20,5,0,1,0,0,0,0,4,4,2,0,12,652,00,OK,00,00
+1541C,crc_status,34,load_crc_error,20,5,1,1,0,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541C,crc_status,35,channel15_poll_error,20,5,1,1,1,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541C,crc_status,36,load_crc_error,20,5,2,1,0,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541C,crc_status,37,channel15_poll_error,20,5,2,1,1,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541C,crc_status,38,load_retry_recovered,20,5,2,1,0,1,4,2,6,4,2,0,12,652,00,OK,00,00
+1541C,crc_status,39,channel15_poll_recovered,20,5,2,1,1,1,4,2,6,4,2,0,12,652,00,OK,00,00
+1541II,crc_status,1,alloc,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541II,crc_status,2,load_ok,19,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541II,crc_status,3,alloc,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541II,crc_status,4,load_ok,19,1,0,0,0,0,0,0,0,0,0,0,2,662,00,OK,00,00
+1541II,crc_status,5,alloc,19,2,0,1,0,0,0,0,0,0,0,0,3,661,00,OK,00,00
+1541II,crc_status,6,load_crc_error,19,2,1,1,0,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541II,crc_status,7,channel15_poll_error,19,2,1,1,1,0,1,0,1,1,0,23,3,661,23,READ ERROR,13,02
+1541II,crc_status,8,load_crc_error,19,2,2,1,0,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541II,crc_status,9,channel15_poll_error,19,2,2,1,1,0,2,0,2,2,0,23,3,661,23,READ ERROR,13,02
+1541II,crc_status,10,load_retry_recovered,19,2,2,1,0,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541II,crc_status,11,channel15_poll_recovered,19,2,2,1,1,1,2,2,2,2,2,0,3,661,00,OK,00,00
+1541II,crc_status,12,alloc,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541II,crc_status,13,load_ok,19,3,0,0,0,0,0,0,2,2,2,0,4,660,00,OK,00,00
+1541II,crc_status,14,alloc,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541II,crc_status,15,load_ok,19,4,0,0,0,0,0,0,2,2,2,0,5,659,00,OK,00,00
+1541II,crc_status,16,alloc,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541II,crc_status,17,load_ok,19,5,0,0,0,0,0,0,2,2,2,0,6,658,00,OK,00,00
+1541II,crc_status,18,alloc,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541II,crc_status,19,load_ok,20,0,0,0,0,0,0,0,2,2,2,0,7,657,00,OK,00,00
+1541II,crc_status,20,alloc,20,1,0,1,0,0,0,0,2,2,2,0,8,656,00,OK,00,00
+1541II,crc_status,21,load_crc_error,20,1,1,1,0,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541II,crc_status,22,channel15_poll_error,20,1,1,1,1,0,2,0,3,2,2,23,8,656,23,READ ERROR,14,01
+1541II,crc_status,23,load_crc_error,20,1,2,1,0,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541II,crc_status,24,channel15_poll_error,20,1,2,1,1,0,4,0,4,4,2,23,8,656,23,READ ERROR,14,01
+1541II,crc_status,25,load_retry_recovered,20,1,2,1,0,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541II,crc_status,26,channel15_poll_recovered,20,1,2,1,1,1,4,2,4,4,2,0,8,656,00,OK,00,00
+1541II,crc_status,27,alloc,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541II,crc_status,28,load_ok,20,2,0,0,0,0,0,0,4,4,2,0,9,655,00,OK,00,00
+1541II,crc_status,29,alloc,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541II,crc_status,30,load_ok,20,3,0,0,0,0,0,0,4,4,2,0,10,654,00,OK,00,00
+1541II,crc_status,31,alloc,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541II,crc_status,32,load_ok,20,4,0,0,0,0,0,0,4,4,2,0,11,653,00,OK,00,00
+1541II,crc_status,33,alloc,20,5,0,1,0,0,0,0,4,4,2,0,12,652,00,OK,00,00
+1541II,crc_status,34,load_crc_error,20,5,1,1,0,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541II,crc_status,35,channel15_poll_error,20,5,1,1,1,0,2,0,5,4,2,23,12,652,23,READ ERROR,14,05
+1541II,crc_status,36,load_crc_error,20,5,2,1,0,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541II,crc_status,37,channel15_poll_error,20,5,2,1,1,0,4,0,6,4,2,23,12,652,23,READ ERROR,14,05
+1541II,crc_status,38,load_retry_recovered,20,5,2,1,0,1,4,2,6,4,2,0,12,652,00,OK,00,00
+1541II,crc_status,39,channel15_poll_recovered,20,5,2,1,1,1,4,2,6,4,2,0,12,652,00,OK,00,00
