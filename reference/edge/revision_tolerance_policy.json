@@ -162,6 +162,9 @@
     "week63_gcr_decode_rows": { "min": 250, "max": 320 },
     "week63_gcr_illegal_symbol_rows": { "min": 0, "max": 0 },
     "week63_gcr_sync_lock_latency_max": { "min": 1, "max": 16 },
+    "week64_track_sync_density_rows": { "min": 40, "max": 60 },
+    "week64_gap_class_mismatch_rows": { "min": 0, "max": 0 },
+    "week64_header_data_boundary_errors": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

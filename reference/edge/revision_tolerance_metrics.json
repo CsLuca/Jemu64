@@ -162,6 +162,9 @@
                     "week62_block_crc_error_rows":  1,
                     "week63_gcr_decode_rows":  288,
                     "week63_gcr_illegal_symbol_rows":  0,
-                    "week63_gcr_sync_lock_latency_max":  8
+                    "week63_gcr_sync_lock_latency_max":  8,
+                    "week64_track_sync_density_rows":  48,
+                    "week64_gap_class_mismatch_rows":  0,
+                    "week64_header_data_boundary_errors":  0
                 }
 }

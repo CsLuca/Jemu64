@@ -549,6 +549,17 @@
   - runtime: `week63_gcr_decode_path_runtime.csv`
   - reference: `reference/edge/week63_gcr_decode_path_trace.csv`
 
+## Week64 Track Layout Realism (sync/gap/header/data)
+
+- Added a track-layout hard-reference layer with deterministic rotation stride and explicit sync/gap/header/data segmentation checks.
+- Coverage focus:
+  - track sync density accumulation (`week64_track_sync_density_rows`),
+  - gap class mismatch guard (`week64_gap_class_mismatch_rows`, target `0`),
+  - header/data boundary guard (`week64_header_data_boundary_errors`, target `0`).
+- Hard reference trace:
+  - runtime: `week64_track_layout_realism_runtime.csv`
+  - reference: `reference/edge/week64_track_layout_realism_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -668,6 +679,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week61_drive_dos_semantic_trace.csv`
     - `reference/edge/week62_disk_fidelity_gcr_trace.csv`
     - `reference/edge/week63_gcr_decode_path_trace.csv`
+    - `reference/edge/week64_track_layout_realism_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
