@@ -582,6 +582,17 @@
   - runtime: `week66_crc_status_latch_runtime.csv`
   - reference: `reference/edge/week66_crc_status_latch_trace.csv`
 
+## Week67 CRC Error-Class Map + Recovery Profile
+
+- Added a CRC error-class hard-reference layer that distinguishes deterministic read-error classes across load path retries and validates channel 15 status-class coherence.
+- Coverage focus:
+  - CRC error-class row accumulation (`week67_crc_error_class_rows`),
+  - channel 15 error-class mismatch guard (`week67_channel15_error_class_mismatch_rows`, target `0`),
+  - load recovery profile bound (`week67_load_recovery_profile_max`).
+- Hard reference trace:
+  - runtime: `week67_crc_error_class_runtime.csv`
+  - reference: `reference/edge/week67_crc_error_class_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -704,6 +715,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week64_track_layout_realism_trace.csv`
     - `reference/edge/week65_crc_ecc_error_map_trace.csv`
     - `reference/edge/week66_crc_status_latch_trace.csv`
+    - `reference/edge/week67_crc_error_class_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

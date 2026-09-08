@@ -79,6 +79,7 @@ $savedWeek63GcrDecode = [Environment]::GetEnvironmentVariable("WEEK63_BOOTSTRAP_
 $savedWeek64TrackLayout = [Environment]::GetEnvironmentVariable("WEEK64_BOOTSTRAP_TRACKLAYOUT_REF", "Process")
 $savedWeek65CrcErrMap = [Environment]::GetEnvironmentVariable("WEEK65_BOOTSTRAP_CRCERRMAP_REF", "Process")
 $savedWeek66CrcStatus = [Environment]::GetEnvironmentVariable("WEEK66_BOOTSTRAP_CRCSTATUS_REF", "Process")
+$savedWeek67CrcErrClass = [Environment]::GetEnvironmentVariable("WEEK67_BOOTSTRAP_CRCERRCLASS_REF", "Process")
 
 try {
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $Manifest, "Process")
@@ -134,6 +135,7 @@ try {
     [Environment]::SetEnvironmentVariable("WEEK64_BOOTSTRAP_TRACKLAYOUT_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK65_BOOTSTRAP_CRCERRMAP_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK66_BOOTSTRAP_CRCSTATUS_REF", "1", "Process")
+    [Environment]::SetEnvironmentVariable("WEEK67_BOOTSTRAP_CRCERRCLASS_REF", "1", "Process")
 
     & $strictExe
     if ($LASTEXITCODE -ne 0) {
@@ -194,6 +196,7 @@ finally {
     [Environment]::SetEnvironmentVariable("WEEK64_BOOTSTRAP_TRACKLAYOUT_REF", $savedWeek64TrackLayout, "Process")
     [Environment]::SetEnvironmentVariable("WEEK65_BOOTSTRAP_CRCERRMAP_REF", $savedWeek65CrcErrMap, "Process")
     [Environment]::SetEnvironmentVariable("WEEK66_BOOTSTRAP_CRCSTATUS_REF", $savedWeek66CrcStatus, "Process")
+    [Environment]::SetEnvironmentVariable("WEEK67_BOOTSTRAP_CRCERRCLASS_REF", $savedWeek67CrcErrClass, "Process")
 }
 
 $week15Runtime = Join-Path $repo "week15_baaec_handoff_runtime.csv"
@@ -247,6 +250,7 @@ $week63Runtime = Join-Path $repo "week63_gcr_decode_path_runtime.csv"
 $week64Runtime = Join-Path $repo "week64_track_layout_realism_runtime.csv"
 $week65Runtime = Join-Path $repo "week65_crc_ecc_error_map_runtime.csv"
 $week66Runtime = Join-Path $repo "week66_crc_status_latch_runtime.csv"
+$week67Runtime = Join-Path $repo "week67_crc_error_class_runtime.csv"
 $brknRuntime = Join-Path $repo "c64_lorenz_brkn_edge_ref.trace.csv"
 
 if (-not (Test-Path -LiteralPath $week15Runtime)) {
@@ -402,6 +406,9 @@ if (-not (Test-Path -LiteralPath $week65Runtime)) {
 if (-not (Test-Path -LiteralPath $week66Runtime)) {
     throw "Missing runtime edge trace: $week66Runtime"
 }
+if (-not (Test-Path -LiteralPath $week67Runtime)) {
+    throw "Missing runtime edge trace: $week67Runtime"
+}
 if (-not (Test-Path -LiteralPath $brknRuntime)) {
     throw "Missing runtime trace: $brknRuntime"
 }
@@ -412,7 +419,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed building pc_only reference for c64_lorenz_brkn_edge_ref"
 }
 
-"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36/week37/week38/week39/week40/week41/week42/week43/week44/week45/week46/week47/week48/week49/week50/week51/week52/week53/week54/week55/week56/week57/week58/week59/week60/week61/week62/week63/week64/week65/week66 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
+"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36/week37/week38/week39/week40/week41/week42/week43/week44/week45/week46/week47/week48/week49/week50/week51/week52/week53/week54/week55/week56/week57/week58/week59/week60/week61/week62/week63/week64/week65/week66/week67 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
 }
 finally {
     $env:PATH = $savedPath

@@ -171,6 +171,9 @@
         "week65_retry_recovery_convergence_max": 2,
         "week66_crc_status_latch_rows": 6,
         "week66_retry_backoff_span_max": 4,
-        "week66_channel15_clear_latency_max": 2
+        "week66_channel15_clear_latency_max": 2,
+        "week67_crc_error_class_rows": 12,
+        "week67_channel15_error_class_mismatch_rows": 0,
+        "week67_load_recovery_profile_max": 3
     }
 }
