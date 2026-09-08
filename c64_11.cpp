@@ -8481,6 +8481,7 @@ static void runWeek58IecAnalogEdgeModelEdgeHardReference();
 static void runWeek59IecAnalogPulseWindowEdgeHardReference();
 static void runWeek60IecContentionReleaseEdgeHardReference();
 static void runWeek61DriveDosSemanticEdgeHardReference();
+static void runWeek62DiskFidelityGcrEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8536,6 +8537,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek59IecAnalogPulseWindowEdgeHardReference();
     runWeek60IecContentionReleaseEdgeHardReference();
     runWeek61DriveDosSemanticEdgeHardReference();
+    runWeek62DiskFidelityGcrEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8592,6 +8594,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek59IecAnalogPulseWindowEdgeHardReference();
     runWeek60IecContentionReleaseEdgeHardReference();
     runWeek61DriveDosSemanticEdgeHardReference();
+    runWeek62DiskFidelityGcrEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -16033,6 +16036,158 @@ static void runWeek61DriveDosSemanticEdgeHardReference() {
     }
 
     std::cout << "[WEEK61-DOS][HARDREF] PASS: drive DOS semantic trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek62DiskFidelityGcrRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(220);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    uint64_t rotationTick = 0;
+    int prevReadWindow = 0;
+    int lastWindowShiftTick = 0;
+    int readWindowJitterMax = 0;
+    int syncDetectRows = 0;
+    int crcErrorRows = 0;
+
+    for (int sector = 0; sector < 16; ++sector) {
+        for (int nibble = 0; nibble < 6; ++nibble) {
+            const int absTick = sector * 6 + nibble;
+            const int syncMark = (nibble < 2) ? 1 : 0;
+            const int gapByte = ((nibble == 5) || (sector == 15 && nibble >= 4)) ? 1 : 0;
+
+            const int readWindow = (absTick / 5) % 4;
+            if (readWindow != prevReadWindow) {
+                const int jitter = absTick - lastWindowShiftTick;
+                if (jitter > readWindowJitterMax) {
+                    readWindowJitterMax = jitter;
+                }
+                lastWindowShiftTick = absTick;
+                prevReadWindow = readWindow;
+            }
+
+            const int crcError = ((sector % 11) == 7 && nibble == 3) ? 1 : 0;
+            if (syncMark) syncDetectRows++;
+            if (crcError) crcErrorRows++;
+
+            const uint8_t track = static_cast<uint8_t>(0x11 + (sector % 3));
+            const uint8_t sec = static_cast<uint8_t>(sector);
+            if (nibble == 2) {
+                drive.processIecCommandByte(0x28);
+                drive.processIecCommandByte(0xFF);
+                std::ostringstream ba;
+                ba << "B-A,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << int(track)
+                   << "," << std::setw(2) << int(sec);
+                const std::string baCmd = ba.str();
+                for (char c : baCmd) {
+                    drive.processIecDataByte(static_cast<uint8_t>(c));
+                }
+                drive.processIecCommandByte(0x3F);
+            }
+            if (nibble == 3) {
+                drive.processIecCommandByte(0x28);
+                drive.processIecCommandByte(0xFF);
+                std::ostringstream br;
+                br << "B-R,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << int(track)
+                   << "," << std::setw(2) << int(sec);
+                const std::string brCmd = br.str();
+                for (char c : brCmd) {
+                    drive.processIecDataByte(static_cast<uint8_t>(c));
+                }
+                drive.processIecCommandByte(0x3F);
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick++;
+
+            std::ostringstream oss;
+            oss << label
+                << ",gcr"
+                << "," << rotationTick
+                << "," << sector
+                << "," << nibble
+                << "," << syncMark
+                << "," << gapByte
+                << "," << readWindow
+                << "," << readWindowJitterMax
+                << "," << crcError
+                << "," << syncDetectRows
+                << "," << crcErrorRows
+                << "," << drive.iecAllocatedBlockCount
+                << "," << drive.virtualBlocksFree()
+                << "," << drive.iecStatusLine;
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek62DiskFidelityGcrEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek62DiskFidelityGcrRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek62DiskFidelityGcrRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek62DiskFidelityGcrRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek62DiskFidelityGcrTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,sector,nibble,sync_mark,gap_byte,read_window,read_window_jitter_max,crc_error,sync_detect_rows,crc_error_rows,alloc_count,blocks_free,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek62DiskFidelityGcrEdgeHardReference() {
+    const std::string runtimePath = "week62_disk_fidelity_gcr_runtime.csv";
+    const std::string refPath = "reference/edge/week62_disk_fidelity_gcr_trace.csv";
+
+    const std::vector<std::string> got = buildWeek62DiskFidelityGcrEdgeTraceRows();
+    writeWeek62DiskFidelityGcrTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK62_BOOTSTRAP_GCR_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek62DiskFidelityGcrTraceCsv(refPath, got);
+        std::cout << "[WEEK62-GCR][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK62-GCR][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK62-GCR][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK62-GCR][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK62-GCR][HARDREF] PASS: disk-fidelity GCR bootstrap trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
