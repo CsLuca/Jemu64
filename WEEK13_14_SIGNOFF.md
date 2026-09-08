@@ -593,6 +593,17 @@
   - runtime: `week67_crc_error_class_runtime.csv`
   - reference: `reference/edge/week67_crc_error_class_trace.csv`
 
+## Week68 Drive CPU Ownership Cutover (phase 1)
+
+- Added a phase-1 CPU ownership hard-reference layer for command-channel/status flow, introducing deterministic observability counters while cutover progressively shifts from scaffold-only handling to CPU/VIA acknowledged command ownership.
+- Coverage focus:
+  - CPU-owned command accumulation (`w68_cpu_owned_cmd_rows`),
+  - scaffold fallback accumulation (`w68_scaffold_fallback_rows`, target low),
+  - command/status divergence guard (`w68_cmd_status_divergence_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week68_drive_cpu_ownership_runtime.csv`
+  - reference: `reference/edge/week68_drive_cpu_ownership_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -716,6 +727,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week65_crc_ecc_error_map_trace.csv`
     - `reference/edge/week66_crc_status_latch_trace.csv`
     - `reference/edge/week67_crc_error_class_trace.csv`
+    - `reference/edge/week68_drive_cpu_ownership_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
