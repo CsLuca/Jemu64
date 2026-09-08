@@ -8482,6 +8482,7 @@ static void runWeek59IecAnalogPulseWindowEdgeHardReference();
 static void runWeek60IecContentionReleaseEdgeHardReference();
 static void runWeek61DriveDosSemanticEdgeHardReference();
 static void runWeek62DiskFidelityGcrEdgeHardReference();
+static void runWeek63GcrDecodePathEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8538,6 +8539,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek60IecContentionReleaseEdgeHardReference();
     runWeek61DriveDosSemanticEdgeHardReference();
     runWeek62DiskFidelityGcrEdgeHardReference();
+    runWeek63GcrDecodePathEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8595,6 +8597,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek60IecContentionReleaseEdgeHardReference();
     runWeek61DriveDosSemanticEdgeHardReference();
     runWeek62DiskFidelityGcrEdgeHardReference();
+    runWeek63GcrDecodePathEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -16188,6 +16191,197 @@ static void runWeek62DiskFidelityGcrEdgeHardReference() {
     }
 
     std::cout << "[WEEK62-GCR][HARDREF] PASS: disk-fidelity GCR bootstrap trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek63GcrDecodePathRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(220);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    static const uint8_t kGcrInput[16] = {
+        0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x15, 0x16,
+        0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x17
+    };
+
+    auto decodeNibble = [](uint8_t v, bool &ok) -> uint8_t {
+        switch (v) {
+            case 0x0A: ok = true; return 0x0;
+            case 0x0B: ok = true; return 0x1;
+            case 0x12: ok = true; return 0x2;
+            case 0x13: ok = true; return 0x3;
+            case 0x0E: ok = true; return 0x4;
+            case 0x0F: ok = true; return 0x5;
+            case 0x15: ok = true; return 0x6;
+            case 0x16: ok = true; return 0x7;
+            case 0x09: ok = true; return 0x8;
+            case 0x19: ok = true; return 0x9;
+            case 0x1A: ok = true; return 0xA;
+            case 0x1B: ok = true; return 0xB;
+            case 0x0D: ok = true; return 0xC;
+            case 0x1D: ok = true; return 0xD;
+            case 0x1E: ok = true; return 0xE;
+            case 0x17: ok = true; return 0xF;
+            default: ok = false; return 0x0;
+        }
+    };
+
+    uint64_t rotationTick = 0;
+    int syncLockLatency = -1;
+    int syncLockLatencyMax = 0;
+    int syncDetectRows = 0;
+    int illegalSymbolRows = 0;
+    int prevWindowTick = 0;
+    int windowJitterMax = 0;
+
+    for (int sector = 0; sector < 12; ++sector) {
+        int decodeWindow = 0;
+        int windowTickStart = 0;
+        bool lockCaptured = false;
+
+        for (int slot = 0; slot < 8; ++slot) {
+            const bool syncMark = (slot < 2);
+            if (syncMark) {
+                syncDetectRows++;
+            }
+
+            uint8_t symbol = 0;
+            if (slot < 6) {
+                symbol = kGcrInput[(sector + slot) & 0x0F];
+            } else {
+                symbol = kGcrInput[(sector + slot + 3) & 0x0F];
+            }
+
+            bool symbolOk = false;
+            const uint8_t decoded = decodeNibble(symbol, symbolOk);
+            if (!symbolOk) {
+                illegalSymbolRows++;
+            }
+
+            if (syncMark) {
+                decodeWindow = 0;
+                windowTickStart = static_cast<int>(rotationTick);
+            } else {
+                decodeWindow = ((slot - 2) % 4) + 1;
+                const int windowWidth = static_cast<int>(rotationTick) - windowTickStart;
+                if (windowWidth > windowJitterMax) {
+                    windowJitterMax = windowWidth;
+                }
+            }
+
+            if (!lockCaptured && syncMark && slot == 1) {
+                syncLockLatency = static_cast<int>(rotationTick) - prevWindowTick;
+                if (syncLockLatency > syncLockLatencyMax) {
+                    syncLockLatencyMax = syncLockLatency;
+                }
+                lockCaptured = true;
+                prevWindowTick = static_cast<int>(rotationTick);
+            }
+
+            if (slot == 3) {
+                drive.processIecCommandByte(0x28);
+                drive.processIecCommandByte(0xFF);
+                std::ostringstream ba;
+                ba << "B-A,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (0x12 + sector % 3)
+                   << "," << std::setw(2) << (sector & 0x1F);
+                const std::string cmd = ba.str();
+                for (char c : cmd) {
+                    drive.processIecDataByte(static_cast<uint8_t>(c));
+                }
+                drive.processIecCommandByte(0x3F);
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick++;
+
+            std::ostringstream oss;
+            oss << label
+                << ",gcr_decode"
+                << "," << rotationTick
+                << "," << sector
+                << "," << slot
+                << "," << static_cast<int>(symbol)
+                << "," << static_cast<int>(decoded)
+                << "," << (symbolOk ? 1 : 0)
+                << "," << (syncMark ? 1 : 0)
+                << "," << syncDetectRows
+                << "," << illegalSymbolRows
+                << "," << syncLockLatencyMax
+                << "," << decodeWindow
+                << "," << windowJitterMax
+                << "," << drive.iecAllocatedBlockCount
+                << "," << drive.virtualBlocksFree();
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek63GcrDecodePathEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek63GcrDecodePathRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek63GcrDecodePathRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek63GcrDecodePathRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek63GcrDecodePathTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,sector,slot,gcr_symbol,decoded_nibble,symbol_ok,sync_mark,sync_detect_rows,illegal_symbol_rows,sync_lock_latency_max,decode_window,read_window_jitter_max,alloc_count,blocks_free\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek63GcrDecodePathEdgeHardReference() {
+    const std::string runtimePath = "week63_gcr_decode_path_runtime.csv";
+    const std::string refPath = "reference/edge/week63_gcr_decode_path_trace.csv";
+
+    const std::vector<std::string> got = buildWeek63GcrDecodePathEdgeTraceRows();
+    writeWeek63GcrDecodePathTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK63_BOOTSTRAP_GCRDECODE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek63GcrDecodePathTraceCsv(refPath, got);
+        std::cout << "[WEEK63-GCR][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK63-GCR][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK63-GCR][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK63-GCR][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK63-GCR][HARDREF] PASS: GCR decode-path trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
