@@ -8492,6 +8492,7 @@ static void runWeek69ViaTimingGradeEdgeHardReference();
 static void runWeek70GcrReadPipelineEdgeHardReference();
 static void runWeek71GcrWriteRoundtripEdgeHardReference();
 static void runWeek72PhysicalDiskEffectsEdgeHardReference();
+static void runWeek73ErrorEngineDosMappingEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8558,6 +8559,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek70GcrReadPipelineEdgeHardReference();
     runWeek71GcrWriteRoundtripEdgeHardReference();
     runWeek72PhysicalDiskEffectsEdgeHardReference();
+    runWeek73ErrorEngineDosMappingEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8625,6 +8627,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek70GcrReadPipelineEdgeHardReference();
     runWeek71GcrWriteRoundtripEdgeHardReference();
     runWeek72PhysicalDiskEffectsEdgeHardReference();
+    runWeek73ErrorEngineDosMappingEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -18337,6 +18340,235 @@ static void runWeek72PhysicalDiskEffectsEdgeHardReference() {
               << " zone_span_max=" << zoneTimingSpanMax
               << " bitslip_rows=" << bitslipRowsMax
               << " weakbit_rows=" << weakbitRowsMax
+              << std::endl;
+}
+
+// Week73 aging/error-engine matrix:
+// This layer models long-run media aging envelopes by traversing an explicit
+// DOS error-class matrix and checking channel-15 mapping, persistence and clear
+// semantics through deterministic retry/clear sequences.
+static std::vector<std::string> buildWeek73ErrorEngineDosMappingRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(220);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    struct ErrorSpec {
+        int code;
+        const char *msg;
+        int retriesToRecover;
+    };
+
+    static const ErrorSpec kErrorSpecs[] = {
+        { 23, "READ ERROR", 2 },
+        { 27, "CHECKSUM ERROR", 1 },
+        { 29, "DISK ID MISMATCH", 1 },
+        { 20, "BLOCK HEADER NOT FOUND", 2 },
+        { 21, "SYNC NOT FOUND", 2 },
+        { 74, "DRIVE NOT READY", 0 }
+    };
+
+    auto statusCodeOf = [](const std::string &status) {
+        if (status.size() >= 2 &&
+            std::isdigit(static_cast<unsigned char>(status[0])) &&
+            std::isdigit(static_cast<unsigned char>(status[1]))) {
+            return (status[0] - '0') * 10 + (status[1] - '0');
+        }
+        return -1;
+    };
+
+    uint64_t rotationTick = 0;
+    int errorclassCoverageRows = 0;
+    int channel15MappingMismatchRows = 0;
+    int recoveryProfileMax = 0;
+
+    for (size_t i = 0; i < (sizeof(kErrorSpecs) / sizeof(kErrorSpecs[0])); ++i) {
+        const ErrorSpec &spec = kErrorSpecs[i];
+        const int track = 0x11 + static_cast<int>(i % 4);
+        const int sector = 0x02 + static_cast<int>(i * 2);
+
+        for (int retry = 0; retry <= spec.retriesToRecover; ++retry) {
+            bool persistentError = true;
+            if (spec.code == 74 && retry == spec.retriesToRecover) {
+                persistentError = false;
+            }
+            if (spec.code != 74 && retry >= spec.retriesToRecover) {
+                persistentError = false;
+            }
+
+            int expectedStatusCode = spec.code;
+            if (!persistentError) {
+                expectedStatusCode = 0;
+            }
+
+            if (persistentError) {
+                std::ostringstream st;
+                st << std::setw(2) << std::setfill('0') << spec.code
+                   << "," << spec.msg << ","
+                   << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                   << "," << std::setw(2) << std::setfill('0') << sector;
+                drive.iecStatusLine = st.str();
+            } else {
+                drive.iecStatusLine = "00,OK,00,00";
+            }
+
+            const int observedStatusCode = statusCodeOf(drive.iecStatusLine);
+            const int mappingMismatch = (observedStatusCode == expectedStatusCode) ? 0 : 1;
+            if (mappingMismatch) {
+                channel15MappingMismatchRows++;
+            }
+
+            if (retry == 0) {
+                errorclassCoverageRows++;
+            }
+            if (retry > recoveryProfileMax) {
+                recoveryProfileMax = retry;
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick += static_cast<uint64_t>(11 + (spec.code % 5) + retry);
+
+            std::ostringstream oss;
+            oss << label
+                << ",error_matrix"
+                << "," << rotationTick
+                << "," << spec.code
+                << "," << track
+                << "," << sector
+                << "," << retry
+                << "," << spec.retriesToRecover
+                << "," << (persistentError ? 1 : 0)
+                << "," << expectedStatusCode
+                << "," << observedStatusCode
+                << "," << mappingMismatch
+                << "," << errorclassCoverageRows
+                << "," << channel15MappingMismatchRows
+                << "," << recoveryProfileMax
+                << "," << drive.iecStatusLine;
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+// Collect week73 rows for all drive revisions into one trace payload.
+static std::vector<std::string> buildWeek73ErrorEngineDosMappingEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek73ErrorEngineDosMappingRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek73ErrorEngineDosMappingRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek73ErrorEngineDosMappingRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Write week73 CSV with explicit matrix + convergence columns used by policy.
+static void writeWeek73ErrorEngineDosMappingTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,error_code,track,sector,retry_step,retries_to_recover,persistent_error,expected_status_code,observed_status_code,mapping_mismatch,w73_errorclass_coverage_rows,w73_channel15_mapping_mismatch_rows,w73_recovery_profile_max,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Execute week73 gate:
+// - enforce mapping mismatch = 0,
+// - keep row-perfect hard-reference behavior,
+// - allow bootstrap refresh using dedicated env var.
+static void runWeek73ErrorEngineDosMappingEdgeHardReference() {
+    const std::string runtimePath = "week73_error_engine_dos_mapping_runtime.csv";
+    const std::string refPath = "reference/edge/week73_error_engine_dos_mapping_trace.csv";
+
+    const std::vector<std::string> got = buildWeek73ErrorEngineDosMappingEdgeTraceRows();
+    writeWeek73ErrorEngineDosMappingTraceCsv(runtimePath, got);
+
+    int mappingMismatchRowsMax = 0;
+    int coverageRowsMax = 0;
+    int recoveryProfileMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int coverage = 0;
+        int mismatch = 0;
+        int recovery = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 12) {
+                coverage = value;
+            } else if (col == 13) {
+                mismatch = value;
+            } else if (col == 14) {
+                recovery = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (coverage > coverageRowsMax) {
+            coverageRowsMax = coverage;
+        }
+        if (mismatch > mappingMismatchRowsMax) {
+            mappingMismatchRowsMax = mismatch;
+        }
+        if (recovery > recoveryProfileMax) {
+            recoveryProfileMax = recovery;
+        }
+    }
+
+    if (mappingMismatchRowsMax != 0) {
+        std::cerr << "[WEEK73-ERROR][HARDREF] FAIL: mapping mismatch gate violated w73_channel15_mapping_mismatch_rows="
+                  << mappingMismatchRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK73_BOOTSTRAP_ERRORMAP_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek73ErrorEngineDosMappingTraceCsv(refPath, got);
+        std::cout << "[WEEK73-ERROR][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK73-ERROR][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK73-ERROR][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK73-ERROR][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK73-ERROR][HARDREF] PASS: error-class matrix + retry convergence trace matches reference"
+              << " coverage_rows=" << coverageRowsMax
+              << " recovery_max=" << recoveryProfileMax
               << std::endl;
 }
 

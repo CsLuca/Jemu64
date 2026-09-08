@@ -1,0 +1,43 @@
+rev,phase,rotation_tick,error_code,track,sector,retry_step,retries_to_recover,persistent_error,expected_status_code,observed_status_code,mapping_mismatch,w73_errorclass_coverage_rows,w73_channel15_mapping_mismatch_rows,w73_recovery_profile_max,status
+1541,error_matrix,14,23,17,2,0,2,1,23,23,0,1,0,0,23,READ ERROR,11,02
+1541,error_matrix,29,23,17,2,1,2,1,23,23,0,1,0,1,23,READ ERROR,11,02
+1541,error_matrix,45,23,17,2,2,2,0,0,0,0,1,0,2,00,OK,00,00
+1541,error_matrix,58,27,18,4,0,1,1,27,27,0,2,0,2,27,CHECKSUM ERROR,12,04
+1541,error_matrix,72,27,18,4,1,1,0,0,0,0,2,0,2,00,OK,00,00
+1541,error_matrix,87,29,19,6,0,1,1,29,29,0,3,0,2,29,DISK ID MISMATCH,13,06
+1541,error_matrix,103,29,19,6,1,1,0,0,0,0,3,0,2,00,OK,00,00
+1541,error_matrix,114,20,20,8,0,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541,error_matrix,126,20,20,8,1,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541,error_matrix,139,20,20,8,2,2,0,0,0,0,4,0,2,00,OK,00,00
+1541,error_matrix,151,21,17,10,0,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541,error_matrix,164,21,17,10,1,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541,error_matrix,178,21,17,10,2,2,0,0,0,0,5,0,2,00,OK,00,00
+1541,error_matrix,193,74,18,12,0,0,0,0,0,0,6,0,2,00,OK,00,00
+1541C,error_matrix,14,23,17,2,0,2,1,23,23,0,1,0,0,23,READ ERROR,11,02
+1541C,error_matrix,29,23,17,2,1,2,1,23,23,0,1,0,1,23,READ ERROR,11,02
+1541C,error_matrix,45,23,17,2,2,2,0,0,0,0,1,0,2,00,OK,00,00
+1541C,error_matrix,58,27,18,4,0,1,1,27,27,0,2,0,2,27,CHECKSUM ERROR,12,04
+1541C,error_matrix,72,27,18,4,1,1,0,0,0,0,2,0,2,00,OK,00,00
+1541C,error_matrix,87,29,19,6,0,1,1,29,29,0,3,0,2,29,DISK ID MISMATCH,13,06
+1541C,error_matrix,103,29,19,6,1,1,0,0,0,0,3,0,2,00,OK,00,00
+1541C,error_matrix,114,20,20,8,0,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541C,error_matrix,126,20,20,8,1,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541C,error_matrix,139,20,20,8,2,2,0,0,0,0,4,0,2,00,OK,00,00
+1541C,error_matrix,151,21,17,10,0,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541C,error_matrix,164,21,17,10,1,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541C,error_matrix,178,21,17,10,2,2,0,0,0,0,5,0,2,00,OK,00,00
+1541C,error_matrix,193,74,18,12,0,0,0,0,0,0,6,0,2,00,OK,00,00
+1541II,error_matrix,14,23,17,2,0,2,1,23,23,0,1,0,0,23,READ ERROR,11,02
+1541II,error_matrix,29,23,17,2,1,2,1,23,23,0,1,0,1,23,READ ERROR,11,02
+1541II,error_matrix,45,23,17,2,2,2,0,0,0,0,1,0,2,00,OK,00,00
+1541II,error_matrix,58,27,18,4,0,1,1,27,27,0,2,0,2,27,CHECKSUM ERROR,12,04
+1541II,error_matrix,72,27,18,4,1,1,0,0,0,0,2,0,2,00,OK,00,00
+1541II,error_matrix,87,29,19,6,0,1,1,29,29,0,3,0,2,29,DISK ID MISMATCH,13,06
+1541II,error_matrix,103,29,19,6,1,1,0,0,0,0,3,0,2,00,OK,00,00
+1541II,error_matrix,114,20,20,8,0,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541II,error_matrix,126,20,20,8,1,2,1,20,20,0,4,0,2,20,BLOCK HEADER NOT FOUND,14,08
+1541II,error_matrix,139,20,20,8,2,2,0,0,0,0,4,0,2,00,OK,00,00
+1541II,error_matrix,151,21,17,10,0,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541II,error_matrix,164,21,17,10,1,2,1,21,21,0,5,0,2,21,SYNC NOT FOUND,11,0A
+1541II,error_matrix,178,21,17,10,2,2,0,0,0,0,5,0,2,00,OK,00,00
+1541II,error_matrix,193,74,18,12,0,0,0,0,0,0,6,0,2,00,OK,00,00
