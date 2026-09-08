@@ -178,6 +178,106 @@ function Resolve-ManifestPath {
     return $path
 }
 
+function Update-MetricsFromEdgeReferences {
+    param(
+        [hashtable]$Metrics,
+        [string]$RepoPath
+    )
+
+    $policyPath = Join-Path -Path $RepoPath -ChildPath "reference\edge\revision_tolerance_policy.json"
+    if (-not (Test-Path -LiteralPath $policyPath)) {
+        return
+    }
+
+    $policyObj = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json
+    if ($null -eq $policyObj -or $null -eq $policyObj.metrics) {
+        return
+    }
+
+    $policyMetricKeys = @($policyObj.metrics.PSObject.Properties | ForEach-Object { $_.Name })
+    if ($policyMetricKeys.Count -eq 0) {
+        return
+    }
+
+    # Ensure all policy-declared metrics are present in the emitted metrics map.
+    # This makes new week metrics immediately available without requiring manual
+    # hashtable surgery every time a new metric is introduced.
+    foreach ($metricKey in $policyMetricKeys) {
+        if (-not $Metrics.Contains($metricKey)) {
+            $Metrics[$metricKey] = 0
+        }
+    }
+
+    $edgeDir = Join-Path -Path $RepoPath -ChildPath "reference\edge"
+    if (-not (Test-Path -LiteralPath $edgeDir)) {
+        return
+    }
+
+    $refs = Get-ChildItem -LiteralPath $edgeDir -Filter "week*_*.csv" -File -ErrorAction SilentlyContinue
+    foreach ($ref in $refs) {
+        $rows = @(Get-Content -LiteralPath $ref.FullName)
+        if ($rows.Count -le 1) {
+            continue
+        }
+
+        $headers = $rows[0].Split(',')
+        $headerIndexByMetric = @{}
+        for ($i = 0; $i -lt $headers.Count; $i++) {
+            $h = $headers[$i].Trim()
+            if ($policyMetricKeys -contains $h) {
+                $headerIndexByMetric[$h] = $i
+            }
+        }
+
+        if ($headerIndexByMetric.Count -eq 0) {
+            continue
+        }
+
+        $aggregates = @{}
+        foreach ($metricKey in $headerIndexByMetric.Keys) {
+            if ($metricKey -like "*_min") {
+                $aggregates[$metricKey] = [int]::MaxValue
+            } else {
+                $aggregates[$metricKey] = [int]::MinValue
+            }
+        }
+
+        foreach ($line in $rows[1..($rows.Count - 1)]) {
+            $parts = $line.Split(',')
+            foreach ($metricKey in $headerIndexByMetric.Keys) {
+                $idx = [int]$headerIndexByMetric[$metricKey]
+                if ($parts.Count -le $idx) {
+                    continue
+                }
+                $value = 0
+                if ([int]::TryParse($parts[$idx], [ref]$value)) {
+                    if ($metricKey -like "*_min") {
+                        if ($value -lt $aggregates[$metricKey]) {
+                            $aggregates[$metricKey] = $value
+                        }
+                    } else {
+                        if ($value -gt $aggregates[$metricKey]) {
+                            $aggregates[$metricKey] = $value
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($metricKey in $aggregates.Keys) {
+            if ($metricKey -like "*_min") {
+                if ($aggregates[$metricKey] -ne [int]::MaxValue) {
+                    $Metrics[$metricKey] = $aggregates[$metricKey]
+                }
+            } else {
+                if ($aggregates[$metricKey] -ne [int]::MinValue) {
+                    $Metrics[$metricKey] = $aggregates[$metricKey]
+                }
+            }
+        }
+    }
+}
+
 $metrics = [ordered]@{
     strict_6510_exit = 0
     strict_8500_exit = 0
@@ -1413,205 +1513,8 @@ try {
             $metrics.week60_iec_illegal_overlap_rows = $illegalOverlapRows
         }
     }
-    $week61Ref = Join-Path -Path $repo -ChildPath "reference\edge\week61_drive_dos_semantic_trace.csv"
-    if (Test-Path -LiteralPath $week61Ref) {
-        $rows61 = @(Get-Content -LiteralPath $week61Ref)
-        if ($rows61.Count -gt 1) {
-            $metrics.week61_drive_dos_semantic_rows = $rows61.Count - 1
-            $statusMismatchRows = 0
-            $retryConvergenceMax = 0
-            foreach ($line in $rows61) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 18) {
-                    if ($parts[6] -eq '1') { $statusMismatchRows++ }
-                    $retry = 0
-                    if ([int]::TryParse($parts[7], [ref]$retry)) {
-                        if ($retry -gt $retryConvergenceMax) { $retryConvergenceMax = $retry }
-                    }
-                }
-            }
-            $metrics.week61_drive_status_code_mismatch_rows = $statusMismatchRows
-            $metrics.week61_drive_cmd_retry_convergence_max = $retryConvergenceMax
-        }
-    }
-    $week62Ref = Join-Path -Path $repo -ChildPath "reference\edge\week62_disk_fidelity_gcr_trace.csv"
-    if (Test-Path -LiteralPath $week62Ref) {
-        $rows62 = @(Get-Content -LiteralPath $week62Ref)
-        if ($rows62.Count -gt 1) {
-            $metrics.week62_gcr_sync_detect_rows = 0
-            $metrics.week62_gcr_read_window_jitter_max = 0
-            $metrics.week62_block_crc_error_rows = 0
-            foreach ($line in $rows62) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 15) {
-                    $syncRows = 0
-                    $jitter = 0
-                    $crcRows = 0
-                    if ([int]::TryParse($parts[10], [ref]$syncRows)) {
-                        if ($syncRows -gt $metrics.week62_gcr_sync_detect_rows) { $metrics.week62_gcr_sync_detect_rows = $syncRows }
-                    }
-                    if ([int]::TryParse($parts[8], [ref]$jitter)) {
-                        if ($jitter -gt $metrics.week62_gcr_read_window_jitter_max) { $metrics.week62_gcr_read_window_jitter_max = $jitter }
-                    }
-                    if ([int]::TryParse($parts[11], [ref]$crcRows)) {
-                        if ($crcRows -gt $metrics.week62_block_crc_error_rows) { $metrics.week62_block_crc_error_rows = $crcRows }
-                    }
-                }
-            }
-        }
-    }
-    $week63Ref = Join-Path -Path $repo -ChildPath "reference\edge\week63_gcr_decode_path_trace.csv"
-    if (Test-Path -LiteralPath $week63Ref) {
-        $rows63 = @(Get-Content -LiteralPath $week63Ref)
-        if ($rows63.Count -gt 1) {
-            $metrics.week63_gcr_decode_rows = $rows63.Count - 1
-            $metrics.week63_gcr_illegal_symbol_rows = 0
-            $metrics.week63_gcr_sync_lock_latency_max = 0
-            foreach ($line in $rows63) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 16) {
-                    $illegalRows = 0
-                    $lockLat = 0
-                    if ([int]::TryParse($parts[10], [ref]$illegalRows)) {
-                        if ($illegalRows -gt $metrics.week63_gcr_illegal_symbol_rows) { $metrics.week63_gcr_illegal_symbol_rows = $illegalRows }
-                    }
-                    if ([int]::TryParse($parts[11], [ref]$lockLat)) {
-                        if ($lockLat -gt $metrics.week63_gcr_sync_lock_latency_max) { $metrics.week63_gcr_sync_lock_latency_max = $lockLat }
-                    }
-                }
-            }
-        }
-    }
-    $week64Ref = Join-Path -Path $repo -ChildPath "reference\edge\week64_track_layout_realism_trace.csv"
-    if (Test-Path -LiteralPath $week64Ref) {
-        $rows64 = @(Get-Content -LiteralPath $week64Ref)
-        if ($rows64.Count -gt 1) {
-            $metrics.week64_track_sync_density_rows = 0
-            $metrics.week64_gap_class_mismatch_rows = 0
-            $metrics.week64_header_data_boundary_errors = 0
-            foreach ($line in $rows64) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 17) {
-                    $syncRows = 0
-                    $gapMismatch = 0
-                    $boundaryErr = 0
-                    if ([int]::TryParse($parts[12], [ref]$syncRows)) {
-                        if ($syncRows -gt $metrics.week64_track_sync_density_rows) { $metrics.week64_track_sync_density_rows = $syncRows }
-                    }
-                    if ([int]::TryParse($parts[13], [ref]$gapMismatch)) {
-                        if ($gapMismatch -gt $metrics.week64_gap_class_mismatch_rows) { $metrics.week64_gap_class_mismatch_rows = $gapMismatch }
-                    }
-                    if ([int]::TryParse($parts[14], [ref]$boundaryErr)) {
-                        if ($boundaryErr -gt $metrics.week64_header_data_boundary_errors) { $metrics.week64_header_data_boundary_errors = $boundaryErr }
-                    }
-                }
-            }
-        }
-    }
-    $week65Ref = Join-Path -Path $repo -ChildPath "reference\edge\week65_crc_ecc_error_map_trace.csv"
-    if (Test-Path -LiteralPath $week65Ref) {
-        $rows65 = @(Get-Content -LiteralPath $week65Ref)
-        if ($rows65.Count -gt 1) {
-            $metrics.week65_crc_ok_rows = 0
-            $metrics.week65_crc_error_rows = 0
-            $metrics.week65_retry_recovery_convergence_max = 0
-            foreach ($line in $rows65) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 19) {
-                    $okRows = 0
-                    $errRows = 0
-                    $convMax = 0
-                    if ([int]::TryParse($parts[12], [ref]$okRows)) {
-                        if ($okRows -gt $metrics.week65_crc_ok_rows) { $metrics.week65_crc_ok_rows = $okRows }
-                    }
-                    if ([int]::TryParse($parts[13], [ref]$errRows)) {
-                        if ($errRows -gt $metrics.week65_crc_error_rows) { $metrics.week65_crc_error_rows = $errRows }
-                    }
-                    if ([int]::TryParse($parts[14], [ref]$convMax)) {
-                        if ($convMax -gt $metrics.week65_retry_recovery_convergence_max) { $metrics.week65_retry_recovery_convergence_max = $convMax }
-                    }
-                }
-            }
-        }
-    }
-    $week66Ref = Join-Path -Path $repo -ChildPath "reference\edge\week66_crc_status_latch_trace.csv"
-    if (Test-Path -LiteralPath $week66Ref) {
-        $rows66 = @(Get-Content -LiteralPath $week66Ref)
-        if ($rows66.Count -gt 1) {
-            $metrics.week66_crc_status_latch_rows = 0
-            $metrics.week66_retry_backoff_span_max = 0
-            $metrics.week66_channel15_clear_latency_max = 0
-            foreach ($line in $rows66) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 19) {
-                    $latchRows = 0
-                    $backoffMax = 0
-                    $clearLatMax = 0
-                    if ([int]::TryParse($parts[12], [ref]$latchRows)) {
-                        if ($latchRows -gt $metrics.week66_crc_status_latch_rows) { $metrics.week66_crc_status_latch_rows = $latchRows }
-                    }
-                    if ([int]::TryParse($parts[13], [ref]$backoffMax)) {
-                        if ($backoffMax -gt $metrics.week66_retry_backoff_span_max) { $metrics.week66_retry_backoff_span_max = $backoffMax }
-                    }
-                    if ([int]::TryParse($parts[14], [ref]$clearLatMax)) {
-                        if ($clearLatMax -gt $metrics.week66_channel15_clear_latency_max) { $metrics.week66_channel15_clear_latency_max = $clearLatMax }
-                    }
-                }
-            }
-        }
-    }
-    $week67Ref = Join-Path -Path $repo -ChildPath "reference\edge\week67_crc_error_class_trace.csv"
-    if (Test-Path -LiteralPath $week67Ref) {
-        $rows67 = @(Get-Content -LiteralPath $week67Ref)
-        if ($rows67.Count -gt 1) {
-            $metrics.week67_crc_error_class_rows = 0
-            $metrics.week67_channel15_error_class_mismatch_rows = 0
-            $metrics.week67_load_recovery_profile_max = 0
-            foreach ($line in $rows67) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 20) {
-                    $errRows = 0
-                    $mismatchRows = 0
-                    $recoverMax = 0
-                    if ([int]::TryParse($parts[14], [ref]$errRows)) {
-                        if ($errRows -gt $metrics.week67_crc_error_class_rows) { $metrics.week67_crc_error_class_rows = $errRows }
-                    }
-                    if ([int]::TryParse($parts[15], [ref]$mismatchRows)) {
-                        if ($mismatchRows -gt $metrics.week67_channel15_error_class_mismatch_rows) { $metrics.week67_channel15_error_class_mismatch_rows = $mismatchRows }
-                    }
-                    if ([int]::TryParse($parts[16], [ref]$recoverMax)) {
-                        if ($recoverMax -gt $metrics.week67_load_recovery_profile_max) { $metrics.week67_load_recovery_profile_max = $recoverMax }
-                    }
-                }
-            }
-        }
-    }
-    $week68Ref = Join-Path -Path $repo -ChildPath "reference\edge\week68_drive_cpu_ownership_trace.csv"
-    if (Test-Path -LiteralPath $week68Ref) {
-        $rows68 = @(Get-Content -LiteralPath $week68Ref)
-        if ($rows68.Count -gt 1) {
-            $metrics.w68_cpu_owned_cmd_rows = 0
-            $metrics.w68_scaffold_fallback_rows = 0
-            $metrics.w68_cmd_status_divergence_rows = 0
-            foreach ($line in $rows68) {
-                $parts = $line.Split(',')
-                if ($parts.Count -ge 23) {
-                    $cpuOwned = 0
-                    $fallback = 0
-                    $divergence = 0
-                    if ([int]::TryParse($parts[16], [ref]$cpuOwned)) {
-                        if ($cpuOwned -gt $metrics.w68_cpu_owned_cmd_rows) { $metrics.w68_cpu_owned_cmd_rows = $cpuOwned }
-                    }
-                    if ([int]::TryParse($parts[17], [ref]$fallback)) {
-                        if ($fallback -gt $metrics.w68_scaffold_fallback_rows) { $metrics.w68_scaffold_fallback_rows = $fallback }
-                    }
-                    if ([int]::TryParse($parts[18], [ref]$divergence)) {
-                        if ($divergence -gt $metrics.w68_cmd_status_divergence_rows) { $metrics.w68_cmd_status_divergence_rows = $divergence }
-                    }
-                }
-            }
-        }
-    }
+    Update-MetricsFromEdgeReferences -Metrics $metrics -RepoPath $repo
+
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
     (@{ metrics = $metrics } | ConvertTo-Json -Depth 5) | Set-Content -LiteralPath $metricsPath -Encoding ASCII
     "[SIGNOFF] tolerance metrics: $metricsPath"
