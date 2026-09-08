@@ -8487,6 +8487,7 @@ static void runWeek64TrackLayoutRealismEdgeHardReference();
 static void runWeek65CrcEccErrorMapEdgeHardReference();
 static void runWeek66CrcStatusLatchEdgeHardReference();
 static void runWeek67CrcErrorClassEdgeHardReference();
+static void runWeek68DriveCpuOwnershipEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8548,6 +8549,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek65CrcEccErrorMapEdgeHardReference();
     runWeek66CrcStatusLatchEdgeHardReference();
     runWeek67CrcErrorClassEdgeHardReference();
+    runWeek68DriveCpuOwnershipEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8610,6 +8612,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek65CrcEccErrorMapEdgeHardReference();
     runWeek66CrcStatusLatchEdgeHardReference();
     runWeek67CrcErrorClassEdgeHardReference();
+    runWeek68DriveCpuOwnershipEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -17307,6 +17310,233 @@ static void runWeek67CrcErrorClassEdgeHardReference() {
     }
 
     std::cout << "[WEEK67-CRC][HARDREF] PASS: CRC error-class trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek68DriveCpuOwnershipRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(280);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    auto feedData = [&](const std::string &cmd) {
+        bool ok = true;
+        for (char c : cmd) {
+            if (!drive.processIecDataByte(static_cast<uint8_t>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        return ok;
+    };
+
+    auto openCmdChannel = [&]() {
+        bool ok = drive.processIecCommandByte(0x28);
+        ok = ok && drive.processIecCommandByte(0xFF);
+        return ok;
+    };
+
+    auto commitCmdChannel = [&]() {
+        return drive.processIecCommandByte(0x3F);
+    };
+
+    uint64_t rotationTick = 0;
+    uint64_t prevCpuOwned = 0;
+    uint64_t prevFallback = 0;
+    uint64_t prevDivergence = 0;
+    int cpuOwnedCmdRows = 0;
+    int scaffoldFallbackRows = 0;
+    int cmdStatusDivergenceRows = 0;
+
+    auto pushRow = [&](const char *phase,
+                       int cutoverOn,
+                       int expectedFallbackRise,
+                       int expectedDivergence,
+                       int track,
+                       int sector,
+                       int commitOk,
+                       int statusPoll15) {
+        const uint64_t cpuOwnedNow = drive.iecCpuOwnedCommandRows;
+        const uint64_t fallbackNow = drive.iecScaffoldFallbackRows;
+        const uint64_t divergenceNow = drive.iecCmdStatusDivergenceRows;
+
+        const int deltaCpuOwned = static_cast<int>(cpuOwnedNow - prevCpuOwned);
+        const int deltaFallback = static_cast<int>(fallbackNow - prevFallback);
+        const int deltaDivergence = static_cast<int>(divergenceNow - prevDivergence);
+
+        prevCpuOwned = cpuOwnedNow;
+        prevFallback = fallbackNow;
+        prevDivergence = divergenceNow;
+
+        if (deltaCpuOwned > 0) {
+            cpuOwnedCmdRows += deltaCpuOwned;
+        }
+        if (deltaFallback > 0) {
+            scaffoldFallbackRows += deltaFallback;
+        }
+        if (deltaDivergence > 0) {
+            cmdStatusDivergenceRows += deltaDivergence;
+        }
+
+        const int fallbackUnexpected = (expectedFallbackRise == 0 && deltaFallback > 0) ? 1 : 0;
+        const int divergenceMismatch = (deltaDivergence != expectedDivergence) ? 1 : 0;
+
+        std::ostringstream oss;
+        oss << label
+            << ",cpu_ownership"
+            << "," << rotationTick
+            << "," << phase
+            << "," << cutoverOn
+            << "," << expectedFallbackRise
+            << "," << expectedDivergence
+            << "," << track
+            << "," << sector
+            << "," << commitOk
+            << "," << statusPoll15
+            << "," << deltaCpuOwned
+            << "," << deltaFallback
+            << "," << deltaDivergence
+            << "," << fallbackUnexpected
+            << "," << divergenceMismatch
+            << "," << cpuOwnedCmdRows
+            << "," << scaffoldFallbackRows
+            << "," << cmdStatusDivergenceRows
+            << "," << drive.iecCpuOwnershipCutoverTransitions
+            << "," << drive.iecCommandDispatchCount
+            << "," << drive.iecDataDispatchCount
+            << "," << drive.iecStatusLine;
+        rows.push_back(oss.str());
+    };
+
+    for (int trackOff = 0; trackOff < 2; ++trackOff) {
+        const int track = 0x18 + trackOff;
+        drive.setIecCpuOwnershipCutoverPhase1(true);
+
+        for (int sector = 0; sector < 4; ++sector) {
+            const bool useFallbackClass = (sector == 3);
+
+            openCmdChannel();
+            if (!useFallbackClass) {
+                std::ostringstream ba;
+                ba << "B-A,00," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                   << "," << std::setw(2) << sector;
+                feedData(ba.str());
+            } else {
+                // Fallback-intent command class for phase-1: deterministic unsupported token.
+                // It exercises scaffold fallback counting while keeping status divergence at zero.
+                std::ostringstream unsupported;
+                unsupported << "XQ," << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << track
+                            << "," << std::setw(2) << sector;
+                feedData(unsupported.str());
+            }
+            const bool commitOk = commitCmdChannel();
+            drive.tickIecHalfCycle();
+            rotationTick++;
+            pushRow(useFallbackClass ? "cpu_owned_unsupported" : "cpu_owned_block_alloc",
+                    1,
+                    useFallbackClass ? 1 : 0,
+                    0,
+                    track,
+                    sector,
+                    commitOk ? 1 : 0,
+                    0);
+
+            drive.processIecCommandByte(0x48);
+            drive.processIecCommandByte(0x6F);
+            drive.tickIecHalfCycle();
+            rotationTick++;
+            pushRow(useFallbackClass ? "cpu_owned_unsupported_status15" : "cpu_owned_status15",
+                    1,
+                    0,
+                    0,
+                    track,
+                    sector,
+                    1,
+                    1);
+            drive.processIecCommandByte(0x5F);
+        }
+
+        drive.setIecCpuOwnershipCutoverPhase1(false);
+        openCmdChannel();
+        {
+            std::ostringstream noop;
+            noop << "I0";
+            feedData(noop.str());
+        }
+        commitCmdChannel();
+        drive.tickIecHalfCycle();
+        rotationTick++;
+        pushRow("scaffold_mode_probe", 0, 0, 0, track, 0, 1, 0);
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek68DriveCpuOwnershipEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek68DriveCpuOwnershipRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek68DriveCpuOwnershipRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek68DriveCpuOwnershipRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek68DriveCpuOwnershipTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,scenario,cutover_on,expected_fallback_rise,expected_divergence,track,sector,commit_ok,status_poll_15,delta_cpu_owned,delta_fallback,delta_divergence,fallback_unexpected,divergence_mismatch,w68_cpu_owned_cmd_rows,w68_scaffold_fallback_rows,w68_cmd_status_divergence_rows,cutover_transitions,cmd_dispatch,data_dispatch,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek68DriveCpuOwnershipEdgeHardReference() {
+    const std::string runtimePath = "week68_drive_cpu_ownership_runtime.csv";
+    const std::string refPath = "reference/edge/week68_drive_cpu_ownership_trace.csv";
+
+    const std::vector<std::string> got = buildWeek68DriveCpuOwnershipEdgeTraceRows();
+    writeWeek68DriveCpuOwnershipTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK68_BOOTSTRAP_CPUOWNERSHIP_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek68DriveCpuOwnershipTraceCsv(refPath, got);
+        std::cout << "[WEEK68-OWNERSHIP][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK68-OWNERSHIP][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK68-OWNERSHIP][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK68-OWNERSHIP][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK68-OWNERSHIP][HARDREF] PASS: drive CPU ownership cutover trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {

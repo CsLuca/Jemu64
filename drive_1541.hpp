@@ -229,6 +229,16 @@ public:
     uint64_t iecDataDispatchCount = 0;
     uint64_t iecCommandSyntaxErrorCount = 0;
 
+    // Week68 phase-1 ownership counters.
+    // These counters do not claim full firmware ownership yet: they provide a deterministic
+    // observability layer while command/status handling transitions from scaffold-only flow to
+    // CPU/VIA-acknowledged flow for command channel operations.
+    bool iecCpuOwnsCommandPath = false;
+    uint64_t iecCpuOwnedCommandRows = 0;
+    uint64_t iecScaffoldFallbackRows = 0;
+    uint64_t iecCmdStatusDivergenceRows = 0;
+    uint64_t iecCpuOwnershipCutoverTransitions = 0;
+
     std::array<uint64_t, 16> iecChannelOpenCount = {0};
     std::array<uint64_t, 16> iecChannelCloseCount = {0};
 
@@ -360,6 +370,11 @@ public:
         iecCommandDispatchCount = 0;
         iecDataDispatchCount = 0;
         iecCommandSyntaxErrorCount = 0;
+        iecCpuOwnsCommandPath = false;
+        iecCpuOwnedCommandRows = 0;
+        iecScaffoldFallbackRows = 0;
+        iecCmdStatusDivergenceRows = 0;
+        iecCpuOwnershipCutoverTransitions = 0;
         iecChannelOpenCount.fill(0);
         iecChannelCloseCount.fill(0);
 
@@ -1180,6 +1195,52 @@ public:
         return s.substr(b, e - b);
     }
 
+    int statusCodeOf(const std::string &status) const {
+        if (status.size() >= 2 &&
+            std::isdigit(static_cast<unsigned char>(status[0])) &&
+            std::isdigit(static_cast<unsigned char>(status[1]))) {
+            return (status[0] - '0') * 10 + (status[1] - '0');
+        }
+        return -1;
+    }
+
+    // Conservative expectation model for phase-1 ownership counters.
+    // We only declare an expected status when the command class has a deterministic code in
+    // this scaffold. Unknown/complex classes return -1 and are excluded from divergence counting.
+    int expectedStatusForCommandHeuristic(const std::string &cmd) const {
+        if (cmd.empty()) {
+            return 30;
+        }
+        if (cmd.rfind("M-R", 0) == 0 || cmd.rfind("M-W", 0) == 0 || cmd.rfind("M-E", 0) == 0) {
+            return 0;
+        }
+        if (cmd.rfind("B-A", 0) == 0 || cmd.rfind("B-W", 0) == 0 || cmd.rfind("B-P", 0) == 0 || cmd.rfind("B-F", 0) == 0) {
+            return 0;
+        }
+        if (cmd.rfind("B-R", 0) == 0) {
+            return -1;
+        }
+        if (cmd == "U1" || cmd == "U2" || cmd == "I0" || cmd == "UI" || cmd == "UJ" || cmd == "N0:" || cmd == "NEW") {
+            return 0;
+        }
+        return -1;
+    }
+
+    bool commandClassEligibleForCpuOwnership(const std::string &cmd) const {
+        return cmd.rfind("M-", 0) == 0 ||
+               cmd.rfind("B-", 0) == 0 ||
+               cmd == "U1" || cmd == "U2" ||
+               cmd == "I0" || cmd == "UI" || cmd == "UJ" ||
+               cmd == "N0:" || cmd == "NEW";
+    }
+
+    void setIecCpuOwnershipCutoverPhase1(bool enabled) {
+        if (iecCpuOwnsCommandPath != enabled) {
+            iecCpuOwnershipCutoverTransitions++;
+        }
+        iecCpuOwnsCommandPath = enabled;
+    }
+
     void buildCommandResponsePayload() {
         iecTxQueue.clear();
         for (uint8_t b : iecCommandResponseQueue) {
@@ -1228,6 +1289,30 @@ public:
             iecCommandSyntaxErrorCount++;
             return;
         }
+
+        const bool cpuOwnedTracking = iecCpuOwnsCommandPath;
+        const int expectedStatusForDivergence = cpuOwnedTracking ? expectedStatusForCommandHeuristic(cmd) : -1;
+        if (cpuOwnedTracking) {
+            iecCpuOwnedCommandRows++;
+            if (!commandClassEligibleForCpuOwnership(cmd)) {
+                iecScaffoldFallbackRows++;
+            }
+        }
+
+        struct CpuOwnershipFinalize {
+            Drive1541 *self;
+            bool enabled;
+            int expectedStatus;
+            ~CpuOwnershipFinalize() {
+                if (!enabled || expectedStatus < 0) {
+                    return;
+                }
+                const int actualStatus = self->statusCodeOf(self->iecStatusLine);
+                if (actualStatus != expectedStatus) {
+                    self->iecCmdStatusDivergenceRows++;
+                }
+            }
+        } finalize{this, cpuOwnedTracking, expectedStatusForDivergence};
 
         if (cmd.rfind("M-R", 0) == 0) {
             const std::vector<std::string> parts = splitComma(cmd);

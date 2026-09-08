@@ -1,0 +1,55 @@
+rev,phase,rotation_tick,scenario,cutover_on,expected_fallback_rise,expected_divergence,track,sector,commit_ok,status_poll_15,delta_cpu_owned,delta_fallback,delta_divergence,fallback_unexpected,divergence_mismatch,w68_cpu_owned_cmd_rows,w68_scaffold_fallback_rows,w68_cmd_status_divergence_rows,cutover_transitions,cmd_dispatch,data_dispatch,status
+1541,cpu_ownership,1,cpu_owned_block_alloc,1,0,0,24,0,1,0,1,0,0,0,0,1,0,0,1,3,12,00,OK,00,00
+1541,cpu_ownership,2,cpu_owned_status15,1,0,0,24,0,1,1,0,0,0,0,0,1,0,0,1,5,12,00,OK,00,00
+1541,cpu_ownership,3,cpu_owned_block_alloc,1,0,0,24,1,1,0,1,0,0,0,0,2,0,0,1,9,24,00,OK,00,00
+1541,cpu_ownership,4,cpu_owned_status15,1,0,0,24,1,1,1,0,0,0,0,0,2,0,0,1,11,24,00,OK,00,00
+1541,cpu_ownership,5,cpu_owned_block_alloc,1,0,0,24,2,1,0,1,0,0,0,0,3,0,0,1,15,36,00,OK,00,00
+1541,cpu_ownership,6,cpu_owned_status15,1,0,0,24,2,1,1,0,0,0,0,0,3,0,0,1,17,36,00,OK,00,00
+1541,cpu_ownership,7,cpu_owned_unsupported,1,1,0,24,3,1,0,1,1,0,0,0,4,1,0,1,21,44,30,SYNTAX ERROR,00,00
+1541,cpu_ownership,8,cpu_owned_unsupported_status15,1,0,0,24,3,1,1,0,0,0,0,0,4,1,0,1,23,44,30,SYNTAX ERROR,00,00
+1541,cpu_ownership,9,scaffold_mode_probe,0,0,0,24,0,1,0,0,0,0,0,0,4,1,0,2,27,46,00,OK,00,00
+1541,cpu_ownership,10,cpu_owned_block_alloc,1,0,0,25,0,1,0,1,0,0,0,0,5,1,0,3,30,58,00,OK,00,00
+1541,cpu_ownership,11,cpu_owned_status15,1,0,0,25,0,1,1,0,0,0,0,0,5,1,0,3,32,58,00,OK,00,00
+1541,cpu_ownership,12,cpu_owned_block_alloc,1,0,0,25,1,1,0,1,0,0,0,0,6,1,0,3,36,70,00,OK,00,00
+1541,cpu_ownership,13,cpu_owned_status15,1,0,0,25,1,1,1,0,0,0,0,0,6,1,0,3,38,70,00,OK,00,00
+1541,cpu_ownership,14,cpu_owned_block_alloc,1,0,0,25,2,1,0,1,0,0,0,0,7,1,0,3,42,82,00,OK,00,00
+1541,cpu_ownership,15,cpu_owned_status15,1,0,0,25,2,1,1,0,0,0,0,0,7,1,0,3,44,82,00,OK,00,00
+1541,cpu_ownership,16,cpu_owned_unsupported,1,1,0,25,3,1,0,1,1,0,0,0,8,2,0,3,48,90,30,SYNTAX ERROR,00,00
+1541,cpu_ownership,17,cpu_owned_unsupported_status15,1,0,0,25,3,1,1,0,0,0,0,0,8,2,0,3,50,90,30,SYNTAX ERROR,00,00
+1541,cpu_ownership,18,scaffold_mode_probe,0,0,0,25,0,1,0,0,0,0,0,0,8,2,0,4,54,92,00,OK,00,00
+1541C,cpu_ownership,1,cpu_owned_block_alloc,1,0,0,24,0,1,0,1,0,0,0,0,1,0,0,1,3,12,00,OK,00,00
+1541C,cpu_ownership,2,cpu_owned_status15,1,0,0,24,0,1,1,0,0,0,0,0,1,0,0,1,5,12,00,OK,00,00
+1541C,cpu_ownership,3,cpu_owned_block_alloc,1,0,0,24,1,1,0,1,0,0,0,0,2,0,0,1,9,24,00,OK,00,00
+1541C,cpu_ownership,4,cpu_owned_status15,1,0,0,24,1,1,1,0,0,0,0,0,2,0,0,1,11,24,00,OK,00,00
+1541C,cpu_ownership,5,cpu_owned_block_alloc,1,0,0,24,2,1,0,1,0,0,0,0,3,0,0,1,15,36,00,OK,00,00
+1541C,cpu_ownership,6,cpu_owned_status15,1,0,0,24,2,1,1,0,0,0,0,0,3,0,0,1,17,36,00,OK,00,00
+1541C,cpu_ownership,7,cpu_owned_unsupported,1,1,0,24,3,1,0,1,1,0,0,0,4,1,0,1,21,44,30,SYNTAX ERROR,00,00
+1541C,cpu_ownership,8,cpu_owned_unsupported_status15,1,0,0,24,3,1,1,0,0,0,0,0,4,1,0,1,23,44,30,SYNTAX ERROR,00,00
+1541C,cpu_ownership,9,scaffold_mode_probe,0,0,0,24,0,1,0,0,0,0,0,0,4,1,0,2,27,46,00,OK,00,00
+1541C,cpu_ownership,10,cpu_owned_block_alloc,1,0,0,25,0,1,0,1,0,0,0,0,5,1,0,3,30,58,00,OK,00,00
+1541C,cpu_ownership,11,cpu_owned_status15,1,0,0,25,0,1,1,0,0,0,0,0,5,1,0,3,32,58,00,OK,00,00
+1541C,cpu_ownership,12,cpu_owned_block_alloc,1,0,0,25,1,1,0,1,0,0,0,0,6,1,0,3,36,70,00,OK,00,00
+1541C,cpu_ownership,13,cpu_owned_status15,1,0,0,25,1,1,1,0,0,0,0,0,6,1,0,3,38,70,00,OK,00,00
+1541C,cpu_ownership,14,cpu_owned_block_alloc,1,0,0,25,2,1,0,1,0,0,0,0,7,1,0,3,42,82,00,OK,00,00
+1541C,cpu_ownership,15,cpu_owned_status15,1,0,0,25,2,1,1,0,0,0,0,0,7,1,0,3,44,82,00,OK,00,00
+1541C,cpu_ownership,16,cpu_owned_unsupported,1,1,0,25,3,1,0,1,1,0,0,0,8,2,0,3,48,90,30,SYNTAX ERROR,00,00
+1541C,cpu_ownership,17,cpu_owned_unsupported_status15,1,0,0,25,3,1,1,0,0,0,0,0,8,2,0,3,50,90,30,SYNTAX ERROR,00,00
+1541C,cpu_ownership,18,scaffold_mode_probe,0,0,0,25,0,1,0,0,0,0,0,0,8,2,0,4,54,92,00,OK,00,00
+1541II,cpu_ownership,1,cpu_owned_block_alloc,1,0,0,24,0,1,0,1,0,0,0,0,1,0,0,1,3,12,00,OK,00,00
+1541II,cpu_ownership,2,cpu_owned_status15,1,0,0,24,0,1,1,0,0,0,0,0,1,0,0,1,5,12,00,OK,00,00
+1541II,cpu_ownership,3,cpu_owned_block_alloc,1,0,0,24,1,1,0,1,0,0,0,0,2,0,0,1,9,24,00,OK,00,00
+1541II,cpu_ownership,4,cpu_owned_status15,1,0,0,24,1,1,1,0,0,0,0,0,2,0,0,1,11,24,00,OK,00,00
+1541II,cpu_ownership,5,cpu_owned_block_alloc,1,0,0,24,2,1,0,1,0,0,0,0,3,0,0,1,15,36,00,OK,00,00
+1541II,cpu_ownership,6,cpu_owned_status15,1,0,0,24,2,1,1,0,0,0,0,0,3,0,0,1,17,36,00,OK,00,00
+1541II,cpu_ownership,7,cpu_owned_unsupported,1,1,0,24,3,1,0,1,1,0,0,0,4,1,0,1,21,44,30,SYNTAX ERROR,00,00
+1541II,cpu_ownership,8,cpu_owned_unsupported_status15,1,0,0,24,3,1,1,0,0,0,0,0,4,1,0,1,23,44,30,SYNTAX ERROR,00,00
+1541II,cpu_ownership,9,scaffold_mode_probe,0,0,0,24,0,1,0,0,0,0,0,0,4,1,0,2,27,46,00,OK,00,00
+1541II,cpu_ownership,10,cpu_owned_block_alloc,1,0,0,25,0,1,0,1,0,0,0,0,5,1,0,3,30,58,00,OK,00,00
+1541II,cpu_ownership,11,cpu_owned_status15,1,0,0,25,0,1,1,0,0,0,0,0,5,1,0,3,32,58,00,OK,00,00
+1541II,cpu_ownership,12,cpu_owned_block_alloc,1,0,0,25,1,1,0,1,0,0,0,0,6,1,0,3,36,70,00,OK,00,00
+1541II,cpu_ownership,13,cpu_owned_status15,1,0,0,25,1,1,1,0,0,0,0,0,6,1,0,3,38,70,00,OK,00,00
+1541II,cpu_ownership,14,cpu_owned_block_alloc,1,0,0,25,2,1,0,1,0,0,0,0,7,1,0,3,42,82,00,OK,00,00
+1541II,cpu_ownership,15,cpu_owned_status15,1,0,0,25,2,1,1,0,0,0,0,0,7,1,0,3,44,82,00,OK,00,00
+1541II,cpu_ownership,16,cpu_owned_unsupported,1,1,0,25,3,1,0,1,1,0,0,0,8,2,0,3,48,90,30,SYNTAX ERROR,00,00
+1541II,cpu_ownership,17,cpu_owned_unsupported_status15,1,0,0,25,3,1,1,0,0,0,0,0,8,2,0,3,50,90,30,SYNTAX ERROR,00,00
+1541II,cpu_ownership,18,scaffold_mode_probe,0,0,0,25,0,1,0,0,0,0,0,0,8,2,0,4,54,92,00,OK,00,00
