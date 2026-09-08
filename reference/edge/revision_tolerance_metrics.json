@@ -180,6 +180,9 @@
         "w68_cmd_status_divergence_rows": 0,
         "w69_via_shift_phase_mismatch_rows": 0,
         "w69_via_timer_irq_jitter_max": 11,
-        "w69_handshake_stall_rows": 0
+        "w69_handshake_stall_rows": 0,
+        "w70_gcr_header_decode_rows": 100,
+        "w70_gcr_data_decode_rows": 100,
+        "w70_gcr_chain_break_rows": 0
     }
 }

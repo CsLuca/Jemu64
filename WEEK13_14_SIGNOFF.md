@@ -615,6 +615,17 @@
   - runtime: `week69_via_timing_grade_runtime.csv`
   - reference: `reference/edge/week69_via_timing_grade_trace.csv`
 
+## Week70 GCR Read Pipeline Full Chain (track-aware sector sweep)
+
+- Added a full-chain GCR read hard-reference layer that models deterministic pipeline progression per sector (`sync scan -> header decode -> data decode -> checksum/CRC -> status`) with track-layout-aware sector sweep.
+- Coverage focus:
+  - header decode accumulation (`w70_gcr_header_decode_rows`),
+  - data decode accumulation (`w70_gcr_data_decode_rows`),
+  - pipeline chain-break guard (`w70_gcr_chain_break_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week70_gcr_read_pipeline_runtime.csv`
+  - reference: `reference/edge/week70_gcr_read_pipeline_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -740,6 +751,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week67_crc_error_class_trace.csv`
     - `reference/edge/week68_drive_cpu_ownership_trace.csv`
     - `reference/edge/week69_via_timing_grade_trace.csv`
+    - `reference/edge/week70_gcr_read_pipeline_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

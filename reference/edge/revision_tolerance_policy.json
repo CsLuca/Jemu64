@@ -180,6 +180,9 @@
     "w69_via_shift_phase_mismatch_rows": { "min": 0, "max": 0 },
     "w69_via_timer_irq_jitter_max": { "min": 1, "max": 16 },
     "w69_handshake_stall_rows": { "min": 0, "max": 0 },
+    "w70_gcr_header_decode_rows": { "min": 80, "max": 140 },
+    "w70_gcr_data_decode_rows": { "min": 80, "max": 140 },
+    "w70_gcr_chain_break_rows": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }
