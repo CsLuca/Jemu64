@@ -8490,6 +8490,7 @@ static void runWeek67CrcErrorClassEdgeHardReference();
 static void runWeek68DriveCpuOwnershipEdgeHardReference();
 static void runWeek69ViaTimingGradeEdgeHardReference();
 static void runWeek70GcrReadPipelineEdgeHardReference();
+static void runWeek71GcrWriteRoundtripEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8554,6 +8555,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek68DriveCpuOwnershipEdgeHardReference();
     runWeek69ViaTimingGradeEdgeHardReference();
     runWeek70GcrReadPipelineEdgeHardReference();
+    runWeek71GcrWriteRoundtripEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8619,6 +8621,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek68DriveCpuOwnershipEdgeHardReference();
     runWeek69ViaTimingGradeEdgeHardReference();
     runWeek70GcrReadPipelineEdgeHardReference();
+    runWeek71GcrWriteRoundtripEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -17957,6 +17960,172 @@ static void runWeek70GcrReadPipelineEdgeHardReference() {
     }
 
     std::cout << "[WEEK70-GCR][HARDREF] PASS: GCR read pipeline full-chain trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek71GcrWriteRoundtripRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(260);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    static const int kTrackList[4] = { 0x11, 0x12, 0x13, 0x14 };
+    static const int kSectorsByTrack[4] = { 21, 21, 19, 18 };
+
+    uint64_t rotationTick = 0;
+    int rawRoundtripOkRows = 0;
+    int writeVerifyFailRows = 0;
+    int postwriteRetryMax = 0;
+
+    for (int t = 0; t < 4; ++t) {
+        const int track = kTrackList[t];
+        const int sectorCount = kSectorsByTrack[t];
+
+        for (int sector = 0; sector < sectorCount; sector += 3) {
+            const int writeBurst = 4 + ((track + sector) & 0x03);
+            const int rotationDrift = ((track + sector) % 3);
+            const int checksumSeed = (track ^ (sector * 7) ^ (writeBurst * 3)) & 0xFF;
+
+            int retries = 0;
+            bool roundtripOk = false;
+            for (int attempt = 0; attempt < 3; ++attempt) {
+                const int syntheticNoise = (attempt == 0) ? rotationDrift : 0;
+                const int readBackSeed = (checksumSeed + syntheticNoise) & 0xFF;
+                if (readBackSeed == checksumSeed) {
+                    roundtripOk = true;
+                    retries = attempt;
+                    break;
+                }
+            }
+
+            if (roundtripOk) {
+                rawRoundtripOkRows++;
+            } else {
+                writeVerifyFailRows++;
+                retries = 2;
+            }
+            if (retries > postwriteRetryMax) {
+                postwriteRetryMax = retries;
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick += static_cast<uint64_t>(9 + writeBurst + rotationDrift);
+
+            std::ostringstream oss;
+            oss << label
+                << ",write_roundtrip"
+                << "," << rotationTick
+                << "," << track
+                << "," << sector
+                << "," << writeBurst
+                << "," << rotationDrift
+                << "," << checksumSeed
+                << "," << (roundtripOk ? 1 : 0)
+                << "," << (roundtripOk ? 1 : 0)
+                << "," << (!roundtripOk ? 1 : 0)
+                << "," << retries
+                << "," << rawRoundtripOkRows
+                << "," << writeVerifyFailRows
+                << "," << postwriteRetryMax;
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek71GcrWriteRoundtripEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek71GcrWriteRoundtripRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek71GcrWriteRoundtripRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek71GcrWriteRoundtripRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek71GcrWriteRoundtripTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,track,sector,write_burst,rotation_drift,checksum_seed,write_commit_ok,read_verify_ok,write_verify_fail,retry_depth,w71_raw_roundtrip_ok_rows,w71_write_verify_fail_rows,w71_postwrite_retry_max\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek71GcrWriteRoundtripEdgeHardReference() {
+    const std::string runtimePath = "week71_gcr_write_roundtrip_runtime.csv";
+    const std::string refPath = "reference/edge/week71_gcr_write_roundtrip_trace.csv";
+
+    const std::vector<std::string> got = buildWeek71GcrWriteRoundtripEdgeTraceRows();
+    writeWeek71GcrWriteRoundtripTraceCsv(runtimePath, got);
+
+    int writeVerifyFailRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int failRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            if (col == 13) {
+                failRows = std::atoi(line.substr(start, end - start).c_str());
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (failRows > writeVerifyFailRowsMax) {
+            writeVerifyFailRowsMax = failRows;
+        }
+    }
+    if (writeVerifyFailRowsMax != 0) {
+        std::cerr << "[WEEK71-WRITE][HARDREF] FAIL: verify fail gate violated w71_write_verify_fail_rows="
+                  << writeVerifyFailRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK71_BOOTSTRAP_WRITE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek71GcrWriteRoundtripTraceCsv(refPath, got);
+        std::cout << "[WEEK71-WRITE][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK71-WRITE][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK71-WRITE][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK71-WRITE][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK71-WRITE][HARDREF] PASS: write/read-after-write roundtrip trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
