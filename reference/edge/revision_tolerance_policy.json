@@ -153,6 +153,9 @@
     "week60_iec_contention_rows": { "min": 260, "max": 320 },
     "week60_iec_release_latency_max": { "min": 0, "max": 16 },
     "week60_iec_illegal_overlap_rows": { "min": 0, "max": 0 },
+    "week61_drive_dos_semantic_rows": { "min": 70, "max": 120 },
+    "week61_drive_status_code_mismatch_rows": { "min": 0, "max": 0 },
+    "week61_drive_cmd_retry_convergence_max": { "min": 0, "max": 8 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

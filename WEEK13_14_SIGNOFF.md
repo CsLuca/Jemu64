@@ -508,6 +508,17 @@
   - runtime: `week60_iec_contention_release_runtime.csv`
   - reference: `reference/edge/week60_iec_contention_release_trace.csv`
 
+## Week61 DOS Path Depth (Real Command Semantics)
+
+- Added a DOS semantic hard-reference layer focused on reducing virtual/scaffold behavior in command-channel M-*/B-* flows and SA15 status sequencing under error/retry.
+- Coverage focus:
+  - semantic DOS scenario coverage (`week61_drive_dos_semantic_rows`),
+  - status-code correctness guard (`week61_drive_status_code_mismatch_rows`, target `0`),
+  - retry convergence depth (`week61_drive_cmd_retry_convergence_max`).
+- Hard reference trace:
+  - runtime: `week61_drive_dos_semantic_runtime.csv`
+  - reference: `reference/edge/week61_drive_dos_semantic_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -624,6 +635,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week58_iec_analog_edge_model_trace.csv`
     - `reference/edge/week59_iec_analog_pulse_window_trace.csv`
     - `reference/edge/week60_iec_contention_release_trace.csv`
+    - `reference/edge/week61_drive_dos_semantic_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

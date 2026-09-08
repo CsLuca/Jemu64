@@ -73,6 +73,7 @@ $savedWeek57SignalWindow = [Environment]::GetEnvironmentVariable("WEEK57_BOOTSTR
 $savedWeek58Analog = [Environment]::GetEnvironmentVariable("WEEK58_BOOTSTRAP_ANALOG_REF", "Process")
 $savedWeek59AnalogPulse = [Environment]::GetEnvironmentVariable("WEEK59_BOOTSTRAP_ANALOGPULSE_REF", "Process")
 $savedWeek60Contention = [Environment]::GetEnvironmentVariable("WEEK60_BOOTSTRAP_CONTENTION_REF", "Process")
+$savedWeek61Dos = [Environment]::GetEnvironmentVariable("WEEK61_BOOTSTRAP_DOS_REF", "Process")
 
 try {
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $Manifest, "Process")
@@ -122,6 +123,7 @@ try {
     [Environment]::SetEnvironmentVariable("WEEK58_BOOTSTRAP_ANALOG_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK59_BOOTSTRAP_ANALOGPULSE_REF", "1", "Process")
     [Environment]::SetEnvironmentVariable("WEEK60_BOOTSTRAP_CONTENTION_REF", "1", "Process")
+    [Environment]::SetEnvironmentVariable("WEEK61_BOOTSTRAP_DOS_REF", "1", "Process")
 
     & $strictExe
     if ($LASTEXITCODE -ne 0) {
@@ -176,6 +178,7 @@ finally {
     [Environment]::SetEnvironmentVariable("WEEK58_BOOTSTRAP_ANALOG_REF", $savedWeek58Analog, "Process")
     [Environment]::SetEnvironmentVariable("WEEK59_BOOTSTRAP_ANALOGPULSE_REF", $savedWeek59AnalogPulse, "Process")
     [Environment]::SetEnvironmentVariable("WEEK60_BOOTSTRAP_CONTENTION_REF", $savedWeek60Contention, "Process")
+    [Environment]::SetEnvironmentVariable("WEEK61_BOOTSTRAP_DOS_REF", $savedWeek61Dos, "Process")
 }
 
 $week15Runtime = Join-Path $repo "week15_baaec_handoff_runtime.csv"
@@ -223,6 +226,7 @@ $week57Runtime = Join-Path $repo "week57_iec_signal_window_runtime.csv"
 $week58Runtime = Join-Path $repo "week58_iec_analog_edge_model_runtime.csv"
 $week59Runtime = Join-Path $repo "week59_iec_analog_pulse_window_runtime.csv"
 $week60Runtime = Join-Path $repo "week60_iec_contention_release_runtime.csv"
+$week61Runtime = Join-Path $repo "week61_drive_dos_semantic_runtime.csv"
 $brknRuntime = Join-Path $repo "c64_lorenz_brkn_edge_ref.trace.csv"
 
 if (-not (Test-Path -LiteralPath $week15Runtime)) {
@@ -360,6 +364,9 @@ if (-not (Test-Path -LiteralPath $week59Runtime)) {
 if (-not (Test-Path -LiteralPath $week60Runtime)) {
     throw "Missing runtime edge trace: $week60Runtime"
 }
+if (-not (Test-Path -LiteralPath $week61Runtime)) {
+    throw "Missing runtime edge trace: $week61Runtime"
+}
 if (-not (Test-Path -LiteralPath $brknRuntime)) {
     throw "Missing runtime trace: $brknRuntime"
 }
@@ -370,7 +377,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed building pc_only reference for c64_lorenz_brkn_edge_ref"
 }
 
-"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36/week37/week38/week39/week40/week41/week42/week43/week44/week45/week46/week47/week48/week49/week50/week51/week52/week53/week54/week55/week56/week57/week58/week59/week60 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
+"[EDGE-REF] PASS: refreshed week15/week16/week18/week19/week20/week21/week22/week23/week24/week25/week26/week27/week28/week29/week30/week31/week32/week33/week34/week35/week36/week37/week38/week39/week40/week41/week42/week43/week44/week45/week46/week47/week48/week49/week50/week51/week52/week53/week54/week55/week56/week57/week58/week59/week60/week61 edge references and c64_lorenz_brkn_edge_ref pc_only reference."
 }
 finally {
     $env:PATH = $savedPath

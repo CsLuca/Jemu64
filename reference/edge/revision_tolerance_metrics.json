@@ -153,6 +153,9 @@
                     "week59_iec_analog_turnaround_min":  0,
                     "week60_iec_contention_rows":  288,
                     "week60_iec_release_latency_max":  0,
-                    "week60_iec_illegal_overlap_rows":  0
+                    "week60_iec_illegal_overlap_rows":  0,
+                    "week61_drive_dos_semantic_rows":  99,
+                    "week61_drive_status_code_mismatch_rows":  0,
+                    "week61_drive_cmd_retry_convergence_max":  1
                 }
 }
