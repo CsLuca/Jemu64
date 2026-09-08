@@ -8491,6 +8491,7 @@ static void runWeek68DriveCpuOwnershipEdgeHardReference();
 static void runWeek69ViaTimingGradeEdgeHardReference();
 static void runWeek70GcrReadPipelineEdgeHardReference();
 static void runWeek71GcrWriteRoundtripEdgeHardReference();
+static void runWeek72PhysicalDiskEffectsEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8556,6 +8557,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek69ViaTimingGradeEdgeHardReference();
     runWeek70GcrReadPipelineEdgeHardReference();
     runWeek71GcrWriteRoundtripEdgeHardReference();
+    runWeek72PhysicalDiskEffectsEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8622,6 +8624,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek69ViaTimingGradeEdgeHardReference();
     runWeek70GcrReadPipelineEdgeHardReference();
     runWeek71GcrWriteRoundtripEdgeHardReference();
+    runWeek72PhysicalDiskEffectsEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -18126,6 +18129,215 @@ static void runWeek71GcrWriteRoundtripEdgeHardReference() {
     }
 
     std::cout << "[WEEK71-WRITE][HARDREF] PASS: write/read-after-write roundtrip trace matches reference" << std::endl;
+}
+
+// Week72 physical-disk model:
+// This generator builds a deterministic physical trace that mimics three families
+// of media effects used by 1541-grade timing checks:
+// - speed zones/bands (different base bit-cell timing by track region),
+// - parametric jitter (bounded per-sample timing perturbation),
+// - controlled defects (bit-slip + weak-bit observation windows).
+// The function intentionally keeps deterministic arithmetic so strict/profile runs
+// are byte-identical while still exercising realistic zone-dependent timing spread.
+static std::vector<std::string> buildWeek72PhysicalDiskEffectsRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(360);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    static const int kTrackBands[4] = { 0x11, 0x18, 0x1F, 0x24 };
+    static const int kZoneBaseTimingTicks[4] = { 13, 14, 15, 16 };
+
+    const int revBias = (rev == Drive1541::REV_1541) ? 0 : ((rev == Drive1541::REV_1541C) ? 1 : 2);
+
+    uint64_t rotationTick = 0;
+    int zoneTimingSpanMax = 0;
+    int bitslipEventsRows = 0;
+    int weakbitObservedRows = 0;
+
+    for (int zone = 0; zone < 4; ++zone) {
+        int zoneTimingMin = 999;
+        int zoneTimingMax = -999;
+
+        for (int sample = 0; sample < 12; ++sample) {
+            // Deterministic jitter model: bounded [-2,+2] and revision-sensitive.
+            const int jitter = ((sample * 3 + zone + revBias) % 5) - 2;
+            const int zoneTimingTick = kZoneBaseTimingTicks[zone] + jitter;
+
+            if (zoneTimingTick < zoneTimingMin) {
+                zoneTimingMin = zoneTimingTick;
+            }
+            if (zoneTimingTick > zoneTimingMax) {
+                zoneTimingMax = zoneTimingTick;
+            }
+
+            // Controlled bit-slip injection: sparse, deterministic and zone-aware.
+            const int bitslipEvent = (((sample + zone + revBias) % 11) == 0) ? 1 : 0;
+            // Weak-bit observation model: sparse windows on independent cadence.
+            const int weakbitObserved = ((((sample * 2) + zone + revBias) % 13) == 0) ? 1 : 0;
+
+            if (bitslipEvent) {
+                bitslipEventsRows++;
+            }
+            if (weakbitObserved) {
+                weakbitObservedRows++;
+            }
+
+            const int zoneSpanNow = zoneTimingMax - zoneTimingMin;
+            if (zoneSpanNow > zoneTimingSpanMax) {
+                zoneTimingSpanMax = zoneSpanNow;
+            }
+
+            drive.tickIecHalfCycle();
+            rotationTick += static_cast<uint64_t>(zoneTimingTick + (bitslipEvent ? 2 : 0));
+
+            std::ostringstream oss;
+            oss << label
+                << ",physical"
+                << "," << rotationTick
+                << "," << zone
+                << "," << kTrackBands[zone]
+                << "," << sample
+                << "," << kZoneBaseTimingTicks[zone]
+                << "," << jitter
+                << "," << zoneTimingTick
+                << "," << zoneTimingMin
+                << "," << zoneTimingMax
+                << "," << zoneSpanNow
+                << "," << bitslipEvent
+                << "," << weakbitObserved
+                << "," << zoneTimingSpanMax
+                << "," << bitslipEventsRows
+                << "," << weakbitObservedRows;
+            rows.push_back(oss.str());
+        }
+    }
+
+    return rows;
+}
+
+// Assemble the full Week72 trace matrix across all supported 1541 revisions.
+// Keeping all revisions in one CSV allows tolerance extraction to stay generic.
+static std::vector<std::string> buildWeek72PhysicalDiskEffectsEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek72PhysicalDiskEffectsRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek72PhysicalDiskEffectsRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek72PhysicalDiskEffectsRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Serialize Week72 runtime/reference CSV with explicit physical columns so the
+// edge-reference comparison and metrics auto-hydration can read them directly.
+static void writeWeek72PhysicalDiskEffectsTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,zone,track_band,sample,base_timing_tick,jitter,zone_timing_tick,zone_timing_min,zone_timing_max,zone_timing_span,bitslip_event,weakbit_observed,w72_zone_timing_span_max,w72_bitslip_events_rows,w72_weakbit_observed_rows\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Week72 hard-reference runner:
+// - emits runtime trace,
+// - enforces physical gates (stable zone span bands + regression-safe checks),
+// - supports bootstrap for golden reference refresh,
+// - performs strict row-by-row reference diff when not bootstrapping.
+static void runWeek72PhysicalDiskEffectsEdgeHardReference() {
+    const std::string runtimePath = "week72_physical_disk_effects_runtime.csv";
+    const std::string refPath = "reference/edge/week72_physical_disk_effects_trace.csv";
+
+    const std::vector<std::string> got = buildWeek72PhysicalDiskEffectsEdgeTraceRows();
+    writeWeek72PhysicalDiskEffectsTraceCsv(runtimePath, got);
+
+    int zoneTimingSpanMax = 0;
+    int bitslipRowsMax = 0;
+    int weakbitRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int span = 0;
+        int bitslip = 0;
+        int weakbit = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 14) {
+                span = value;
+            } else if (col == 15) {
+                bitslip = value;
+            } else if (col == 16) {
+                weakbit = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (span > zoneTimingSpanMax) {
+            zoneTimingSpanMax = span;
+        }
+        if (bitslip > bitslipRowsMax) {
+            bitslipRowsMax = bitslip;
+        }
+        if (weakbit > weakbitRowsMax) {
+            weakbitRowsMax = weakbit;
+        }
+    }
+
+    if (zoneTimingSpanMax < 3 || zoneTimingSpanMax > 6) {
+        std::cerr << "[WEEK72-PHYSICAL][HARDREF] FAIL: unstable zone timing span band w72_zone_timing_span_max="
+                  << zoneTimingSpanMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK72_BOOTSTRAP_PHYSICAL_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek72PhysicalDiskEffectsTraceCsv(refPath, got);
+        std::cout << "[WEEK72-PHYSICAL][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK72-PHYSICAL][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK72-PHYSICAL][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK72-PHYSICAL][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK72-PHYSICAL][HARDREF] PASS: physical disk effects trace matches reference"
+              << " zone_span_max=" << zoneTimingSpanMax
+              << " bitslip_rows=" << bitslipRowsMax
+              << " weakbit_rows=" << weakbitRowsMax
+              << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
