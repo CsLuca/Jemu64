@@ -1,0 +1,181 @@
+rev,phase,rotation_tick,scenario,track,sector,error_class,expected_status,status_code,status_mismatch,retry_depth,load_path_read,status_poll,recovered,crc_error_class_rows,channel15_error_class_mismatch_rows,load_recovery_profile_max,alloc_count,blocks_free,status
+1541,crc_errclass,1,alloc,21,0,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541,crc_errclass,2,load_error,21,0,23,23,23,0,1,1,0,0,1,0,1,1,663,23,READ ERROR,15,00
+1541,crc_errclass,3,channel15_error,21,0,23,23,23,0,1,0,1,0,1,0,1,1,663,23,READ ERROR,15,00
+1541,crc_errclass,4,load_recovered,21,0,23,0,0,0,2,1,0,1,1,0,2,1,663,00,OK,00,00
+1541,crc_errclass,5,channel15_recovered,21,0,23,0,0,0,2,0,1,1,1,0,2,1,663,00,OK,00,00
+1541,crc_errclass,6,alloc,21,1,0,0,0,0,0,0,0,0,1,0,2,2,662,00,OK,00,00
+1541,crc_errclass,7,load_error,21,1,27,27,27,0,1,1,0,0,2,0,2,2,662,27,READ ERROR,15,01
+1541,crc_errclass,8,channel15_error,21,1,27,27,27,0,1,0,1,0,2,0,2,2,662,27,READ ERROR,15,01
+1541,crc_errclass,9,load_error,21,1,27,27,27,0,2,1,0,0,3,0,2,2,662,27,READ ERROR,15,01
+1541,crc_errclass,10,channel15_error,21,1,27,27,27,0,2,0,1,0,3,0,2,2,662,27,READ ERROR,15,01
+1541,crc_errclass,11,load_recovered,21,1,27,0,0,0,3,1,0,1,3,0,3,2,662,00,OK,00,00
+1541,crc_errclass,12,channel15_recovered,21,1,27,0,0,0,3,0,1,1,3,0,3,2,662,00,OK,00,00
+1541,crc_errclass,13,alloc,21,2,0,0,0,0,0,0,0,0,3,0,3,3,661,00,OK,00,00
+1541,crc_errclass,14,load_recovered,21,2,29,0,0,0,1,1,0,1,3,0,3,3,661,00,OK,00,00
+1541,crc_errclass,15,channel15_recovered,21,2,29,0,0,0,1,0,1,1,3,0,3,3,661,00,OK,00,00
+1541,crc_errclass,16,alloc,21,3,0,0,0,0,0,0,0,0,3,0,3,4,660,00,OK,00,00
+1541,crc_errclass,17,load_error,21,3,23,23,23,0,1,1,0,0,4,0,3,4,660,23,READ ERROR,15,03
+1541,crc_errclass,18,channel15_error,21,3,23,23,23,0,1,0,1,0,4,0,3,4,660,23,READ ERROR,15,03
+1541,crc_errclass,19,load_recovered,21,3,23,0,0,0,2,1,0,1,4,0,3,4,660,00,OK,00,00
+1541,crc_errclass,20,channel15_recovered,21,3,23,0,0,0,2,0,1,1,4,0,3,4,660,00,OK,00,00
+1541,crc_errclass,21,alloc,21,4,0,0,0,0,0,0,0,0,4,0,3,5,659,00,OK,00,00
+1541,crc_errclass,22,load_error,21,4,27,27,27,0,1,1,0,0,5,0,3,5,659,27,READ ERROR,15,04
+1541,crc_errclass,23,channel15_error,21,4,27,27,27,0,1,0,1,0,5,0,3,5,659,27,READ ERROR,15,04
+1541,crc_errclass,24,load_error,21,4,27,27,27,0,2,1,0,0,6,0,3,5,659,27,READ ERROR,15,04
+1541,crc_errclass,25,channel15_error,21,4,27,27,27,0,2,0,1,0,6,0,3,5,659,27,READ ERROR,15,04
+1541,crc_errclass,26,load_recovered,21,4,27,0,0,0,3,1,0,1,6,0,3,5,659,00,OK,00,00
+1541,crc_errclass,27,channel15_recovered,21,4,27,0,0,0,3,0,1,1,6,0,3,5,659,00,OK,00,00
+1541,crc_errclass,28,alloc,21,5,0,0,0,0,0,0,0,0,6,0,3,6,658,00,OK,00,00
+1541,crc_errclass,29,load_recovered,21,5,29,0,0,0,1,1,0,1,6,0,3,6,658,00,OK,00,00
+1541,crc_errclass,30,channel15_recovered,21,5,29,0,0,0,1,0,1,1,6,0,3,6,658,00,OK,00,00
+1541,crc_errclass,31,alloc,22,0,0,0,0,0,0,0,0,0,6,0,3,7,657,00,OK,00,00
+1541,crc_errclass,32,load_recovered,22,0,29,0,0,0,1,1,0,1,6,0,3,7,657,00,OK,00,00
+1541,crc_errclass,33,channel15_recovered,22,0,29,0,0,0,1,0,1,1,6,0,3,7,657,00,OK,00,00
+1541,crc_errclass,34,alloc,22,1,0,0,0,0,0,0,0,0,6,0,3,8,656,00,OK,00,00
+1541,crc_errclass,35,load_error,22,1,23,23,23,0,1,1,0,0,7,0,3,8,656,23,READ ERROR,16,01
+1541,crc_errclass,36,channel15_error,22,1,23,23,23,0,1,0,1,0,7,0,3,8,656,23,READ ERROR,16,01
+1541,crc_errclass,37,load_recovered,22,1,23,0,0,0,2,1,0,1,7,0,3,8,656,00,OK,00,00
+1541,crc_errclass,38,channel15_recovered,22,1,23,0,0,0,2,0,1,1,7,0,3,8,656,00,OK,00,00
+1541,crc_errclass,39,alloc,22,2,0,0,0,0,0,0,0,0,7,0,3,9,655,00,OK,00,00
+1541,crc_errclass,40,load_error,22,2,27,27,27,0,1,1,0,0,8,0,3,9,655,27,READ ERROR,16,02
+1541,crc_errclass,41,channel15_error,22,2,27,27,27,0,1,0,1,0,8,0,3,9,655,27,READ ERROR,16,02
+1541,crc_errclass,42,load_error,22,2,27,27,27,0,2,1,0,0,9,0,3,9,655,27,READ ERROR,16,02
+1541,crc_errclass,43,channel15_error,22,2,27,27,27,0,2,0,1,0,9,0,3,9,655,27,READ ERROR,16,02
+1541,crc_errclass,44,load_recovered,22,2,27,0,0,0,3,1,0,1,9,0,3,9,655,00,OK,00,00
+1541,crc_errclass,45,channel15_recovered,22,2,27,0,0,0,3,0,1,1,9,0,3,9,655,00,OK,00,00
+1541,crc_errclass,46,alloc,22,3,0,0,0,0,0,0,0,0,9,0,3,10,654,00,OK,00,00
+1541,crc_errclass,47,load_recovered,22,3,29,0,0,0,1,1,0,1,9,0,3,10,654,00,OK,00,00
+1541,crc_errclass,48,channel15_recovered,22,3,29,0,0,0,1,0,1,1,9,0,3,10,654,00,OK,00,00
+1541,crc_errclass,49,alloc,22,4,0,0,0,0,0,0,0,0,9,0,3,11,653,00,OK,00,00
+1541,crc_errclass,50,load_error,22,4,23,23,23,0,1,1,0,0,10,0,3,11,653,23,READ ERROR,16,04
+1541,crc_errclass,51,channel15_error,22,4,23,23,23,0,1,0,1,0,10,0,3,11,653,23,READ ERROR,16,04
+1541,crc_errclass,52,load_recovered,22,4,23,0,0,0,2,1,0,1,10,0,3,11,653,00,OK,00,00
+1541,crc_errclass,53,channel15_recovered,22,4,23,0,0,0,2,0,1,1,10,0,3,11,653,00,OK,00,00
+1541,crc_errclass,54,alloc,22,5,0,0,0,0,0,0,0,0,10,0,3,12,652,00,OK,00,00
+1541,crc_errclass,55,load_error,22,5,27,27,27,0,1,1,0,0,11,0,3,12,652,27,READ ERROR,16,05
+1541,crc_errclass,56,channel15_error,22,5,27,27,27,0,1,0,1,0,11,0,3,12,652,27,READ ERROR,16,05
+1541,crc_errclass,57,load_error,22,5,27,27,27,0,2,1,0,0,12,0,3,12,652,27,READ ERROR,16,05
+1541,crc_errclass,58,channel15_error,22,5,27,27,27,0,2,0,1,0,12,0,3,12,652,27,READ ERROR,16,05
+1541,crc_errclass,59,load_recovered,22,5,27,0,0,0,3,1,0,1,12,0,3,12,652,00,OK,00,00
+1541,crc_errclass,60,channel15_recovered,22,5,27,0,0,0,3,0,1,1,12,0,3,12,652,00,OK,00,00
+1541C,crc_errclass,1,alloc,21,0,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541C,crc_errclass,2,load_error,21,0,23,23,23,0,1,1,0,0,1,0,1,1,663,23,READ ERROR,15,00
+1541C,crc_errclass,3,channel15_error,21,0,23,23,23,0,1,0,1,0,1,0,1,1,663,23,READ ERROR,15,00
+1541C,crc_errclass,4,load_recovered,21,0,23,0,0,0,2,1,0,1,1,0,2,1,663,00,OK,00,00
+1541C,crc_errclass,5,channel15_recovered,21,0,23,0,0,0,2,0,1,1,1,0,2,1,663,00,OK,00,00
+1541C,crc_errclass,6,alloc,21,1,0,0,0,0,0,0,0,0,1,0,2,2,662,00,OK,00,00
+1541C,crc_errclass,7,load_error,21,1,27,27,27,0,1,1,0,0,2,0,2,2,662,27,READ ERROR,15,01
+1541C,crc_errclass,8,channel15_error,21,1,27,27,27,0,1,0,1,0,2,0,2,2,662,27,READ ERROR,15,01
+1541C,crc_errclass,9,load_error,21,1,27,27,27,0,2,1,0,0,3,0,2,2,662,27,READ ERROR,15,01
+1541C,crc_errclass,10,channel15_error,21,1,27,27,27,0,2,0,1,0,3,0,2,2,662,27,READ ERROR,15,01
+1541C,crc_errclass,11,load_recovered,21,1,27,0,0,0,3,1,0,1,3,0,3,2,662,00,OK,00,00
+1541C,crc_errclass,12,channel15_recovered,21,1,27,0,0,0,3,0,1,1,3,0,3,2,662,00,OK,00,00
+1541C,crc_errclass,13,alloc,21,2,0,0,0,0,0,0,0,0,3,0,3,3,661,00,OK,00,00
+1541C,crc_errclass,14,load_recovered,21,2,29,0,0,0,1,1,0,1,3,0,3,3,661,00,OK,00,00
+1541C,crc_errclass,15,channel15_recovered,21,2,29,0,0,0,1,0,1,1,3,0,3,3,661,00,OK,00,00
+1541C,crc_errclass,16,alloc,21,3,0,0,0,0,0,0,0,0,3,0,3,4,660,00,OK,00,00
+1541C,crc_errclass,17,load_error,21,3,23,23,23,0,1,1,0,0,4,0,3,4,660,23,READ ERROR,15,03
+1541C,crc_errclass,18,channel15_error,21,3,23,23,23,0,1,0,1,0,4,0,3,4,660,23,READ ERROR,15,03
+1541C,crc_errclass,19,load_recovered,21,3,23,0,0,0,2,1,0,1,4,0,3,4,660,00,OK,00,00
+1541C,crc_errclass,20,channel15_recovered,21,3,23,0,0,0,2,0,1,1,4,0,3,4,660,00,OK,00,00
+1541C,crc_errclass,21,alloc,21,4,0,0,0,0,0,0,0,0,4,0,3,5,659,00,OK,00,00
+1541C,crc_errclass,22,load_error,21,4,27,27,27,0,1,1,0,0,5,0,3,5,659,27,READ ERROR,15,04
+1541C,crc_errclass,23,channel15_error,21,4,27,27,27,0,1,0,1,0,5,0,3,5,659,27,READ ERROR,15,04
+1541C,crc_errclass,24,load_error,21,4,27,27,27,0,2,1,0,0,6,0,3,5,659,27,READ ERROR,15,04
+1541C,crc_errclass,25,channel15_error,21,4,27,27,27,0,2,0,1,0,6,0,3,5,659,27,READ ERROR,15,04
+1541C,crc_errclass,26,load_recovered,21,4,27,0,0,0,3,1,0,1,6,0,3,5,659,00,OK,00,00
+1541C,crc_errclass,27,channel15_recovered,21,4,27,0,0,0,3,0,1,1,6,0,3,5,659,00,OK,00,00
+1541C,crc_errclass,28,alloc,21,5,0,0,0,0,0,0,0,0,6,0,3,6,658,00,OK,00,00
+1541C,crc_errclass,29,load_recovered,21,5,29,0,0,0,1,1,0,1,6,0,3,6,658,00,OK,00,00
+1541C,crc_errclass,30,channel15_recovered,21,5,29,0,0,0,1,0,1,1,6,0,3,6,658,00,OK,00,00
+1541C,crc_errclass,31,alloc,22,0,0,0,0,0,0,0,0,0,6,0,3,7,657,00,OK,00,00
+1541C,crc_errclass,32,load_recovered,22,0,29,0,0,0,1,1,0,1,6,0,3,7,657,00,OK,00,00
+1541C,crc_errclass,33,channel15_recovered,22,0,29,0,0,0,1,0,1,1,6,0,3,7,657,00,OK,00,00
+1541C,crc_errclass,34,alloc,22,1,0,0,0,0,0,0,0,0,6,0,3,8,656,00,OK,00,00
+1541C,crc_errclass,35,load_error,22,1,23,23,23,0,1,1,0,0,7,0,3,8,656,23,READ ERROR,16,01
+1541C,crc_errclass,36,channel15_error,22,1,23,23,23,0,1,0,1,0,7,0,3,8,656,23,READ ERROR,16,01
+1541C,crc_errclass,37,load_recovered,22,1,23,0,0,0,2,1,0,1,7,0,3,8,656,00,OK,00,00
+1541C,crc_errclass,38,channel15_recovered,22,1,23,0,0,0,2,0,1,1,7,0,3,8,656,00,OK,00,00
+1541C,crc_errclass,39,alloc,22,2,0,0,0,0,0,0,0,0,7,0,3,9,655,00,OK,00,00
+1541C,crc_errclass,40,load_error,22,2,27,27,27,0,1,1,0,0,8,0,3,9,655,27,READ ERROR,16,02
+1541C,crc_errclass,41,channel15_error,22,2,27,27,27,0,1,0,1,0,8,0,3,9,655,27,READ ERROR,16,02
+1541C,crc_errclass,42,load_error,22,2,27,27,27,0,2,1,0,0,9,0,3,9,655,27,READ ERROR,16,02
+1541C,crc_errclass,43,channel15_error,22,2,27,27,27,0,2,0,1,0,9,0,3,9,655,27,READ ERROR,16,02
+1541C,crc_errclass,44,load_recovered,22,2,27,0,0,0,3,1,0,1,9,0,3,9,655,00,OK,00,00
+1541C,crc_errclass,45,channel15_recovered,22,2,27,0,0,0,3,0,1,1,9,0,3,9,655,00,OK,00,00
+1541C,crc_errclass,46,alloc,22,3,0,0,0,0,0,0,0,0,9,0,3,10,654,00,OK,00,00
+1541C,crc_errclass,47,load_recovered,22,3,29,0,0,0,1,1,0,1,9,0,3,10,654,00,OK,00,00
+1541C,crc_errclass,48,channel15_recovered,22,3,29,0,0,0,1,0,1,1,9,0,3,10,654,00,OK,00,00
+1541C,crc_errclass,49,alloc,22,4,0,0,0,0,0,0,0,0,9,0,3,11,653,00,OK,00,00
+1541C,crc_errclass,50,load_error,22,4,23,23,23,0,1,1,0,0,10,0,3,11,653,23,READ ERROR,16,04
+1541C,crc_errclass,51,channel15_error,22,4,23,23,23,0,1,0,1,0,10,0,3,11,653,23,READ ERROR,16,04
+1541C,crc_errclass,52,load_recovered,22,4,23,0,0,0,2,1,0,1,10,0,3,11,653,00,OK,00,00
+1541C,crc_errclass,53,channel15_recovered,22,4,23,0,0,0,2,0,1,1,10,0,3,11,653,00,OK,00,00
+1541C,crc_errclass,54,alloc,22,5,0,0,0,0,0,0,0,0,10,0,3,12,652,00,OK,00,00
+1541C,crc_errclass,55,load_error,22,5,27,27,27,0,1,1,0,0,11,0,3,12,652,27,READ ERROR,16,05
+1541C,crc_errclass,56,channel15_error,22,5,27,27,27,0,1,0,1,0,11,0,3,12,652,27,READ ERROR,16,05
+1541C,crc_errclass,57,load_error,22,5,27,27,27,0,2,1,0,0,12,0,3,12,652,27,READ ERROR,16,05
+1541C,crc_errclass,58,channel15_error,22,5,27,27,27,0,2,0,1,0,12,0,3,12,652,27,READ ERROR,16,05
+1541C,crc_errclass,59,load_recovered,22,5,27,0,0,0,3,1,0,1,12,0,3,12,652,00,OK,00,00
+1541C,crc_errclass,60,channel15_recovered,22,5,27,0,0,0,3,0,1,1,12,0,3,12,652,00,OK,00,00
+1541II,crc_errclass,1,alloc,21,0,0,0,0,0,0,0,0,0,0,0,0,1,663,00,OK,00,00
+1541II,crc_errclass,2,load_error,21,0,23,23,23,0,1,1,0,0,1,0,1,1,663,23,READ ERROR,15,00
+1541II,crc_errclass,3,channel15_error,21,0,23,23,23,0,1,0,1,0,1,0,1,1,663,23,READ ERROR,15,00
+1541II,crc_errclass,4,load_recovered,21,0,23,0,0,0,2,1,0,1,1,0,2,1,663,00,OK,00,00
+1541II,crc_errclass,5,channel15_recovered,21,0,23,0,0,0,2,0,1,1,1,0,2,1,663,00,OK,00,00
+1541II,crc_errclass,6,alloc,21,1,0,0,0,0,0,0,0,0,1,0,2,2,662,00,OK,00,00
+1541II,crc_errclass,7,load_error,21,1,27,27,27,0,1,1,0,0,2,0,2,2,662,27,READ ERROR,15,01
+1541II,crc_errclass,8,channel15_error,21,1,27,27,27,0,1,0,1,0,2,0,2,2,662,27,READ ERROR,15,01
+1541II,crc_errclass,9,load_error,21,1,27,27,27,0,2,1,0,0,3,0,2,2,662,27,READ ERROR,15,01
+1541II,crc_errclass,10,channel15_error,21,1,27,27,27,0,2,0,1,0,3,0,2,2,662,27,READ ERROR,15,01
+1541II,crc_errclass,11,load_recovered,21,1,27,0,0,0,3,1,0,1,3,0,3,2,662,00,OK,00,00
+1541II,crc_errclass,12,channel15_recovered,21,1,27,0,0,0,3,0,1,1,3,0,3,2,662,00,OK,00,00
+1541II,crc_errclass,13,alloc,21,2,0,0,0,0,0,0,0,0,3,0,3,3,661,00,OK,00,00
+1541II,crc_errclass,14,load_recovered,21,2,29,0,0,0,1,1,0,1,3,0,3,3,661,00,OK,00,00
+1541II,crc_errclass,15,channel15_recovered,21,2,29,0,0,0,1,0,1,1,3,0,3,3,661,00,OK,00,00
+1541II,crc_errclass,16,alloc,21,3,0,0,0,0,0,0,0,0,3,0,3,4,660,00,OK,00,00
+1541II,crc_errclass,17,load_error,21,3,23,23,23,0,1,1,0,0,4,0,3,4,660,23,READ ERROR,15,03
+1541II,crc_errclass,18,channel15_error,21,3,23,23,23,0,1,0,1,0,4,0,3,4,660,23,READ ERROR,15,03
+1541II,crc_errclass,19,load_recovered,21,3,23,0,0,0,2,1,0,1,4,0,3,4,660,00,OK,00,00
+1541II,crc_errclass,20,channel15_recovered,21,3,23,0,0,0,2,0,1,1,4,0,3,4,660,00,OK,00,00
+1541II,crc_errclass,21,alloc,21,4,0,0,0,0,0,0,0,0,4,0,3,5,659,00,OK,00,00
+1541II,crc_errclass,22,load_error,21,4,27,27,27,0,1,1,0,0,5,0,3,5,659,27,READ ERROR,15,04
+1541II,crc_errclass,23,channel15_error,21,4,27,27,27,0,1,0,1,0,5,0,3,5,659,27,READ ERROR,15,04
+1541II,crc_errclass,24,load_error,21,4,27,27,27,0,2,1,0,0,6,0,3,5,659,27,READ ERROR,15,04
+1541II,crc_errclass,25,channel15_error,21,4,27,27,27,0,2,0,1,0,6,0,3,5,659,27,READ ERROR,15,04
+1541II,crc_errclass,26,load_recovered,21,4,27,0,0,0,3,1,0,1,6,0,3,5,659,00,OK,00,00
+1541II,crc_errclass,27,channel15_recovered,21,4,27,0,0,0,3,0,1,1,6,0,3,5,659,00,OK,00,00
+1541II,crc_errclass,28,alloc,21,5,0,0,0,0,0,0,0,0,6,0,3,6,658,00,OK,00,00
+1541II,crc_errclass,29,load_recovered,21,5,29,0,0,0,1,1,0,1,6,0,3,6,658,00,OK,00,00
+1541II,crc_errclass,30,channel15_recovered,21,5,29,0,0,0,1,0,1,1,6,0,3,6,658,00,OK,00,00
+1541II,crc_errclass,31,alloc,22,0,0,0,0,0,0,0,0,0,6,0,3,7,657,00,OK,00,00
+1541II,crc_errclass,32,load_recovered,22,0,29,0,0,0,1,1,0,1,6,0,3,7,657,00,OK,00,00
+1541II,crc_errclass,33,channel15_recovered,22,0,29,0,0,0,1,0,1,1,6,0,3,7,657,00,OK,00,00
+1541II,crc_errclass,34,alloc,22,1,0,0,0,0,0,0,0,0,6,0,3,8,656,00,OK,00,00
+1541II,crc_errclass,35,load_error,22,1,23,23,23,0,1,1,0,0,7,0,3,8,656,23,READ ERROR,16,01
+1541II,crc_errclass,36,channel15_error,22,1,23,23,23,0,1,0,1,0,7,0,3,8,656,23,READ ERROR,16,01
+1541II,crc_errclass,37,load_recovered,22,1,23,0,0,0,2,1,0,1,7,0,3,8,656,00,OK,00,00
+1541II,crc_errclass,38,channel15_recovered,22,1,23,0,0,0,2,0,1,1,7,0,3,8,656,00,OK,00,00
+1541II,crc_errclass,39,alloc,22,2,0,0,0,0,0,0,0,0,7,0,3,9,655,00,OK,00,00
+1541II,crc_errclass,40,load_error,22,2,27,27,27,0,1,1,0,0,8,0,3,9,655,27,READ ERROR,16,02
+1541II,crc_errclass,41,channel15_error,22,2,27,27,27,0,1,0,1,0,8,0,3,9,655,27,READ ERROR,16,02
+1541II,crc_errclass,42,load_error,22,2,27,27,27,0,2,1,0,0,9,0,3,9,655,27,READ ERROR,16,02
+1541II,crc_errclass,43,channel15_error,22,2,27,27,27,0,2,0,1,0,9,0,3,9,655,27,READ ERROR,16,02
+1541II,crc_errclass,44,load_recovered,22,2,27,0,0,0,3,1,0,1,9,0,3,9,655,00,OK,00,00
+1541II,crc_errclass,45,channel15_recovered,22,2,27,0,0,0,3,0,1,1,9,0,3,9,655,00,OK,00,00
+1541II,crc_errclass,46,alloc,22,3,0,0,0,0,0,0,0,0,9,0,3,10,654,00,OK,00,00
+1541II,crc_errclass,47,load_recovered,22,3,29,0,0,0,1,1,0,1,9,0,3,10,654,00,OK,00,00
+1541II,crc_errclass,48,channel15_recovered,22,3,29,0,0,0,1,0,1,1,9,0,3,10,654,00,OK,00,00
+1541II,crc_errclass,49,alloc,22,4,0,0,0,0,0,0,0,0,9,0,3,11,653,00,OK,00,00
+1541II,crc_errclass,50,load_error,22,4,23,23,23,0,1,1,0,0,10,0,3,11,653,23,READ ERROR,16,04
+1541II,crc_errclass,51,channel15_error,22,4,23,23,23,0,1,0,1,0,10,0,3,11,653,23,READ ERROR,16,04
+1541II,crc_errclass,52,load_recovered,22,4,23,0,0,0,2,1,0,1,10,0,3,11,653,00,OK,00,00
+1541II,crc_errclass,53,channel15_recovered,22,4,23,0,0,0,2,0,1,1,10,0,3,11,653,00,OK,00,00
+1541II,crc_errclass,54,alloc,22,5,0,0,0,0,0,0,0,0,10,0,3,12,652,00,OK,00,00
+1541II,crc_errclass,55,load_error,22,5,27,27,27,0,1,1,0,0,11,0,3,12,652,27,READ ERROR,16,05
+1541II,crc_errclass,56,channel15_error,22,5,27,27,27,0,1,0,1,0,11,0,3,12,652,27,READ ERROR,16,05
+1541II,crc_errclass,57,load_error,22,5,27,27,27,0,2,1,0,0,12,0,3,12,652,27,READ ERROR,16,05
+1541II,crc_errclass,58,channel15_error,22,5,27,27,27,0,2,0,1,0,12,0,3,12,652,27,READ ERROR,16,05
+1541II,crc_errclass,59,load_recovered,22,5,27,0,0,0,3,1,0,1,12,0,3,12,652,00,OK,00,00
+1541II,crc_errclass,60,channel15_recovered,22,5,27,0,0,0,3,0,1,1,12,0,3,12,652,00,OK,00,00
