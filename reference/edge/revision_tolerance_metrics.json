@@ -168,6 +168,9 @@
         "week64_header_data_boundary_errors": 0,
         "week65_crc_ok_rows": 16,
         "week65_crc_error_rows": 8,
-        "week65_retry_recovery_convergence_max": 2
+        "week65_retry_recovery_convergence_max": 2,
+        "week66_crc_status_latch_rows": 6,
+        "week66_retry_backoff_span_max": 4,
+        "week66_channel15_clear_latency_max": 2
     }
 }

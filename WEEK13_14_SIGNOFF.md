@@ -571,6 +571,17 @@
   - runtime: `week65_crc_ecc_error_map_runtime.csv`
   - reference: `reference/edge/week65_crc_ecc_error_map_trace.csv`
 
+## Week66 CRC Status-Latch + Clear-Latency (channel15 realism)
+
+- Added a CRC status-latch hard-reference layer to model error persistence across retries and explicit clear-on-recovery behavior as observed via channel 15 polling.
+- Coverage focus:
+  - CRC status latch row accumulation (`week66_crc_status_latch_rows`),
+  - retry backoff span bound (`week66_retry_backoff_span_max`),
+  - channel 15 clear latency bound (`week66_channel15_clear_latency_max`).
+- Hard reference trace:
+  - runtime: `week66_crc_status_latch_runtime.csv`
+  - reference: `reference/edge/week66_crc_status_latch_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -692,6 +703,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week63_gcr_decode_path_trace.csv`
     - `reference/edge/week64_track_layout_realism_trace.csv`
     - `reference/edge/week65_crc_ecc_error_map_trace.csv`
+    - `reference/edge/week66_crc_status_latch_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -119,4 +119,5 @@ jobs:
             week63_gcr_decode_path_runtime.csv
             week64_track_layout_realism_runtime.csv
             week65_crc_ecc_error_map_runtime.csv
+            week66_crc_status_latch_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
