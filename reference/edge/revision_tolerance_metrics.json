@@ -189,6 +189,9 @@
         "w71_postwrite_retry_max": 1,
         "w72_zone_timing_span_max": 4,
         "w72_bitslip_events_rows": 5,
-        "w72_weakbit_observed_rows": 3
+        "w72_weakbit_observed_rows": 3,
+        "w73_errorclass_coverage_rows": 6,
+        "w73_channel15_mapping_mismatch_rows": 0,
+        "w73_recovery_profile_max": 2
     }
 }

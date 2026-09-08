@@ -651,6 +651,17 @@
   - runtime: `week72_physical_disk_effects_runtime.csv`
   - reference: `reference/edge/week72_physical_disk_effects_trace.csv`
 
+## Week73 Media Aging / Long-Run Drift Envelope (Error Engine + DOS mapping)
+
+- Added an extended error-engine hard-reference layer for long-run media aging envelope checks, with complete DOS-class mapping matrix (`23/27/29/20/21/74` where applicable), persistence semantics, and clear/recovery behavior.
+- Coverage focus:
+  - error-class coverage accumulation (`w73_errorclass_coverage_rows`),
+  - channel-15 mapping mismatch guard (`w73_channel15_mapping_mismatch_rows`, target `0`),
+  - retry/convergence bound (`w73_recovery_profile_max`).
+- Hard reference trace:
+  - runtime: `week73_error_engine_dos_mapping_runtime.csv`
+  - reference: `reference/edge/week73_error_engine_dos_mapping_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -779,6 +790,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week70_gcr_read_pipeline_trace.csv`
     - `reference/edge/week71_gcr_write_roundtrip_trace.csv`
     - `reference/edge/week72_physical_disk_effects_trace.csv`
+    - `reference/edge/week73_error_engine_dos_mapping_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
