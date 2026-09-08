@@ -41,6 +41,13 @@ static void runDrive1541IecExecBlockCommandSmoke(CIA6526 &cia2) {
         assert(false);
     }
 
+    sendCmd15("B-A,02,11,04");
+    st = readStatus15();
+    if (st.rfind("00,OK", 0) != 0) {
+        std::cerr << "[1541 IEC EXE] FAIL: B-A status not OK: " << st << std::endl;
+        assert(false);
+    }
+
     sendCmd15("B-R,02,11,04");
     if (drive.iecLastBlockCommand != "B-R" || drive.iecLastBlockChannel != 0x02 ||
         drive.iecLastBlockTrack != 0x11 || drive.iecLastBlockSector != 0x04) {

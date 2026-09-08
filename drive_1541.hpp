@@ -1313,9 +1313,20 @@ public:
                         iecLastBlockCommand = op;
 
                         if (op == "B-R") {
+                            if (!isVirtualBlockAllocated(trk, sec)) {
+                                iecStatusLine = "65,NO BLOCK,00,00";
+                                return;
+                            }
                             loadVirtualBlock(trk, sec);
                             iecStatusLine = "00,OK,00,00";
                         } else if (op == "B-W") {
+                            if (!isVirtualBlockAllocated(trk, sec)) {
+                                const bool allocated = allocateVirtualBlock(trk, sec, ch);
+                                if (!allocated) {
+                                    iecStatusLine = "63,FILE EXISTS,00,00";
+                                    return;
+                                }
+                            }
                             iecStatusLine = "00,OK,00,00";
                             flushVirtualBlock(trk, sec);
                         } else if (op == "B-P") {
@@ -1682,6 +1693,11 @@ public:
         }
 
         return true;
+    }
+
+    bool isVirtualBlockAllocated(uint8_t track, uint8_t sector) const {
+        const uint16_t idx = blockAllocIndex(track, sector);
+        return iecBlockAllocated[idx] != 0;
     }
 
     void loadVirtualBlock(uint8_t track, uint8_t sector) {

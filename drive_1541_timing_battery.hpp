@@ -143,6 +143,12 @@ static void runDrive1541TimingBattery(CIA6526 &cia2) {
         assert(false);
     }
 
+    injectCmd15("B-A,02,14,01");
+    if (drive.iecStatusLine.rfind("00,OK", 0) != 0) {
+        std::cerr << "[1541 TIMING] FAIL: B-A re-alloc status=" << drive.iecStatusLine << std::endl;
+        assert(false);
+    }
+
     // Timeout stress in deterministic drive-local path.
     drive.iecTalking = true;
     drive.iecTxByteActive = true;

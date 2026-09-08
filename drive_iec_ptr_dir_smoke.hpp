@@ -36,8 +36,15 @@ static void runDrive1541IecBufferPointerDirectorySmoke(CIA6526 &cia2) {
     drive.memory[static_cast<uint16_t>((base + 0x10) & 0xBFFF)] = 0xA5;
     drive.memory[static_cast<uint16_t>((base + 0x11) & 0xBFFF)] = 0x5A;
 
-    sendCmd15("B-R,00,22,05");
+    sendCmd15("B-A,00,22,05");
     std::string st = readStatus15();
+    if (st.rfind("00,OK", 0) != 0) {
+        std::cerr << "[1541 IEC PTR] FAIL: B-A status not OK: " << st << std::endl;
+        assert(false);
+    }
+
+    sendCmd15("B-R,00,22,05");
+    st = readStatus15();
     if (st.rfind("00,OK", 0) != 0) {
         std::cerr << "[1541 IEC PTR] FAIL: B-R status not OK: " << st << std::endl;
         assert(false);

@@ -8480,6 +8480,7 @@ static void runWeek57IecSignalWindowEdgeHardReference();
 static void runWeek58IecAnalogEdgeModelEdgeHardReference();
 static void runWeek59IecAnalogPulseWindowEdgeHardReference();
 static void runWeek60IecContentionReleaseEdgeHardReference();
+static void runWeek61DriveDosSemanticEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8534,6 +8535,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek58IecAnalogEdgeModelEdgeHardReference();
     runWeek59IecAnalogPulseWindowEdgeHardReference();
     runWeek60IecContentionReleaseEdgeHardReference();
+    runWeek61DriveDosSemanticEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8589,6 +8591,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek58IecAnalogEdgeModelEdgeHardReference();
     runWeek59IecAnalogPulseWindowEdgeHardReference();
     runWeek60IecContentionReleaseEdgeHardReference();
+    runWeek61DriveDosSemanticEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -15725,6 +15728,311 @@ static void runWeek60IecContentionReleaseEdgeHardReference() {
     }
 
     std::cout << "[WEEK60-CONTENTION][HARDREF] PASS: IEC contention/release trace matches reference" << std::endl;
+}
+
+static std::vector<std::string> buildWeek61DriveDosSemanticRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(220);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.iecSerialState = Drive1541::IecSerialState::Command;
+    drive.iecATN = false;
+
+    auto statusCodeOf = [&](const std::string &status) {
+        if (status.size() >= 2 &&
+            std::isdigit(static_cast<unsigned char>(status[0])) &&
+            std::isdigit(static_cast<unsigned char>(status[1]))) {
+            return (status[0] - '0') * 10 + (status[1] - '0');
+        }
+        return -1;
+    };
+
+    auto pushRow = [&](const char *phase, uint64_t step, int expectedStatus, int retryCount) {
+        const int statusCode = statusCodeOf(drive.iecStatusLine);
+        const int mismatch = (expectedStatus >= 0 && statusCode != expectedStatus) ? 1 : 0;
+        std::ostringstream oss;
+        oss << label
+            << ",dos"
+            << "," << phase
+            << "," << step
+            << "," << statusCode
+            << "," << expectedStatus
+            << "," << mismatch
+            << "," << retryCount
+            << "," << drive.iecCommandDispatchCount
+            << "," << drive.iecDataDispatchCount
+            << "," << drive.iecCommandSyntaxErrorCount
+            << "," << drive.iecCommandResponseQueue.size()
+            << "," << drive.iecTxQueue.size()
+            << "," << drive.iecAllocatedBlockCount
+            << "," << drive.virtualBlocksFree()
+            << "," << int(drive.memory[0x0400])
+            << "," << int(drive.memory[0x0401])
+            << "," << drive.iecStatusLine;
+        rows.push_back(oss.str());
+    };
+
+    auto feedData = [&](const std::string &cmd) {
+        bool ok = true;
+        for (char c : cmd) {
+            if (!drive.processIecDataByte(static_cast<uint8_t>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        return ok;
+    };
+
+    auto openCmdChannel = [&]() {
+        bool ok = drive.processIecCommandByte(0x28);
+        ok = ok && drive.processIecCommandByte(0xFF);
+        return ok;
+    };
+
+    auto commitCmdChannel = [&]() {
+        return drive.processIecCommandByte(0x3F);
+    };
+
+    uint64_t step = 0;
+    int retryConvergenceMax = 0;
+    int retryCount = 0;
+    int expectedStatus = 0;
+    int expectedAfterCommit = 0;
+    pushRow("baseline", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenA = openCmdChannel();
+    (void)cmdOpenA;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_a", step++, expectedStatus, retryCount);
+
+    const bool mwOk = feedData("M-W,0400,00,02,AA,55");
+    expectedAfterCommit = mwOk ? 0 : 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("mw_buffered_ok", step++, expectedStatus, retryCount);
+
+    const bool mwCommit = commitCmdChannel();
+    expectedStatus = mwCommit ? expectedAfterCommit : 30;
+    pushRow("mw_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenB = openCmdChannel();
+    (void)cmdOpenB;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_b", step++, expectedStatus, retryCount);
+
+    const bool mrOk = feedData("M-R,0400,00,02");
+    expectedAfterCommit = mrOk ? 0 : 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("mr_buffered_ok", step++, expectedStatus, retryCount);
+
+    const bool mrCommit = commitCmdChannel();
+    expectedStatus = mrCommit ? expectedAfterCommit : 30;
+    pushRow("mr_commit", step++, expectedStatus, retryCount);
+
+    drive.processIecCommandByte(0x48);
+    drive.processIecCommandByte(0x6F);
+    expectedStatus = 0;
+    pushRow("talk_sa15_payload", step++, expectedStatus, retryCount);
+    drive.processIecCommandByte(0x5F);
+
+    const bool cmdOpenC = openCmdChannel();
+    (void)cmdOpenC;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_c", step++, expectedStatus, retryCount);
+
+    const bool badMw = feedData("M-W,0400,00,02,ZZ,55");
+    (void)badMw;
+    expectedAfterCommit = 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("mw_invalid_hex_buffered", step++, expectedStatus, retryCount);
+
+    const bool badMwCommit = commitCmdChannel();
+    expectedStatus = 30;
+    retryCount = 1;
+    pushRow("mw_invalid_hex_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenCRetry = openCmdChannel();
+    (void)cmdOpenCRetry;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_c_retry", step++, expectedStatus, retryCount);
+
+    const bool retryMw = feedData("M-W,0400,00,02,0A,0B");
+    expectedAfterCommit = retryMw ? 0 : 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("mw_retry_fix_buffered", step++, expectedStatus, retryCount);
+
+    const bool retryMwCommit = commitCmdChannel();
+    expectedStatus = retryMwCommit ? expectedAfterCommit : 30;
+    if (retryMwCommit) {
+        retryConvergenceMax = std::max(retryConvergenceMax, retryCount);
+        retryCount = 0;
+    }
+    pushRow("mw_retry_fix_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenD = openCmdChannel();
+    (void)cmdOpenD;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_d", step++, expectedStatus, retryCount);
+
+    const bool badBA = feedData("B-A,00,11");
+    (void)badBA;
+    expectedAfterCommit = 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("ba_invalid_arity_buffered", step++, expectedStatus, retryCount);
+
+    const bool badBaCommit = commitCmdChannel();
+    expectedStatus = 30;
+    retryCount = 1;
+    pushRow("ba_invalid_arity_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenDRetry = openCmdChannel();
+    (void)cmdOpenDRetry;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_d_retry", step++, expectedStatus, retryCount);
+
+    const bool goodBA = feedData("B-A,00,11,01");
+    expectedAfterCommit = goodBA ? 0 : 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("ba_retry_fix_buffered", step++, expectedStatus, retryCount);
+
+    const bool baCommit = commitCmdChannel();
+    expectedStatus = baCommit ? expectedAfterCommit : 30;
+    if (baCommit) {
+        retryConvergenceMax = std::max(retryConvergenceMax, retryCount);
+        retryCount = 0;
+    }
+    pushRow("ba_retry_fix_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenE = openCmdChannel();
+    (void)cmdOpenE;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_e", step++, expectedStatus, retryCount);
+
+    const bool bfOk = feedData("B-F,00,11,01");
+    expectedAfterCommit = bfOk ? 0 : 30;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("bf_buffered", step++, expectedStatus, retryCount);
+    const bool bfCommit = commitCmdChannel();
+    expectedStatus = bfCommit ? expectedAfterCommit : 30;
+    pushRow("bf_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenF = openCmdChannel();
+    (void)cmdOpenF;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_f", step++, expectedStatus, retryCount);
+
+    const bool brMissing = feedData("B-R,00,11,01");
+    (void)brMissing;
+    expectedAfterCommit = 65;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("br_missing_block_buffered", step++, expectedStatus, retryCount);
+
+    const bool brMissingCommit = commitCmdChannel();
+    expectedStatus = brMissingCommit ? expectedAfterCommit : 65;
+    retryCount = 1;
+    pushRow("br_missing_block_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenFRetry = openCmdChannel();
+    (void)cmdOpenFRetry;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_f_retry", step++, expectedStatus, retryCount);
+
+    const bool retryBA = feedData("B-A,00,11,01");
+    expectedAfterCommit = retryBA ? 0 : 63;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("ba_after_missing_buffered", step++, expectedStatus, retryCount);
+
+    const bool retryBaCommit = commitCmdChannel();
+    expectedStatus = retryBaCommit ? expectedAfterCommit : 30;
+    if (retryBaCommit) {
+        retryConvergenceMax = std::max(retryConvergenceMax, retryCount);
+        retryCount = 0;
+    }
+    pushRow("ba_after_missing_commit", step++, expectedStatus, retryCount);
+
+    const bool cmdOpenG = openCmdChannel();
+    (void)cmdOpenG;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("open_cmd_g", step++, expectedStatus, retryCount);
+
+    const bool retryBR = feedData("B-R,00,11,01");
+    expectedAfterCommit = retryBR ? 0 : 65;
+    expectedStatus = statusCodeOf(drive.iecStatusLine);
+    pushRow("br_retry_fix_buffered", step++, expectedStatus, retryCount);
+    const bool brCommit = commitCmdChannel();
+    expectedStatus = brCommit ? expectedAfterCommit : 30;
+    pushRow("br_retry_fix_commit", step++, expectedStatus, retryCount);
+
+    drive.processIecCommandByte(0x48);
+    drive.processIecCommandByte(0x6F);
+    expectedStatus = 0;
+    pushRow("talk_sa15_final", step++, expectedStatus, retryCount);
+    drive.processIecCommandByte(0x5F);
+
+    return rows;
+}
+
+static std::vector<std::string> buildWeek61DriveDosSemanticEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek61DriveDosSemanticRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek61DriveDosSemanticRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek61DriveDosSemanticRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+static void writeWeek61DriveDosSemanticTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,scenario,step,status_code,expected_status,status_mismatch,retry_count,cmd_dispatch,data_dispatch,syntax_err,respq,txq,alloc_count,blocks_free,mem_0400,mem_0401,status\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+static void runWeek61DriveDosSemanticEdgeHardReference() {
+    const std::string runtimePath = "week61_drive_dos_semantic_runtime.csv";
+    const std::string refPath = "reference/edge/week61_drive_dos_semantic_trace.csv";
+
+    const std::vector<std::string> got = buildWeek61DriveDosSemanticEdgeTraceRows();
+    writeWeek61DriveDosSemanticTraceCsv(runtimePath, got);
+
+    const bool bootstrap = (std::getenv("WEEK61_BOOTSTRAP_DOS_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek61DriveDosSemanticTraceCsv(refPath, got);
+        std::cout << "[WEEK61-DOS][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK61-DOS][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK61-DOS][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK61-DOS][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK61-DOS][HARDREF] PASS: drive DOS semantic trace matches reference" << std::endl;
 }
 
 static void tickPeripherals(Bus &bus) {
