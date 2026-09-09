@@ -222,6 +222,12 @@
         "w80_error_dos_parity_rows": 8,
         "w80_soak_batch_pass_rows": 24,
         "w80_release_checklist_rows": 10,
-        "w80_host_fallback_rows": 0
+        "w80_host_fallback_rows": 0,
+        "w81_flux_samples": 168,
+        "w81_weak_halftrack_observed_rows": 112,
+        "w81_syncloss_recovery_rows": 19,
+        "w81_loader_timing_parity_runs": 504,
+        "w81_loader_timing_parity_mismatch_rows": 0,
+        "w81_flux_behavior_pass_rows": 168
     }
 }

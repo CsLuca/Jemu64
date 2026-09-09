@@ -222,6 +222,12 @@
     "w80_soak_batch_pass_rows": { "min": 24, "max": 24 },
     "w80_release_checklist_rows": { "min": 10, "max": 20 },
     "w80_host_fallback_rows": { "min": 0, "max": 0 },
+    "w81_flux_samples": { "min": 160, "max": 500 },
+    "w81_weak_halftrack_observed_rows": { "min": 25, "max": 120 },
+    "w81_syncloss_recovery_rows": { "min": 15, "max": 90 },
+    "w81_loader_timing_parity_runs": { "min": 480, "max": 3000 },
+    "w81_loader_timing_parity_mismatch_rows": { "min": 0, "max": 0 },
+    "w81_flux_behavior_pass_rows": { "min": 160, "max": 500 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

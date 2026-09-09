@@ -750,6 +750,20 @@
   - runtime: `week80_release_readiness_runtime.csv`
   - reference: `reference/edge/week80_release_readiness_trace.csv`
 
+## Week81 Flux Path Behavior Parity (real RAW ingest/decode/replay)
+
+- Added a dedicated non-synthetic flux behavior parity hard-reference layer on the active KryoFlux RAW set.
+- Coverage focus:
+  - real flux sample floor (`w81_flux_samples`),
+  - observed weak/half-track rows (`w81_weak_halftrack_observed_rows`),
+  - sync-loss recovery rows (`w81_syncloss_recovery_rows`),
+  - repeated loader timing parity runs (`w81_loader_timing_parity_runs`),
+  - zero parity mismatches (`w81_loader_timing_parity_mismatch_rows`, target `0`),
+  - behavior pass coverage (`w81_flux_behavior_pass_rows`).
+- Hard reference trace:
+  - runtime: `week81_flux_behavior_parity_runtime.csv`
+  - reference: `reference/edge/week81_flux_behavior_parity_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -886,6 +900,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week78_real_disk_corpus_trace.csv`
     - `reference/edge/week79_real_hard_corpus_trace.csv`
     - `reference/edge/week80_release_readiness_trace.csv`
+    - `reference/edge/week81_flux_behavior_parity_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
