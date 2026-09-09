@@ -195,6 +195,9 @@
         "w73_recovery_profile_max": 2,
         "w74_g64_feature_parity_rows": 3,
         "w74_nib_parity_rows": 3,
-        "w74_image_lossy_transform_rows": 0
+        "w74_image_lossy_transform_rows": 0,
+        "w75_real_corpus_pass_rate": 100,
+        "w75_loader_timing_regressions": 0,
+        "w75_host_fallback_rows": 0
     }
 }

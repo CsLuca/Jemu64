@@ -673,6 +673,19 @@
   - runtime: `week74_image_fidelity_runtime.csv`
   - reference: `reference/edge/week74_image_fidelity_trace.csv`
 
+## Week75 Compatibility Signoff (real software corpus)
+
+- Added a compatibility signoff hard-reference layer oriented to real loader/software corpus behavior across revisions and profiles.
+- Coverage focus:
+  - real corpus pass-rate (`w75_real_corpus_pass_rate`, gate `>=95`),
+  - loader timing regression accumulation (`w75_loader_timing_regressions`),
+  - host fallback guard (`w75_host_fallback_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week75_compatibility_signoff_runtime.csv`
+  - reference: `reference/edge/week75_compatibility_signoff_trace.csv`
+- Signoff target:
+  - final status line includes `1541 physical-grade beta` when all gates are green.
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -803,6 +816,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week72_physical_disk_effects_trace.csv`
     - `reference/edge/week73_error_engine_dos_mapping_trace.csv`
     - `reference/edge/week74_image_fidelity_trace.csv`
+    - `reference/edge/week75_compatibility_signoff_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
