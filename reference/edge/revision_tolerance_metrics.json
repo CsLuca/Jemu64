@@ -213,6 +213,15 @@
         "w79_loader_timing_regressions": 0,
         "w79_host_fallback_rows": 0,
         "w79_hard_format_pass_rows": 4,
-        "w79_raw_flux_coverage_rows": 168
+        "w79_raw_flux_coverage_rows": 168,
+        "w80_mustpass_rows": 6,
+        "w80_flux_ingest_behavior_rows": 168,
+        "w80_flux_weak_halftrack_rows": 12,
+        "w80_flux_syncloss_rows": 9,
+        "w80_write_e2e_rows": 6,
+        "w80_error_dos_parity_rows": 8,
+        "w80_soak_batch_pass_rows": 24,
+        "w80_release_checklist_rows": 10,
+        "w80_host_fallback_rows": 0
     }
 }

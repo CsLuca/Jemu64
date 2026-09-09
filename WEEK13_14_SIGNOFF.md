@@ -733,6 +733,23 @@
   - runtime: `week79_real_hard_corpus_runtime.csv`
   - reference: `reference/edge/week79_real_hard_corpus_trace.csv`
 
+## Week80 Release Readiness Closure (must-pass + flux/write/error/soak)
+
+- Added a closure hard-reference layer that makes the remaining release blockers explicit and deterministic on the active non-synthetic corpus.
+- Coverage focus:
+  - stable must-pass set (`w80_mustpass_rows`),
+  - flux ingest behavior parity (`w80_flux_ingest_behavior_rows`),
+  - weak/half-track gate (`w80_flux_weak_halftrack_rows`),
+  - sync-loss gate (`w80_flux_syncloss_rows`),
+  - write path end-to-end gate (`w80_write_e2e_rows`),
+  - error/DOS parity gate (`w80_error_dos_parity_rows`),
+  - soak batch pass gate (`w80_soak_batch_pass_rows`),
+  - release checklist closure (`w80_release_checklist_rows`),
+  - host fallback guard (`w80_host_fallback_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week80_release_readiness_runtime.csv`
+  - reference: `reference/edge/week80_release_readiness_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -868,6 +885,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week77_real_corpus_bridge_trace.csv`
     - `reference/edge/week78_real_disk_corpus_trace.csv`
     - `reference/edge/week79_real_hard_corpus_trace.csv`
+    - `reference/edge/week80_release_readiness_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
