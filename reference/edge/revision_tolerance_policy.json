@@ -201,6 +201,9 @@
     "w76_cross_profile_stability_rate": { "min": 98, "max": 100 },
     "w76_loader_drift_regressions": { "min": 0, "max": 4 },
     "w76_host_fallback_rows": { "min": 0, "max": 0 },
+    "w77_real_corpus_coverage_rows": { "min": 48, "max": 120 },
+    "w77_loader_timing_regressions": { "min": 0, "max": 4 },
+    "w77_host_fallback_rows": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

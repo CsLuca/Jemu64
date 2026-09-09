@@ -697,6 +697,17 @@
   - runtime: `week76_compatibility_drift_runtime.csv`
   - reference: `reference/edge/week76_compatibility_drift_trace.csv`
 
+## Week77 Real Corpus Bridge (loader families integration gate)
+
+- Added a bridge hard-reference layer toward full real-software closure, combining profile/revision runs across representative loader families.
+- Coverage focus:
+  - real corpus coverage accumulation (`w77_real_corpus_coverage_rows`),
+  - loader timing regression bound (`w77_loader_timing_regressions`),
+  - host fallback guard (`w77_host_fallback_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week77_real_corpus_bridge_runtime.csv`
+  - reference: `reference/edge/week77_real_corpus_bridge_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -829,6 +840,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week74_image_fidelity_trace.csv`
     - `reference/edge/week75_compatibility_signoff_trace.csv`
     - `reference/edge/week76_compatibility_drift_trace.csv`
+    - `reference/edge/week77_real_corpus_bridge_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
