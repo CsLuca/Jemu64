@@ -686,6 +686,17 @@
 - Signoff target:
   - final status line includes `1541 physical-grade beta` when all gates are green.
 
+## Week76 Compatibility Drift Envelope (cross-profile replay)
+
+- Added a compatibility drift hard-reference layer that extends the real-corpus signoff with deterministic cross-profile replay windows.
+- Coverage focus:
+  - cross-profile stability floor (`w76_cross_profile_stability_rate`, gate `>=98`),
+  - loader drift regression bound (`w76_loader_drift_regressions`),
+  - host fallback guard (`w76_host_fallback_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week76_compatibility_drift_runtime.csv`
+  - reference: `reference/edge/week76_compatibility_drift_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -817,6 +828,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week73_error_engine_dos_mapping_trace.csv`
     - `reference/edge/week74_image_fidelity_trace.csv`
     - `reference/edge/week75_compatibility_signoff_trace.csv`
+    - `reference/edge/week76_compatibility_drift_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

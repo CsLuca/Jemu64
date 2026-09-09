@@ -198,6 +198,9 @@
         "w74_image_lossy_transform_rows": 0,
         "w75_real_corpus_pass_rate": 100,
         "w75_loader_timing_regressions": 0,
-        "w75_host_fallback_rows": 0
+        "w75_host_fallback_rows": 0,
+        "w76_cross_profile_stability_rate": 100,
+        "w76_loader_drift_regressions": 0,
+        "w76_host_fallback_rows": 0
     }
 }

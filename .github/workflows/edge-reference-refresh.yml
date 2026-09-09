@@ -129,4 +129,5 @@ jobs:
             week73_error_engine_dos_mapping_runtime.csv
             week74_image_fidelity_runtime.csv
             week75_compatibility_signoff_runtime.csv
+            week76_compatibility_drift_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv
