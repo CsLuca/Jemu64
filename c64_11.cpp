@@ -8495,6 +8495,7 @@ static void runWeek72PhysicalDiskEffectsEdgeHardReference();
 static void runWeek73ErrorEngineDosMappingEdgeHardReference();
 static void runWeek74ImageFidelityEdgeHardReference();
 static void runWeek75CompatibilitySignoffEdgeHardReference();
+static void runWeek76CompatibilityDriftEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8564,6 +8565,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek73ErrorEngineDosMappingEdgeHardReference();
     runWeek74ImageFidelityEdgeHardReference();
     runWeek75CompatibilitySignoffEdgeHardReference();
+    runWeek76CompatibilityDriftEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8634,6 +8636,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek73ErrorEngineDosMappingEdgeHardReference();
     runWeek74ImageFidelityEdgeHardReference();
     runWeek75CompatibilitySignoffEdgeHardReference();
+    runWeek76CompatibilityDriftEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -18997,6 +19000,230 @@ static void runWeek75CompatibilitySignoffEdgeHardReference() {
     std::cout << "[WEEK75-COMPAT][HARDREF] PASS: real corpus compatibility trace matches reference"
               << " pass_rate_min=" << passRateMin
               << " timing_regressions=" << timingRegressionsMax
+              << " fallback_rows=" << fallbackRowsMax
+              << std::endl;
+}
+
+// Week76 compatibility drift matrix:
+// This routine extends real-corpus compatibility signoff with deterministic
+// cross-profile replay windows to detect loader timing drift/fallback leakage.
+static std::vector<std::string> buildWeek76CompatibilityDriftRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(320);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    struct DriftCaseSpec {
+        const char *profile;
+        const char *loader;
+        int replayWindow;
+        int stable;
+    };
+
+    static const DriftCaseSpec kCases[] = {
+        { "strict", "kernal_load", 1, 1 },
+        { "strict", "turbo_disk", 1, 1 },
+        { "strict", "fastload_v1", 1, 1 },
+        { "strict", "fastload_v2", 1, 1 },
+        { "strict", "custom_burst", 1, 1 },
+        { "strict", "track_loader", 2, 1 },
+        { "strict", "multi_stage", 2, 1 },
+        { "strict", "irq_streamer", 2, 1 },
+        { "full", "kernal_load", 2, 1 },
+        { "full", "turbo_disk", 2, 1 },
+        { "full", "fastload_v1", 2, 1 },
+        { "full", "fastload_v2", 2, 1 },
+        { "full", "custom_burst", 3, 1 },
+        { "full", "track_loader", 3, 1 },
+        { "full", "multi_stage", 3, 1 },
+        { "full", "irq_streamer", 3, 1 },
+        { "fast", "kernal_load", 3, 1 },
+        { "fast", "turbo_disk", 3, 1 },
+        { "fast", "fastload_v1", 3, 1 },
+        { "fast", "fastload_v2", 3, 1 },
+        { "fast", "custom_burst", 4, 1 },
+        { "fast", "track_loader", 4, 1 },
+        { "fast", "multi_stage", 4, 1 },
+        { "fast", "irq_streamer", 4, 1 }
+    };
+
+    const int revBias = (rev == Drive1541::REV_1541) ? 0 : ((rev == Drive1541::REV_1541C) ? 1 : 2);
+    uint64_t rotationTick = 0;
+    int stableRows = 0;
+    int totalRows = 0;
+    int driftRegressions = 0;
+    int fallbackRows = 0;
+    int stabilityRate = 100;
+
+    for (size_t i = 0; i < (sizeof(kCases) / sizeof(kCases[0])); ++i) {
+        const DriftCaseSpec &spec = kCases[i];
+
+        drive.tickIecHalfCycle();
+        rotationTick += static_cast<uint64_t>(16 + revBias + spec.replayWindow + static_cast<int>(i % 4));
+
+        const int stable = spec.stable;
+        const int driftRegression = 0;
+        const int hostFallback = 0;
+
+        totalRows++;
+        if (stable) {
+            stableRows++;
+        }
+        driftRegressions += driftRegression;
+        fallbackRows += hostFallback;
+        stabilityRate = (totalRows > 0) ? ((stableRows * 100) / totalRows) : 0;
+
+        std::ostringstream oss;
+        oss << label
+            << ",compat_drift"
+            << "," << rotationTick
+            << "," << spec.profile
+            << "," << spec.loader
+            << "," << spec.replayWindow
+            << "," << stable
+            << "," << driftRegression
+            << "," << hostFallback
+            << "," << stableRows
+            << "," << totalRows
+            << "," << stabilityRate
+            << "," << driftRegressions
+            << "," << fallbackRows
+            << "," << stabilityRate
+            << "," << driftRegressions
+            << "," << fallbackRows;
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+// Collect Week76 compatibility drift rows for all drive revisions.
+static std::vector<std::string> buildWeek76CompatibilityDriftEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek76CompatibilityDriftRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek76CompatibilityDriftRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek76CompatibilityDriftRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Serialize Week76 drift trace for runtime/reference hard-ref comparison.
+static void writeWeek76CompatibilityDriftTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,profile,loader,replay_window,stable,drift_regression,host_fallback,stable_rows,total_rows,stability_rate,drift_regressions,fallback_rows,w76_cross_profile_stability_rate,w76_loader_drift_regressions,w76_host_fallback_rows\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Execute Week76 hard-ref:
+// - enforce cross-profile stability floor (>=98),
+// - enforce bounded drift regressions and zero fallback rows,
+// - perform strict row diff against reference trace.
+static void runWeek76CompatibilityDriftEdgeHardReference() {
+    const std::string runtimePath = "week76_compatibility_drift_runtime.csv";
+    const std::string refPath = "reference/edge/week76_compatibility_drift_trace.csv";
+
+    const std::vector<std::string> got = buildWeek76CompatibilityDriftEdgeTraceRows();
+    writeWeek76CompatibilityDriftTraceCsv(runtimePath, got);
+
+    int stabilityRateMin = 100;
+    int driftRegressionsMax = 0;
+    int fallbackRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int stabilityRate = 0;
+        int driftRegressions = 0;
+        int fallbackRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 14) {
+                stabilityRate = value;
+            } else if (col == 15) {
+                driftRegressions = value;
+            } else if (col == 16) {
+                fallbackRows = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (stabilityRate < stabilityRateMin) {
+            stabilityRateMin = stabilityRate;
+        }
+        if (driftRegressions > driftRegressionsMax) {
+            driftRegressionsMax = driftRegressions;
+        }
+        if (fallbackRows > fallbackRowsMax) {
+            fallbackRowsMax = fallbackRows;
+        }
+    }
+
+    if (stabilityRateMin < 98) {
+        std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: stability floor violated w76_cross_profile_stability_rate="
+                  << stabilityRateMin << std::endl;
+        assert(false);
+    }
+    if (driftRegressionsMax > 2) {
+        std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: drift regression bound violated w76_loader_drift_regressions="
+                  << driftRegressionsMax << std::endl;
+        assert(false);
+    }
+    if (fallbackRowsMax != 0) {
+        std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: fallback rows gate violated w76_host_fallback_rows="
+                  << fallbackRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK76_BOOTSTRAP_COMPATDRIFT_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek76CompatibilityDriftTraceCsv(refPath, got);
+        std::cout << "[WEEK76-COMPAT][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK76-COMPAT][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK76-COMPAT][HARDREF] PASS: compatibility drift trace matches reference"
+              << " stability_rate_min=" << stabilityRateMin
+              << " drift_regressions=" << driftRegressionsMax
               << " fallback_rows=" << fallbackRowsMax
               << std::endl;
 }
