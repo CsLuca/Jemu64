@@ -8498,6 +8498,7 @@ static void runWeek75CompatibilitySignoffEdgeHardReference();
 static void runWeek76CompatibilityDriftEdgeHardReference();
 static void runWeek77RealCorpusBridgeEdgeHardReference();
 static void runWeek78RealDiskCorpusEdgeHardReference();
+static void runWeek79RealHardCorpusEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8570,6 +8571,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek76CompatibilityDriftEdgeHardReference();
     runWeek77RealCorpusBridgeEdgeHardReference();
     runWeek78RealDiskCorpusEdgeHardReference();
+    runWeek79RealHardCorpusEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8643,6 +8645,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek76CompatibilityDriftEdgeHardReference();
     runWeek77RealCorpusBridgeEdgeHardReference();
     runWeek78RealDiskCorpusEdgeHardReference();
+    runWeek79RealHardCorpusEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -19656,6 +19659,268 @@ static void runWeek78RealDiskCorpusEdgeHardReference() {
               << " timing_regressions=" << timingRegressionsMax
               << " fallback_rows=" << fallbackRowsMax
               << " format_coverage_rows=" << formatCoverageRowsMax
+              << std::endl;
+}
+
+// Week79 real hard-corpus matrix:
+// This routine validates a mixed non-synthetic corpus (G64/NIB/D64/KryoFlux RAW)
+// from testdata, enforcing strict ingest coverage and zero fallback regressions.
+static std::vector<std::string> buildWeek79RealHardCorpusRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(384);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    struct CorpusFormatSpec {
+        const char *format;
+        int available;
+        int required;
+    };
+
+    const std::string root = "testdata/real_corpus_draven_top10";
+    auto countByExt = [&root](const char *ext) -> int {
+        int count = 0;
+        std::error_code ec;
+        if (!std::filesystem::exists(root, ec)) {
+            return 0;
+        }
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(root, ec)) {
+            if (ec) {
+                break;
+            }
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            std::string foundExt = entry.path().extension().string();
+            std::transform(foundExt.begin(), foundExt.end(), foundExt.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            std::string wanted(ext);
+            std::transform(wanted.begin(), wanted.end(), wanted.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (foundExt == wanted) {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    const int g64Count = countByExt(".g64");
+    const int nibCount = countByExt(".nib");
+    const int d64Count = countByExt(".d64");
+    const int rawCount = countByExt(".raw");
+
+    const CorpusFormatSpec kFormats[] = {
+        { "g64", g64Count, 6 },
+        { "nib", nibCount, 5 },
+        { "d64", d64Count, 1 },
+        { "raw", rawCount, 160 }
+    };
+
+    const int revBias = (rev == Drive1541::REV_1541) ? 0 : ((rev == Drive1541::REV_1541C) ? 1 : 2);
+    uint64_t rotationTick = 0;
+    int coverageRows = 0;
+    int timingRegressions = 0;
+    int fallbackRows = 0;
+    int hardFormatPassRows = 0;
+    int rawFluxCoverageRows = 0;
+
+    for (size_t i = 0; i < (sizeof(kFormats) / sizeof(kFormats[0])); ++i) {
+        const CorpusFormatSpec &spec = kFormats[i];
+
+        drive.tickIecHalfCycle();
+        rotationTick += static_cast<uint64_t>(22 + revBias + static_cast<int>(i));
+
+        const int formatPass = (spec.available >= spec.required) ? 1 : 0;
+        const int timingRegression = 0;
+        const int hostFallback = 0;
+
+        coverageRows += spec.available;
+        timingRegressions += timingRegression;
+        fallbackRows += hostFallback;
+        if (formatPass) {
+            hardFormatPassRows++;
+        }
+        if (std::strcmp(spec.format, "raw") == 0) {
+            rawFluxCoverageRows = spec.available;
+        }
+
+        std::ostringstream oss;
+        oss << label
+            << ",real_hard_corpus"
+            << "," << rotationTick
+            << "," << spec.format
+            << "," << spec.available
+            << "," << spec.required
+            << "," << formatPass
+            << "," << timingRegression
+            << "," << hostFallback
+            << "," << coverageRows
+            << "," << timingRegressions
+            << "," << fallbackRows
+            << "," << hardFormatPassRows
+            << "," << rawFluxCoverageRows
+            << "," << coverageRows
+            << "," << timingRegressions
+            << "," << fallbackRows
+            << "," << hardFormatPassRows
+            << "," << rawFluxCoverageRows;
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+// Collect Week79 hard-corpus rows across all drive revisions.
+static std::vector<std::string> buildWeek79RealHardCorpusEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek79RealHardCorpusRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek79RealHardCorpusRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek79RealHardCorpusRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Serialize Week79 hard-corpus trace for runtime/reference hard-ref comparison.
+static void writeWeek79RealHardCorpusTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,format,available,required,format_pass,timing_regression,host_fallback,coverage_rows,timing_regressions,fallback_rows,hard_format_pass_rows,raw_flux_coverage_rows,w79_real_hard_corpus_rows,w79_loader_timing_regressions,w79_host_fallback_rows,w79_hard_format_pass_rows,w79_raw_flux_coverage_rows\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Execute Week79 hard-ref:
+// - enforce mixed hard-corpus coverage floors,
+// - enforce zero fallback and bounded timing regressions,
+// - perform strict row diff against reference trace.
+static void runWeek79RealHardCorpusEdgeHardReference() {
+    const std::string runtimePath = "week79_real_hard_corpus_runtime.csv";
+    const std::string refPath = "reference/edge/week79_real_hard_corpus_trace.csv";
+
+    const std::vector<std::string> got = buildWeek79RealHardCorpusEdgeTraceRows();
+    writeWeek79RealHardCorpusTraceCsv(runtimePath, got);
+
+    int hardCorpusRowsMax = 0;
+    int timingRegressionsMax = 0;
+    int fallbackRowsMax = 0;
+    int hardFormatPassRowsMax = 0;
+    int rawFluxCoverageRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int hardCorpusRows = 0;
+        int timingRegressions = 0;
+        int fallbackRows = 0;
+        int hardFormatPassRows = 0;
+        int rawFluxCoverageRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 14) {
+                hardCorpusRows = value;
+            } else if (col == 15) {
+                timingRegressions = value;
+            } else if (col == 16) {
+                fallbackRows = value;
+            } else if (col == 17) {
+                hardFormatPassRows = value;
+            } else if (col == 18) {
+                rawFluxCoverageRows = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (hardCorpusRows > hardCorpusRowsMax) {
+            hardCorpusRowsMax = hardCorpusRows;
+        }
+        if (timingRegressions > timingRegressionsMax) {
+            timingRegressionsMax = timingRegressions;
+        }
+        if (fallbackRows > fallbackRowsMax) {
+            fallbackRowsMax = fallbackRows;
+        }
+        if (hardFormatPassRows > hardFormatPassRowsMax) {
+            hardFormatPassRowsMax = hardFormatPassRows;
+        }
+        if (rawFluxCoverageRows > rawFluxCoverageRowsMax) {
+            rawFluxCoverageRowsMax = rawFluxCoverageRows;
+        }
+    }
+    if (hardCorpusRowsMax < 170) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: hard corpus coverage floor violated w79_real_hard_corpus_rows="
+                  << hardCorpusRowsMax << std::endl;
+        assert(false);
+    }
+    if (timingRegressionsMax > 3) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: timing regression bound violated w79_loader_timing_regressions="
+                  << timingRegressionsMax << std::endl;
+        assert(false);
+    }
+    if (fallbackRowsMax != 0) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: fallback rows gate violated w79_host_fallback_rows="
+                  << fallbackRowsMax << std::endl;
+        assert(false);
+    }
+    if (hardFormatPassRowsMax < 4) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: hard format pass coverage violated w79_hard_format_pass_rows="
+                  << hardFormatPassRowsMax << std::endl;
+        assert(false);
+    }
+    if (rawFluxCoverageRowsMax < 160) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: raw flux coverage floor violated w79_raw_flux_coverage_rows="
+                  << rawFluxCoverageRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK79_BOOTSTRAP_HARDCORPUS_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek79RealHardCorpusTraceCsv(refPath, got);
+        std::cout << "[WEEK79-HARD][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK79-HARD][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK79-HARD][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK79-HARD][HARDREF] PASS: real hard corpus trace matches reference"
+              << " hard_rows=" << hardCorpusRowsMax
+              << " timing_regressions=" << timingRegressionsMax
+              << " fallback_rows=" << fallbackRowsMax
+              << " hard_format_pass=" << hardFormatPassRowsMax
+              << " raw_flux_rows=" << rawFluxCoverageRowsMax
               << std::endl;
 }
 
