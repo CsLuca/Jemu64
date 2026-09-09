@@ -208,6 +208,11 @@
         "w78_real_corpus_coverage_rows": 9,
         "w78_loader_timing_regressions": 0,
         "w78_host_fallback_rows": 0,
-        "w78_format_coverage_rows": 9
+        "w78_format_coverage_rows": 9,
+        "w79_real_hard_corpus_rows": 180,
+        "w79_loader_timing_regressions": 0,
+        "w79_host_fallback_rows": 0,
+        "w79_hard_format_pass_rows": 4,
+        "w79_raw_flux_coverage_rows": 168
     }
 }

@@ -720,6 +720,19 @@
   - runtime: `week78_real_disk_corpus_runtime.csv`
   - reference: `reference/edge/week78_real_disk_corpus_trace.csv`
 
+## Week79 Real Hard Corpus (G64/NIB/D64 + KryoFlux RAW)
+
+- Added a non-synthetic hard-corpus gate that uses the active testdata set with mixed formats (`.g64`, `.nib`, `.d64`, KryoFlux `.raw`) as concrete coverage source.
+- Coverage focus:
+  - hard corpus total coverage (`w79_real_hard_corpus_rows`),
+  - loader timing regressions (`w79_loader_timing_regressions`),
+  - host fallback guard (`w79_host_fallback_rows`, target `0`),
+  - hard format pass count (`w79_hard_format_pass_rows`),
+  - raw flux coverage floor (`w79_raw_flux_coverage_rows`).
+- Hard reference trace:
+  - runtime: `week79_real_hard_corpus_runtime.csv`
+  - reference: `reference/edge/week79_real_hard_corpus_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -854,6 +867,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week76_compatibility_drift_trace.csv`
     - `reference/edge/week77_real_corpus_bridge_trace.csv`
     - `reference/edge/week78_real_disk_corpus_trace.csv`
+    - `reference/edge/week79_real_hard_corpus_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
