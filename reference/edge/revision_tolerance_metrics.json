@@ -204,6 +204,10 @@
         "w76_host_fallback_rows": 0,
         "w77_real_corpus_coverage_rows": 54,
         "w77_loader_timing_regressions": 0,
-        "w77_host_fallback_rows": 0
+        "w77_host_fallback_rows": 0,
+        "w78_real_corpus_coverage_rows": 9,
+        "w78_loader_timing_regressions": 0,
+        "w78_host_fallback_rows": 0,
+        "w78_format_coverage_rows": 9
     }
 }
