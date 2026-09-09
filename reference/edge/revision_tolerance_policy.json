@@ -192,6 +192,9 @@
     "w73_errorclass_coverage_rows": { "min": 6, "max": 12 },
     "w73_channel15_mapping_mismatch_rows": { "min": 0, "max": 0 },
     "w73_recovery_profile_max": { "min": 1, "max": 3 },
+    "w74_g64_feature_parity_rows": { "min": 2, "max": 6 },
+    "w74_nib_parity_rows": { "min": 2, "max": 6 },
+    "w74_image_lossy_transform_rows": { "min": 0, "max": 0 },
     "week54_pure_stability_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_pass_runs": { "min": 12, "max": 12 },
     "week54_pure_stability_host_fallback_no": { "min": 1, "max": 1 }

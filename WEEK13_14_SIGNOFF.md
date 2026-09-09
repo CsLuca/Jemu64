@@ -662,6 +662,17 @@
   - runtime: `week73_error_engine_dos_mapping_runtime.csv`
   - reference: `reference/edge/week73_error_engine_dos_mapping_trace.csv`
 
+## Week74 Image Fidelity (G64/NIB parity + lossy-transform gate)
+
+- Added an image-fidelity hard-reference layer focused on format parity for first-class G64/NIB ingest paths across drive revisions.
+- Coverage focus:
+  - G64 feature parity accumulation (`w74_g64_feature_parity_rows`),
+  - NIB parity accumulation (`w74_nib_parity_rows`),
+  - lossy transform guard on target subset (`w74_image_lossy_transform_rows`, target `0`).
+- Hard reference trace:
+  - runtime: `week74_image_fidelity_runtime.csv`
+  - reference: `reference/edge/week74_image_fidelity_trace.csv`
+
 ## Exit Criteria Results
 
 - `strict/full` green: PASS
@@ -791,6 +802,7 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week71_gcr_write_roundtrip_trace.csv`
     - `reference/edge/week72_physical_disk_effects_trace.csv`
     - `reference/edge/week73_error_engine_dos_mapping_trace.csv`
+    - `reference/edge/week74_image_fidelity_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:

@@ -127,4 +127,5 @@ jobs:
             week71_gcr_write_roundtrip_runtime.csv
             week72_physical_disk_effects_runtime.csv
             week73_error_engine_dos_mapping_runtime.csv
+            week74_image_fidelity_runtime.csv
             c64_lorenz_brkn_edge_ref.trace.csv

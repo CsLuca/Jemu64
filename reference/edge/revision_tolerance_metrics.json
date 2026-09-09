@@ -192,6 +192,9 @@
         "w72_weakbit_observed_rows": 3,
         "w73_errorclass_coverage_rows": 6,
         "w73_channel15_mapping_mismatch_rows": 0,
-        "w73_recovery_profile_max": 2
+        "w73_recovery_profile_max": 2,
+        "w74_g64_feature_parity_rows": 3,
+        "w74_nib_parity_rows": 3,
+        "w74_image_lossy_transform_rows": 0
     }
 }
