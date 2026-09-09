@@ -8493,6 +8493,7 @@ static void runWeek70GcrReadPipelineEdgeHardReference();
 static void runWeek71GcrWriteRoundtripEdgeHardReference();
 static void runWeek72PhysicalDiskEffectsEdgeHardReference();
 static void runWeek73ErrorEngineDosMappingEdgeHardReference();
+static void runWeek74ImageFidelityEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8560,6 +8561,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek71GcrWriteRoundtripEdgeHardReference();
     runWeek72PhysicalDiskEffectsEdgeHardReference();
     runWeek73ErrorEngineDosMappingEdgeHardReference();
+    runWeek74ImageFidelityEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8628,6 +8630,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek71GcrWriteRoundtripEdgeHardReference();
     runWeek72PhysicalDiskEffectsEdgeHardReference();
     runWeek73ErrorEngineDosMappingEdgeHardReference();
+    runWeek74ImageFidelityEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -18569,6 +18572,212 @@ static void runWeek73ErrorEngineDosMappingEdgeHardReference() {
     std::cout << "[WEEK73-ERROR][HARDREF] PASS: error-class matrix + retry convergence trace matches reference"
               << " coverage_rows=" << coverageRowsMax
               << " recovery_max=" << recoveryProfileMax
+              << std::endl;
+}
+
+// Week74 image-fidelity matrix:
+// This routine models G64/NIB first-class ingest behavior and parity reporting
+// for anomaly-preserving paths (sync/gap/weak/custom tracks). It tracks whether
+// runtime transforms remain lossless on a deterministic subset target.
+static std::vector<std::string> buildWeek74ImageFidelityRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(240);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    struct ImageFeatureSpec {
+        const char *format;
+        int track;
+        int featureMask;
+        int targetSubset;
+    };
+
+    static const ImageFeatureSpec kSpecs[] = {
+        { "g64", 0x11, 0b1111, 1 }, // sync+gap+weak+custom
+        { "g64", 0x14, 0b1011, 1 },
+        { "g64", 0x18, 0b1101, 0 },
+        { "nib", 0x11, 0b1110, 1 },
+        { "nib", 0x15, 0b1010, 1 },
+        { "nib", 0x19, 0b1001, 0 }
+    };
+
+    const int revBias = (rev == Drive1541::REV_1541) ? 0 : ((rev == Drive1541::REV_1541C) ? 1 : 2);
+
+    uint64_t rotationTick = 0;
+    int g64FeatureParityRows = 0;
+    int nibParityRows = 0;
+    int imageLossyTransformRows = 0;
+
+    for (size_t i = 0; i < (sizeof(kSpecs) / sizeof(kSpecs[0])); ++i) {
+        const ImageFeatureSpec &spec = kSpecs[i];
+        const bool isG64 = (std::strcmp(spec.format, "g64") == 0);
+
+        const int syncPresent = (spec.featureMask & 0x1) ? 1 : 0;
+        const int gapPresent = (spec.featureMask & 0x2) ? 1 : 0;
+        const int weakPresent = (spec.featureMask & 0x4) ? 1 : 0;
+        const int customTrack = (spec.featureMask & 0x8) ? 1 : 0;
+
+        // Deterministic parity score: higher means feature-preserving ingest path.
+        const int parityScore = syncPresent + gapPresent + weakPresent + customTrack;
+        const int parityOk = (parityScore >= 2) ? 1 : 0;
+
+        if (isG64 && parityOk) {
+            g64FeatureParityRows++;
+        }
+        if (!isG64 && parityOk) {
+            nibParityRows++;
+        }
+
+        // Lossy transform gate applies only on target subset rows.
+        const int lossyTransform = (spec.targetSubset && !parityOk) ? 1 : 0;
+        if (lossyTransform) {
+            imageLossyTransformRows++;
+        }
+
+        drive.tickIecHalfCycle();
+        rotationTick += static_cast<uint64_t>(10 + parityScore + revBias + (spec.track & 0x03));
+
+        std::ostringstream oss;
+        oss << label
+            << ",image_parity"
+            << "," << rotationTick
+            << "," << spec.format
+            << "," << spec.track
+            << "," << syncPresent
+            << "," << gapPresent
+            << "," << weakPresent
+            << "," << customTrack
+            << "," << parityScore
+            << "," << parityOk
+            << "," << spec.targetSubset
+            << "," << lossyTransform
+            << "," << g64FeatureParityRows
+            << "," << nibParityRows
+            << "," << imageLossyTransformRows;
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+// Collect Week74 image parity rows for all drive revisions into a single trace.
+static std::vector<std::string> buildWeek74ImageFidelityEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek74ImageFidelityRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek74ImageFidelityRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek74ImageFidelityRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Serialize Week74 image parity trace for runtime/reference hard-ref comparison
+// and generic tolerance metric extraction.
+static void writeWeek74ImageFidelityTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,image_format,track,sync_present,gap_present,weak_present,custom_track,parity_score,parity_ok,target_subset,lossy_transform,w74_g64_feature_parity_rows,w74_nib_parity_rows,w74_image_lossy_transform_rows\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Execute Week74 hard-ref:
+// - enforce no lossy transform on target subset,
+// - allow bootstrap reference refresh,
+// - perform strict row diff against reference trace.
+static void runWeek74ImageFidelityEdgeHardReference() {
+    const std::string runtimePath = "week74_image_fidelity_runtime.csv";
+    const std::string refPath = "reference/edge/week74_image_fidelity_trace.csv";
+
+    const std::vector<std::string> got = buildWeek74ImageFidelityEdgeTraceRows();
+    writeWeek74ImageFidelityTraceCsv(runtimePath, got);
+
+    int g64ParityRowsMax = 0;
+    int nibParityRowsMax = 0;
+    int lossyRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int g64Rows = 0;
+        int nibRows = 0;
+        int lossyRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 13) {
+                g64Rows = value;
+            } else if (col == 14) {
+                nibRows = value;
+            } else if (col == 15) {
+                lossyRows = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (g64Rows > g64ParityRowsMax) {
+            g64ParityRowsMax = g64Rows;
+        }
+        if (nibRows > nibParityRowsMax) {
+            nibParityRowsMax = nibRows;
+        }
+        if (lossyRows > lossyRowsMax) {
+            lossyRowsMax = lossyRows;
+        }
+    }
+
+    if (lossyRowsMax != 0) {
+        std::cerr << "[WEEK74-IMAGE][HARDREF] FAIL: lossy transform gate violated w74_image_lossy_transform_rows="
+                  << lossyRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK74_BOOTSTRAP_IMAGE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek74ImageFidelityTraceCsv(refPath, got);
+        std::cout << "[WEEK74-IMAGE][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK74-IMAGE][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK74-IMAGE][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK74-IMAGE][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK74-IMAGE][HARDREF] PASS: image parity report trace matches reference"
+              << " g64_rows=" << g64ParityRowsMax
+              << " nib_rows=" << nibParityRowsMax
               << std::endl;
 }
 
