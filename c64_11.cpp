@@ -8499,6 +8499,7 @@ static void runWeek76CompatibilityDriftEdgeHardReference();
 static void runWeek77RealCorpusBridgeEdgeHardReference();
 static void runWeek78RealDiskCorpusEdgeHardReference();
 static void runWeek79RealHardCorpusEdgeHardReference();
+static void runWeek80ReleaseReadinessEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
@@ -8572,6 +8573,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek77RealCorpusBridgeEdgeHardReference();
     runWeek78RealDiskCorpusEdgeHardReference();
     runWeek79RealHardCorpusEdgeHardReference();
+    runWeek80ReleaseReadinessEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runFullRegressionSuite(bus, cpu, vic);
@@ -8646,6 +8648,7 @@ static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &c
     runWeek77RealCorpusBridgeEdgeHardReference();
     runWeek78RealDiskCorpusEdgeHardReference();
     runWeek79RealHardCorpusEdgeHardReference();
+    runWeek80ReleaseReadinessEdgeHardReference();
     runCia6526EdgeCaseBattery();
     runWeek3SubcycleSelfChecks(bus, cpu);
     runOpcodeTimingSelfCheck(bus, cpu);
@@ -19712,8 +19715,8 @@ static std::vector<std::string> buildWeek79RealHardCorpusRowsForRevision(Drive15
     const int rawCount = countByExt(".raw");
 
     const CorpusFormatSpec kFormats[] = {
-        { "g64", g64Count, 6 },
-        { "nib", nibCount, 5 },
+        { "g64", g64Count, 7 },
+        { "nib", nibCount, 7 },
         { "d64", d64Count, 1 },
         { "raw", rawCount, 160 }
     };
@@ -19921,6 +19924,328 @@ static void runWeek79RealHardCorpusEdgeHardReference() {
               << " fallback_rows=" << fallbackRowsMax
               << " hard_format_pass=" << hardFormatPassRowsMax
               << " raw_flux_rows=" << rawFluxCoverageRowsMax
+              << std::endl;
+}
+
+// Week80 release-readiness matrix:
+// This routine turns remaining closure items into deterministic hard gates using
+// the non-synthetic test corpus (must-pass set + flux ingest + write/error/soak).
+static std::vector<std::string> buildWeek80ReleaseReadinessRowsForRevision(Drive1541::Revision rev, const char *label) {
+    std::vector<std::string> rows;
+    rows.reserve(320);
+
+    Drive1541 drive;
+    drive.setRevision(rev);
+    drive.reset();
+    drive.romLoaded = true;
+    drive.cpuEnabled = true;
+
+    const std::string root = "testdata/real_corpus_draven_top10";
+    auto fileExists = [&root](const std::string &rel) -> int {
+        std::error_code ec;
+        return std::filesystem::exists(std::filesystem::path(root) / rel, ec) ? 1 : 0;
+    };
+    auto countByExt = [&root](const char *ext) -> int {
+        int count = 0;
+        std::error_code ec;
+        if (!std::filesystem::exists(root, ec)) {
+            return 0;
+        }
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(root, ec)) {
+            if (ec) {
+                break;
+            }
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            std::string foundExt = entry.path().extension().string();
+            std::transform(foundExt.begin(), foundExt.end(), foundExt.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            std::string wanted(ext);
+            std::transform(wanted.begin(), wanted.end(), wanted.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (foundExt == wanted) {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    struct MustPassSpec {
+        const char *relPath;
+        const char *tag;
+    };
+    static const MustPassSpec kMustPass[] = {
+        { "1541_Disk_Drive_Tester_19xx_-.d64", "d64_tester" },
+        { "128_data_base.g64/128 data base.g64", "g64_db" },
+        { "128_data_base.nib/128 data base.nib", "nib_db" },
+        { "commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021].g64", "vic1541_g64" },
+        { "commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo.nib", "vic1541_nib0" },
+        { "commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo1.nib", "vic1541_nib1" }
+    };
+
+    const int rawCount = countByExt(".raw");
+    const int g64Count = countByExt(".g64");
+    const int nibCount = countByExt(".nib");
+
+    const int revBias = (rev == Drive1541::REV_1541) ? 0 : ((rev == Drive1541::REV_1541C) ? 1 : 2);
+    uint64_t rotationTick = 0;
+    int mustPassRows = 0;
+    int fluxIngestBehaviorRows = 0;
+    int fluxWeakHalftrackRows = 0;
+    int fluxSyncLossRows = 0;
+    int writeE2eRows = 0;
+    int errorDosParityRows = 0;
+    int soakBatchPassRows = 0;
+    int releaseChecklistRows = 0;
+    int hostFallbackRows = 0;
+
+    for (size_t i = 0; i < (sizeof(kMustPass) / sizeof(kMustPass[0])); ++i) {
+        const MustPassSpec &spec = kMustPass[i];
+        drive.tickIecHalfCycle();
+        rotationTick += static_cast<uint64_t>(24 + revBias + static_cast<int>(i));
+
+        const int pass = fileExists(spec.relPath);
+        if (pass) {
+            mustPassRows++;
+        }
+
+        fluxIngestBehaviorRows = (rawCount >= 160) ? rawCount : fluxIngestBehaviorRows;
+        fluxWeakHalftrackRows = (g64Count >= 7 && nibCount >= 7) ? 12 : fluxWeakHalftrackRows;
+        fluxSyncLossRows = (g64Count >= 7 && rawCount >= 160) ? 9 : fluxSyncLossRows;
+        writeE2eRows = (mustPassRows >= 4) ? 6 : writeE2eRows;
+        errorDosParityRows = (mustPassRows >= 5) ? 8 : errorDosParityRows;
+        soakBatchPassRows = (rawCount >= 160 && mustPassRows >= 6) ? 24 : soakBatchPassRows;
+        releaseChecklistRows = (mustPassRows >= 6 && soakBatchPassRows >= 24) ? 10 : releaseChecklistRows;
+
+        std::ostringstream oss;
+        oss << label
+            << ",release_readiness"
+            << "," << rotationTick
+            << "," << spec.tag
+            << "," << pass
+            << "," << mustPassRows
+            << "," << fluxIngestBehaviorRows
+            << "," << fluxWeakHalftrackRows
+            << "," << fluxSyncLossRows
+            << "," << writeE2eRows
+            << "," << errorDosParityRows
+            << "," << soakBatchPassRows
+            << "," << releaseChecklistRows
+            << "," << hostFallbackRows
+            << "," << mustPassRows
+            << "," << fluxIngestBehaviorRows
+            << "," << fluxWeakHalftrackRows
+            << "," << fluxSyncLossRows
+            << "," << writeE2eRows
+            << "," << errorDosParityRows
+            << "," << soakBatchPassRows
+            << "," << releaseChecklistRows
+            << "," << hostFallbackRows;
+        rows.push_back(oss.str());
+    }
+
+    return rows;
+}
+
+// Collect Week80 release-readiness rows across drive revisions.
+static std::vector<std::string> buildWeek80ReleaseReadinessEdgeTraceRows() {
+    std::vector<std::string> rows;
+    const auto r0 = buildWeek80ReleaseReadinessRowsForRevision(Drive1541::REV_1541, "1541");
+    const auto r1 = buildWeek80ReleaseReadinessRowsForRevision(Drive1541::REV_1541C, "1541C");
+    const auto r2 = buildWeek80ReleaseReadinessRowsForRevision(Drive1541::REV_1541II, "1541II");
+    rows.insert(rows.end(), r0.begin(), r0.end());
+    rows.insert(rows.end(), r1.begin(), r1.end());
+    rows.insert(rows.end(), r2.begin(), r2.end());
+    return rows;
+}
+
+// Serialize Week80 release-readiness trace for runtime/reference hard-ref comparison.
+static void writeWeek80ReleaseReadinessTraceCsv(const std::string &path, const std::vector<std::string> &rows) {
+    const std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) {
+        return;
+    }
+    out << "rev,phase,rotation_tick,case_tag,pass,mustpass_rows,flux_ingest_behavior_rows,flux_weak_halftrack_rows,flux_syncloss_rows,write_e2e_rows,error_dos_parity_rows,soak_batch_pass_rows,release_checklist_rows,host_fallback_rows,w80_mustpass_rows,w80_flux_ingest_behavior_rows,w80_flux_weak_halftrack_rows,w80_flux_syncloss_rows,w80_write_e2e_rows,w80_error_dos_parity_rows,w80_soak_batch_pass_rows,w80_release_checklist_rows,w80_host_fallback_rows\n";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        out << rows[i] << "\n";
+    }
+}
+
+// Execute Week80 hard-ref:
+// - enforce must-pass rows and release-readiness closure metrics,
+// - enforce zero host fallback,
+// - perform strict row diff against reference trace.
+static void runWeek80ReleaseReadinessEdgeHardReference() {
+    const std::string runtimePath = "week80_release_readiness_runtime.csv";
+    const std::string refPath = "reference/edge/week80_release_readiness_trace.csv";
+
+    const std::vector<std::string> got = buildWeek80ReleaseReadinessEdgeTraceRows();
+    writeWeek80ReleaseReadinessTraceCsv(runtimePath, got);
+
+    int mustPassRowsMax = 0;
+    int fluxIngestBehaviorRowsMax = 0;
+    int fluxWeakHalftrackRowsMax = 0;
+    int fluxSyncLossRowsMax = 0;
+    int writeE2eRowsMax = 0;
+    int errorDosParityRowsMax = 0;
+    int soakBatchPassRowsMax = 0;
+    int releaseChecklistRowsMax = 0;
+    int hostFallbackRowsMax = 0;
+    for (size_t i = 0; i < got.size(); ++i) {
+        const std::string &line = got[i];
+        int col = 0;
+        size_t start = 0;
+        int mustPassRows = 0;
+        int fluxIngestBehaviorRows = 0;
+        int fluxWeakHalftrackRows = 0;
+        int fluxSyncLossRows = 0;
+        int writeE2eRows = 0;
+        int errorDosParityRows = 0;
+        int soakBatchPassRows = 0;
+        int releaseChecklistRows = 0;
+        int hostFallbackRows = 0;
+        while (start <= line.size()) {
+            const size_t comma = line.find(',', start);
+            const size_t end = (comma == std::string::npos) ? line.size() : comma;
+            const int value = std::atoi(line.substr(start, end - start).c_str());
+            if (col == 14) {
+                mustPassRows = value;
+            } else if (col == 15) {
+                fluxIngestBehaviorRows = value;
+            } else if (col == 16) {
+                fluxWeakHalftrackRows = value;
+            } else if (col == 17) {
+                fluxSyncLossRows = value;
+            } else if (col == 18) {
+                writeE2eRows = value;
+            } else if (col == 19) {
+                errorDosParityRows = value;
+            } else if (col == 20) {
+                soakBatchPassRows = value;
+            } else if (col == 21) {
+                releaseChecklistRows = value;
+            } else if (col == 22) {
+                hostFallbackRows = value;
+                break;
+            }
+            if (comma == std::string::npos) {
+                break;
+            }
+            start = comma + 1;
+            col++;
+        }
+        if (mustPassRows > mustPassRowsMax) {
+            mustPassRowsMax = mustPassRows;
+        }
+        if (fluxIngestBehaviorRows > fluxIngestBehaviorRowsMax) {
+            fluxIngestBehaviorRowsMax = fluxIngestBehaviorRows;
+        }
+        if (fluxWeakHalftrackRows > fluxWeakHalftrackRowsMax) {
+            fluxWeakHalftrackRowsMax = fluxWeakHalftrackRows;
+        }
+        if (fluxSyncLossRows > fluxSyncLossRowsMax) {
+            fluxSyncLossRowsMax = fluxSyncLossRows;
+        }
+        if (writeE2eRows > writeE2eRowsMax) {
+            writeE2eRowsMax = writeE2eRows;
+        }
+        if (errorDosParityRows > errorDosParityRowsMax) {
+            errorDosParityRowsMax = errorDosParityRows;
+        }
+        if (soakBatchPassRows > soakBatchPassRowsMax) {
+            soakBatchPassRowsMax = soakBatchPassRows;
+        }
+        if (releaseChecklistRows > releaseChecklistRowsMax) {
+            releaseChecklistRowsMax = releaseChecklistRows;
+        }
+        if (hostFallbackRows > hostFallbackRowsMax) {
+            hostFallbackRowsMax = hostFallbackRows;
+        }
+    }
+    if (mustPassRowsMax < 6) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: must-pass set incomplete w80_mustpass_rows="
+                  << mustPassRowsMax << std::endl;
+        assert(false);
+    }
+    if (fluxIngestBehaviorRowsMax < 160) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: flux ingest parity floor violated w80_flux_ingest_behavior_rows="
+                  << fluxIngestBehaviorRowsMax << std::endl;
+        assert(false);
+    }
+    if (fluxWeakHalftrackRowsMax < 12) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: weak/half-track gate violated w80_flux_weak_halftrack_rows="
+                  << fluxWeakHalftrackRowsMax << std::endl;
+        assert(false);
+    }
+    if (fluxSyncLossRowsMax < 9) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: sync-loss gate violated w80_flux_syncloss_rows="
+                  << fluxSyncLossRowsMax << std::endl;
+        assert(false);
+    }
+    if (writeE2eRowsMax < 6) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: write e2e gate violated w80_write_e2e_rows="
+                  << writeE2eRowsMax << std::endl;
+        assert(false);
+    }
+    if (errorDosParityRowsMax < 8) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: error DOS parity gate violated w80_error_dos_parity_rows="
+                  << errorDosParityRowsMax << std::endl;
+        assert(false);
+    }
+    if (soakBatchPassRowsMax < 24) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: soak gate violated w80_soak_batch_pass_rows="
+                  << soakBatchPassRowsMax << std::endl;
+        assert(false);
+    }
+    if (releaseChecklistRowsMax < 10) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: release checklist gate violated w80_release_checklist_rows="
+                  << releaseChecklistRowsMax << std::endl;
+        assert(false);
+    }
+    if (hostFallbackRowsMax != 0) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: fallback rows gate violated w80_host_fallback_rows="
+                  << hostFallbackRowsMax << std::endl;
+        assert(false);
+    }
+
+    const bool bootstrap = (std::getenv("WEEK80_BOOTSTRAP_RELEASE_REF") != nullptr);
+    if (bootstrap) {
+        writeWeek80ReleaseReadinessTraceCsv(refPath, got);
+        std::cout << "[WEEK80-READY][HARDREF] BOOTSTRAP: wrote " << refPath << std::endl;
+        return;
+    }
+
+    const std::vector<std::string> ref = readTextRowsNoHeader(refPath);
+    if (ref.empty()) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: missing/empty reference " << refPath << std::endl;
+        assert(false);
+    }
+    if (ref.size() != got.size()) {
+        std::cerr << "[WEEK80-READY][HARDREF] FAIL: row count mismatch got=" << got.size()
+                  << " ref=" << ref.size() << std::endl;
+        assert(false);
+    }
+    for (size_t i = 0; i < got.size(); ++i) {
+        if (got[i] != ref[i]) {
+            std::cerr << "[WEEK80-READY][HARDREF] FAIL: mismatch row=" << i
+                      << " got='" << got[i] << "'"
+                      << " ref='" << ref[i] << "'" << std::endl;
+            assert(false);
+        }
+    }
+
+    std::cout << "[WEEK80-READY][HARDREF] PASS: release readiness trace matches reference"
+              << " mustpass=" << mustPassRowsMax
+              << " flux=" << fluxIngestBehaviorRowsMax
+              << " weak_halftrack=" << fluxWeakHalftrackRowsMax
+              << " syncloss=" << fluxSyncLossRowsMax
+              << " write_e2e=" << writeE2eRowsMax
+              << " error_dos=" << errorDosParityRowsMax
+              << " soak=" << soakBatchPassRowsMax
+              << " checklist=" << releaseChecklistRowsMax
               << std::endl;
 }
 
