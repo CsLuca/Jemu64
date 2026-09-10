@@ -5935,6 +5935,43 @@ static void configureDriveRevisionFromEnv(Drive1541 &drive) {
     drive.setRevision((v == "1541ii") ? Drive1541::REV_1541II : ((v == "1541c") ? Drive1541::REV_1541C : Drive1541::REV_1541));
 }
 
+struct DriveSlotMountConfig {
+    std::string path;
+    std::string format;
+    bool exists = false;
+};
+
+static DriveSlotMountConfig loadDriveSlotMountConfig(uint8_t unit) {
+    DriveSlotMountConfig cfg;
+    const std::string unitLabel = std::to_string(static_cast<unsigned>(unit));
+    const std::string imageKey = "DRIVE" + unitLabel + "_IMAGE";
+    const std::string formatKey = "DRIVE" + unitLabel + "_FORMAT";
+
+    const char *imageEnv = std::getenv(imageKey.c_str());
+    if (imageEnv == nullptr || imageEnv[0] == '\0') {
+        return cfg;
+    }
+
+    cfg.path = imageEnv;
+    cfg.exists = std::filesystem::exists(std::filesystem::path(cfg.path));
+
+    const char *formatEnv = std::getenv(formatKey.c_str());
+    if (formatEnv != nullptr && formatEnv[0] != '\0') {
+        cfg.format = asciiLower(formatEnv);
+        return cfg;
+    }
+
+    const std::filesystem::path p(cfg.path);
+    std::string ext = asciiLower(p.extension().string());
+    if (!ext.empty() && ext[0] == '.') {
+        ext.erase(ext.begin());
+    }
+    if (ext == "d64" || ext == "g64" || ext == "nib" || ext == "raw") {
+        cfg.format = ext;
+    }
+    return cfg;
+}
+
 static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc) {
     const char *savedCpuRev = std::getenv("C64_CPU_REVISION");
     const char *savedVicRev = std::getenv("C64_VIC_REVISION");
@@ -6150,12 +6187,15 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     std::array<Drive1541, 4> driveSlots;
     for (size_t i = 0; i < driveSlots.size(); ++i) {
         Drive1541 &slotDrive = driveSlots[i];
-        slotDrive.iecDeviceAddress = static_cast<uint8_t>(8 + i);
+        const uint8_t deviceUnit = static_cast<uint8_t>(8 + i);
+        slotDrive.iecDeviceAddress = deviceUnit;
         configureDriveRevisionFromEnv(slotDrive);
         if (!slotDrive.loadRom("roms/dos1541.rom")) {
             std::cerr << "[KERNAL IEC E2E] FAIL: cannot load roms/dos1541.rom" << std::endl;
             assert(false);
         }
+        const DriveSlotMountConfig mountCfg = loadDriveSlotMountConfig(deviceUnit);
+        slotDrive.configureMountedImage(mountCfg.path, mountCfg.format, mountCfg.exists);
         slotDrive.cpuEnabled = false;
     }
 

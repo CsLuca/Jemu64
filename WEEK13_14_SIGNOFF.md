@@ -941,6 +941,35 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - trigger: `workflow_dispatch`
   - runs only `run_check_pla_snapshot.ps1` for a quick PLA digest gate
 
+## Multi-Drive Slot Mount Metadata (Commit 5)
+
+- Runtime now creates explicit 1541 slots for units `8/9/10/11` and configures mount metadata per slot.
+- Per-unit environment variables:
+  - `DRIVE8_IMAGE`, `DRIVE9_IMAGE`, `DRIVE10_IMAGE`, `DRIVE11_IMAGE`
+  - optional format override: `DRIVE8_FORMAT`, `DRIVE9_FORMAT`, `DRIVE10_FORMAT`, `DRIVE11_FORMAT`
+- Supported metadata formats: `d64`, `g64`, `nib`, `raw`.
+- If `DRIVE*_FORMAT` is not set, format is inferred from the file extension.
+
+### New Functions / Structures
+
+- `DriveSlotMountConfig` (`c64_11.cpp`)
+  - holds `path`, `format`, `exists` for one unit.
+
+- `loadDriveSlotMountConfig(uint8_t unit)` (`c64_11.cpp`)
+  - parses unit-specific env vars;
+  - normalizes optional format override;
+  - infers format from extension when missing;
+  - computes path existence via filesystem check.
+
+- `Drive1541::configureMountedImage(const std::string &path, const std::string &format, bool exists)` (`drive_1541.hpp`)
+  - stores mount metadata inside each drive instance;
+  - updates `mountedImageConfigured`, `mountedImagePath`, `mountedImageFormat`, `mountedImageExists`.
+
+### Scope Boundary
+
+- Commit 5 provides independent per-slot mount metadata wiring.
+- Full format-specific disk ingest semantics are intentionally deferred to next commits.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

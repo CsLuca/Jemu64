@@ -217,6 +217,18 @@ public:
     std::string iecDirectoryModeFilter;
     bool iecDirectoryModeFilterNegated = false;
 
+    std::string mountedImagePath;
+    std::string mountedImageFormat;
+    bool mountedImageConfigured = false;
+    bool mountedImageExists = false;
+
+    void configureMountedImage(const std::string &path, const std::string &format, bool exists) {
+        mountedImageConfigured = !path.empty();
+        mountedImagePath = path;
+        mountedImageFormat = format;
+        mountedImageExists = exists;
+    }
+
     // Drive CPU scaffold state (placeholder for real core)
     bool cpuEnabled = false;
     uint8_t cpuLastOpcode = 0;
