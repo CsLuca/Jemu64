@@ -8351,7 +8351,7 @@ static void runWeek45TimeCoreMultiDomainSelfCheck() {
     Drive1541 driveA;
     IecBridgePolarity pol = makeRuntimeDefaultIecPolarity();
 
-    SharedIecClockDomain domainA(cia2A, driveA, pol);
+    IecBusDomain domainA(cia2A, driveA, pol);
     domainA.configureDomainRatesForTest(985248ULL, 1000000ULL, 1200, 1337u, 0);
 
     uint32_t eventCounterA = 0;
@@ -8385,17 +8385,17 @@ static void runWeek45TimeCoreMultiDomainSelfCheck() {
 
     CIA6526 cia2B;
     Drive1541 driveB;
-    SharedIecClockDomain domainB(cia2B, driveB, pol);
+    IecBusDomain domainB(cia2B, driveB, pol);
     domainB.configureDomainRatesForTest(985248ULL, 1000000ULL, 1200, 1337u, 8);
 
     CIA6526 cia2C;
     Drive1541 driveC;
-    SharedIecClockDomain domainC(cia2C, driveC, pol);
+    IecBusDomain domainC(cia2C, driveC, pol);
     domainC.configureDomainRatesForTest(985248ULL, 1000000ULL, 1200, 1337u, 8);
 
     uint64_t digestB = 0;
     uint64_t digestC = 0;
-    auto runDigest = [&](SharedIecClockDomain &dom, uint64_t &digest) {
+    auto runDigest = [&](IecBusDomain &dom, uint64_t &digest) {
         for (int i = 0; i < 2048; ++i) {
             dom.scheduleEventAfter(0, [&]() {
                 digest ^= (dom.getCurrentTimeUnits() + (dom.getDriveHalfTicks() << 1) + (dom.getC64HalfTicks() << 3));

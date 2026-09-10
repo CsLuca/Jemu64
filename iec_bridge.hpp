@@ -485,14 +485,109 @@ struct IecBusDomain {
     CIA6526 &cia2;
     IecBridgePolarity polarity;
     std::vector<Drive1541 *> attachedDrives;
-    SharedIecClockDomain singleDomain;
+    struct TimedEvent {
+        uint64_t when = 0;
+        uint64_t seq = 0;
+        std::function<void()> callback;
+    };
+
+    struct TimedEventCompare {
+        bool operator()(const TimedEvent &a, const TimedEvent &b) const {
+            if (a.when != b.when) {
+                return a.when > b.when;
+            }
+            return a.seq > b.seq;
+        }
+    };
+
+    static constexpr uint64_t C64_HALF_PERIOD_UNITS = 1000000ULL;
+
+    uint64_t c64HalfRateHz = 985248ULL;
+    uint64_t driveHalfRateHz = 1000000ULL;
+    int32_t driveDriftPpm = 0;
+    uint64_t nowUnits = 0;
+    uint64_t nextC64Units = 0;
+    uint64_t nextDriveUnits = 0;
+    uint64_t c64HalfTicks = 0;
+    uint64_t driveHalfTicks = 0;
+    uint64_t eventSeq = 0;
+    uint32_t ditherSeed = 0;
+    int32_t ditherAmplitude = 0;
+    uint64_t linkLatencyC64ToBus = 1;
+    uint64_t linkLatencyDriveToBus = 1;
+    uint64_t linkLatencyBusToC64 = 1;
+    uint64_t linkLatencyBusToDrive = 1;
+    uint64_t linkJitterUnits = 0;
+    uint32_t linkJitterSeed = 0;
+
+    bool linkC64PullATN = false;
+    bool linkC64PullCLK = false;
+    bool linkC64PullDATA = false;
+    bool linkDrivePullCLK = false;
+    bool linkDrivePullDATA = false;
+    bool linkLineATNHigh = true;
+    bool linkLineCLKHigh = true;
+    bool linkLineDATAHigh = true;
+
+    std::priority_queue<TimedEvent, std::vector<TimedEvent>, TimedEventCompare> events;
 
     IecBusDomain(CIA6526 &c, Drive1541 &primaryDrive, const IecBridgePolarity &p)
-        : cia2(c), polarity(p), attachedDrives{&primaryDrive}, singleDomain(c, primaryDrive, p) {
+        : cia2(c), polarity(p), attachedDrives{&primaryDrive} {
+        if (const char *driveHzEnv = std::getenv("IEC_DRIVE_HALF_HZ")) {
+            const unsigned long long parsed = std::strtoull(driveHzEnv, nullptr, 10);
+            if (parsed > 0ULL) {
+                driveHalfRateHz = static_cast<uint64_t>(parsed);
+            }
+        }
+        if (const char *c64HzEnv = std::getenv("IEC_C64_HALF_HZ")) {
+            const unsigned long long parsed = std::strtoull(c64HzEnv, nullptr, 10);
+            if (parsed > 0ULL) {
+                c64HalfRateHz = static_cast<uint64_t>(parsed);
+            }
+        }
+        if (const char *driftEnv = std::getenv("IEC_DRIVE_DRIFT_PPM")) {
+            driveDriftPpm = static_cast<int32_t>(std::strtol(driftEnv, nullptr, 10));
+        }
+        if (const char *seedEnv = std::getenv("IEC_DRIVE_DITHER_SEED")) {
+            ditherSeed = static_cast<uint32_t>(std::strtoul(seedEnv, nullptr, 10));
+        }
+        if (const char *ampEnv = std::getenv("IEC_DRIVE_DITHER_AMPLITUDE")) {
+            ditherAmplitude = static_cast<int32_t>(std::strtol(ampEnv, nullptr, 10));
+            if (ditherAmplitude < 0) {
+                ditherAmplitude = 0;
+            }
+        }
+        if (const char *v = std::getenv("IEC_LINK_C64_TO_BUS_UNITS")) {
+            linkLatencyC64ToBus = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINK_DRIVE_TO_BUS_UNITS")) {
+            linkLatencyDriveToBus = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINK_BUS_TO_C64_UNITS")) {
+            linkLatencyBusToC64 = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINK_BUS_TO_DRIVE_UNITS")) {
+            linkLatencyBusToDrive = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINK_JITTER_UNITS")) {
+            linkJitterUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINK_SEED")) {
+            linkJitterSeed = static_cast<uint32_t>(std::strtoul(v, nullptr, 10));
+        }
+
+        bootstrapIecLink();
     }
 
     void attachDrive(Drive1541 &drive) {
+        for (Drive1541 *existing : attachedDrives) {
+            if (existing == &drive) {
+                return;
+            }
+        }
         attachedDrives.push_back(&drive);
+        drive.setIecLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
+        scheduleBusSettleFromDrivePulls(anyDrivePullCLK(), anyDrivePullDATA());
     }
 
     size_t driveCount() const {
@@ -500,30 +595,244 @@ struct IecBusDomain {
     }
 
     void configureDomainRatesForTest(uint64_t c64Hz, uint64_t driveHz, int32_t driftPpmValue, uint32_t seed, int32_t amp) {
-        singleDomain.configureDomainRatesForTest(c64Hz, driveHz, driftPpmValue, seed, amp);
+        if (c64Hz > 0) {
+            c64HalfRateHz = c64Hz;
+        }
+        if (driveHz > 0) {
+            driveHalfRateHz = driveHz;
+        }
+        driveDriftPpm = driftPpmValue;
+        ditherSeed = seed;
+        ditherAmplitude = (amp < 0) ? 0 : amp;
     }
 
     uint64_t getCurrentTimeUnits() const {
-        return singleDomain.getCurrentTimeUnits();
+        return nowUnits;
     }
 
     uint64_t getC64HalfTicks() const {
-        return singleDomain.getC64HalfTicks();
+        return c64HalfTicks;
     }
 
     uint64_t getDriveHalfTicks() const {
-        return singleDomain.getDriveHalfTicks();
+        return driveHalfTicks;
+    }
+
+    void scheduleEventAtAbsolute(uint64_t when, const std::function<void()> &callback) {
+        events.push(TimedEvent{when, eventSeq++, callback});
     }
 
     void scheduleEventAfter(uint64_t delta, const std::function<void()> &callback) {
-        singleDomain.scheduleEventAfter(delta, callback);
+        scheduleEventAtAbsolute(nowUnits + delta, callback);
     }
 
     void scheduleEventAtNextC64Boundary(const std::function<void()> &callback) {
-        singleDomain.scheduleEventAtNextC64Boundary(callback);
+        scheduleEventAtAbsolute(nextC64Units, callback);
+    }
+
+    uint64_t effectiveDriveHalfRateHz() const {
+        int64_t scaled = static_cast<int64_t>(driveHalfRateHz);
+        scaled += static_cast<int64_t>((static_cast<long long>(driveHalfRateHz) * static_cast<long long>(driveDriftPpm)) / 1000000LL);
+        if (scaled <= 0) {
+            scaled = 1;
+        }
+        return static_cast<uint64_t>(scaled);
+    }
+
+    uint64_t nextDrivePeriodUnits() {
+        const uint64_t effRate = effectiveDriveHalfRateHz();
+        uint64_t base = (C64_HALF_PERIOD_UNITS * c64HalfRateHz + (effRate / 2ULL)) / effRate;
+        if (base == 0) {
+            base = 1;
+        }
+
+        if (ditherAmplitude <= 0) {
+            return base;
+        }
+
+        ditherSeed = static_cast<uint32_t>(1664525u * ditherSeed + 1013904223u);
+        const uint32_t span = static_cast<uint32_t>((ditherAmplitude * 2) + 1);
+        const int32_t jitter = static_cast<int32_t>(ditherSeed % span) - ditherAmplitude;
+        int64_t withJitter = static_cast<int64_t>(base) + static_cast<int64_t>(jitter);
+        if (withJitter < 1) {
+            withJitter = 1;
+        }
+        return static_cast<uint64_t>(withJitter);
+    }
+
+    uint64_t linkDelayWithJitter(uint64_t base) {
+        uint64_t d = base;
+        if (linkJitterUnits > 0) {
+            linkJitterSeed = static_cast<uint32_t>(1664525u * linkJitterSeed + 1013904223u);
+            d += (linkJitterSeed % (linkJitterUnits + 1));
+        }
+        if (d == 0) {
+            d = 1;
+        }
+        return d;
+    }
+
+    bool anyDrivePullCLK() const {
+        for (const Drive1541 *drive : attachedDrives) {
+            if (drive != nullptr && drive->iecDrivePullCLK) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool anyDrivePullDATA() const {
+        for (const Drive1541 *drive : attachedDrives) {
+            if (drive != nullptr && drive->iecDrivePullDATA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void propagateLinesToDrives() {
+        for (Drive1541 *drive : attachedDrives) {
+            if (drive != nullptr) {
+                drive->setIecLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
+            }
+        }
+    }
+
+    void bootstrapIecLink() {
+        const IecC64Signals sig = deriveIecC64Signals(cia2, polarity);
+        linkC64PullATN = sig.c64PullATN;
+        linkC64PullCLK = sig.c64PullCLK;
+        linkC64PullDATA = sig.c64PullDATA;
+        linkDrivePullCLK = anyDrivePullCLK();
+        linkDrivePullDATA = anyDrivePullDATA();
+        const IecResolvedLines lines = resolveIecLinesFromPulls(linkC64PullATN,
+                                                                linkC64PullCLK,
+                                                                linkC64PullDATA,
+                                                                linkDrivePullCLK,
+                                                                linkDrivePullDATA);
+        linkLineATNHigh = lines.atnHigh;
+        linkLineCLKHigh = lines.clkHigh;
+        linkLineDATAHigh = lines.dataHigh;
+        propagateLinesToDrives();
+        applyIecInputsToCia(cia2, polarity, sig, lines);
+    }
+
+    void scheduleBusSettleFromC64Pulls(bool pullATN, bool pullCLK, bool pullDATA) {
+        const uint64_t delay = linkDelayWithJitter(linkLatencyC64ToBus);
+        scheduleEventAfter(delay, [this, pullATN, pullCLK, pullDATA]() {
+            linkC64PullATN = pullATN;
+            linkC64PullCLK = pullCLK;
+            linkC64PullDATA = pullDATA;
+            settleBusAndPropagateSamples();
+        });
+    }
+
+    void scheduleBusSettleFromDrivePulls(bool pullCLK, bool pullDATA) {
+        const uint64_t delay = linkDelayWithJitter(linkLatencyDriveToBus);
+        scheduleEventAfter(delay, [this, pullCLK, pullDATA]() {
+            linkDrivePullCLK = pullCLK;
+            linkDrivePullDATA = pullDATA;
+            settleBusAndPropagateSamples();
+        });
+    }
+
+    void settleBusAndPropagateSamples() {
+        const IecResolvedLines lines = resolveIecLinesFromPulls(linkC64PullATN,
+                                                                linkC64PullCLK,
+                                                                linkC64PullDATA,
+                                                                linkDrivePullCLK,
+                                                                linkDrivePullDATA);
+        if (lines.atnHigh == linkLineATNHigh && lines.clkHigh == linkLineCLKHigh && lines.dataHigh == linkLineDATAHigh) {
+            return;
+        }
+
+        linkLineATNHigh = lines.atnHigh;
+        linkLineCLKHigh = lines.clkHigh;
+        linkLineDATAHigh = lines.dataHigh;
+
+        const uint64_t toDrive = linkDelayWithJitter(linkLatencyBusToDrive);
+        scheduleEventAfter(toDrive, [this]() {
+            propagateLinesToDrives();
+        });
+
+        const uint64_t toC64 = linkDelayWithJitter(linkLatencyBusToC64);
+        scheduleEventAfter(toC64, [this]() {
+            const IecC64Signals sigNow = deriveIecC64Signals(cia2, polarity);
+            const IecResolvedLines linesNow = {linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh};
+            applyIecInputsToCia(cia2, polarity, sigNow, linesNow);
+        });
+    }
+
+    void executeTimedEventsAtNow() {
+        while (!events.empty() && events.top().when <= nowUnits) {
+            const TimedEvent ev = events.top();
+            events.pop();
+            if (ev.callback) {
+                ev.callback();
+            }
+        }
+    }
+
+    void tickDriveDomainOnce() {
+        const bool prevPullCLK = anyDrivePullCLK();
+        const bool prevPullDATA = anyDrivePullDATA();
+
+        for (Drive1541 *drive : attachedDrives) {
+            if (drive != nullptr) {
+                drive->tickIecHalfCycle();
+            }
+        }
+        driveHalfTicks++;
+
+        const bool nextPullCLK = anyDrivePullCLK();
+        const bool nextPullDATA = anyDrivePullDATA();
+        if (nextPullCLK != prevPullCLK || nextPullDATA != prevPullDATA) {
+            scheduleBusSettleFromDrivePulls(nextPullCLK, nextPullDATA);
+        }
+
+        nextDriveUnits += nextDrivePeriodUnits();
+    }
+
+    void tickC64DomainOnce() {
+        const bool cntHigh = (cia2.praInput & 0x40) != 0;
+        const bool spHigh = (cia2.praInput & 0x80) != 0;
+        cia2.setSerialPins(cntHigh, spHigh);
+
+        const IecC64Signals pre = deriveIecC64Signals(cia2, polarity);
+        cia2.cycleCore.tickHalfCycle(cia2);
+        const IecC64Signals post = deriveIecC64Signals(cia2, polarity);
+
+        if (post.c64PullATN != pre.c64PullATN || post.c64PullCLK != pre.c64PullCLK || post.c64PullDATA != pre.c64PullDATA) {
+            scheduleBusSettleFromC64Pulls(post.c64PullATN, post.c64PullCLK, post.c64PullDATA);
+        }
+
+        c64HalfTicks++;
+        nextC64Units += C64_HALF_PERIOD_UNITS;
     }
 
     void tickHalfCycle() {
-        singleDomain.tickHalfCycle();
+        const uint64_t targetC64Tick = c64HalfTicks + 1;
+        while (c64HalfTicks < targetC64Tick) {
+            uint64_t nextTime = nextC64Units;
+            if (nextDriveUnits < nextTime) {
+                nextTime = nextDriveUnits;
+            }
+            if (!events.empty() && events.top().when < nextTime) {
+                nextTime = events.top().when;
+            }
+
+            nowUnits = nextTime;
+            executeTimedEventsAtNow();
+
+            if (nextDriveUnits == nowUnits) {
+                tickDriveDomainOnce();
+                executeTimedEventsAtNow();
+            }
+
+            if (nextC64Units == nowUnits) {
+                tickC64DomainOnce();
+                executeTimedEventsAtNow();
+            }
+        }
     }
 };
