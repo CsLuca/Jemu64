@@ -1495,6 +1495,38 @@ public:
         return static_cast<uint16_t>(((uint16_t(track) << 8) | sector) & 0xBFFF);
     }
 
+    bool isMountedD64BackendActive() const {
+        return mountedImageConfigured && mountedImageExists && mountedImageFormat == "d64";
+    }
+
+    bool d64TrackSectorToOffset(uint8_t track, uint8_t sector, uint32_t &offset) const {
+        if (track < 1 || track > 35) {
+            return false;
+        }
+
+        static const uint8_t sectorsPerTrack[36] = {
+            0,
+            21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
+            19,19,19,19,19,19,19,
+            18,18,18,18,18,18,
+            17,17,17,17,17
+        };
+
+        const uint8_t spt = sectorsPerTrack[track];
+        if (sector >= spt) {
+            return false;
+        }
+
+        uint32_t sectorsBefore = 0;
+        for (uint8_t t = 1; t < track; ++t) {
+            sectorsBefore += sectorsPerTrack[t];
+        }
+
+        const uint32_t sectorIndex = sectorsBefore + sector;
+        offset = sectorIndex * 256u;
+        return true;
+    }
+
     uint16_t blockAllocIndex(uint8_t track, uint8_t sector) const {
         const uint32_t key = static_cast<uint32_t>(track) * 21u + static_cast<uint32_t>(sector);
         return static_cast<uint16_t>(key % IEC_TOTAL_VIRTUAL_BLOCKS);
@@ -1807,9 +1839,26 @@ public:
     }
 
     void loadVirtualBlock(uint8_t track, uint8_t sector) {
-        const uint16_t base = blockLinearBase(track, sector);
-        for (uint16_t i = 0; i < 256; ++i) {
-            iecBlockBuffer[i] = memory[static_cast<uint16_t>((base + i) & 0xBFFF)];
+        bool loadedFromD64 = false;
+        if (isMountedD64BackendActive()) {
+            uint32_t offset = 0;
+            if (d64TrackSectorToOffset(track, sector, offset)) {
+                std::ifstream in(mountedImagePath, std::ios::binary);
+                if (in.is_open()) {
+                    in.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+                    in.read(reinterpret_cast<char *>(iecBlockBuffer.data()), 256);
+                    if (in.gcount() == 256) {
+                        loadedFromD64 = true;
+                    }
+                }
+            }
+        }
+
+        if (!loadedFromD64) {
+            const uint16_t base = blockLinearBase(track, sector);
+            for (uint16_t i = 0; i < 256; ++i) {
+                iecBlockBuffer[i] = memory[static_cast<uint16_t>((base + i) & 0xBFFF)];
+            }
         }
         iecBlockBufferValid = true;
         iecBlockBufferTrack = track;
@@ -1823,9 +1872,32 @@ public:
             iecStatusLine = "66,ILLEGAL TRACK OR SECTOR,00,00";
             return;
         }
-        const uint16_t base = blockLinearBase(track, sector);
-        for (uint16_t i = 0; i < 256; ++i) {
-            write(static_cast<uint16_t>((base + i) & 0xBFFF), iecBlockBuffer[i]);
+
+        bool flushedToD64 = false;
+        if (isMountedD64BackendActive()) {
+            uint32_t offset = 0;
+            if (!d64TrackSectorToOffset(track, sector, offset)) {
+                iecStatusLine = "66,ILLEGAL TRACK OR SECTOR,00,00";
+                return;
+            }
+            std::fstream io(mountedImagePath, std::ios::in | std::ios::out | std::ios::binary);
+            if (!io.is_open()) {
+                iecStatusLine = "74,DRIVE NOT READY,00,00";
+                return;
+            }
+            io.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
+            io.write(reinterpret_cast<const char *>(iecBlockBuffer.data()), 256);
+            if (!io.fail()) {
+                io.flush();
+                flushedToD64 = true;
+            }
+        }
+
+        if (!flushedToD64) {
+            const uint16_t base = blockLinearBase(track, sector);
+            for (uint16_t i = 0; i < 256; ++i) {
+                write(static_cast<uint16_t>((base + i) & 0xBFFF), iecBlockBuffer[i]);
+            }
         }
         iecDiskMap[0] = track;
         iecDiskMap[1] = sector;

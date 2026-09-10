@@ -73,6 +73,64 @@ static void runDrive1541IecExecBlockSemanticsSmoke(CIA6526 &cia2) {
         assert(false);
     }
 
+    // Mounted D64 backend read/write semantics (per-slot image backend path)
+    const std::filesystem::path d64Dir = std::filesystem::path("testdata") / "runtime_tmp";
+    std::filesystem::create_directories(d64Dir);
+    const std::filesystem::path d64Path = d64Dir / "d64_rw_smoke.d64";
+    {
+        std::vector<uint8_t> zero(174848, 0);
+        std::ofstream out(d64Path, std::ios::binary | std::ios::trunc);
+        out.write(reinterpret_cast<const char *>(zero.data()), static_cast<std::streamsize>(zero.size()));
+    }
+
+    uint32_t d64Off = 0;
+    if (!drive.d64TrackSectorToOffset(0x12, 0x01, d64Off)) {
+        std::cerr << "[1541 IEC SEM] FAIL: D64 offset mapping failed for T18/S1." << std::endl;
+        assert(false);
+    }
+    {
+        std::fstream io(d64Path, std::ios::in | std::ios::out | std::ios::binary);
+        io.seekp(static_cast<std::streamoff>(d64Off), std::ios::beg);
+        const uint8_t seed[2] = {0xAA, 0xBB};
+        io.write(reinterpret_cast<const char *>(seed), 2);
+    }
+
+    drive.configureMountedImage(d64Path.string(), "d64", true);
+    drive.freeVirtualBlock(0x12, 0x01);
+    const bool allocD64 = drive.allocateVirtualBlock(0x12, 0x01, 0x01);
+    if (!allocD64) {
+        std::cerr << "[1541 IEC SEM] FAIL: cannot allocate virtual block for D64 backend test." << std::endl;
+        assert(false);
+    }
+
+    sendCmd15("B-R,01,12,01");
+    st = readStatus15();
+    if (st.rfind("00,OK", 0) != 0 || drive.iecBlockBuffer[0] != 0xAA || drive.iecBlockBuffer[1] != 0xBB) {
+        std::cerr << "[1541 IEC SEM] FAIL: B-R did not read expected bytes from mounted D64 backend." << std::endl;
+        assert(false);
+    }
+
+    drive.iecBlockBuffer[0] = 0xCC;
+    drive.iecBlockBuffer[1] = 0xDD;
+    sendCmd15("B-W,01,12,01");
+    st = readStatus15();
+    if (st.rfind("00,OK", 0) != 0) {
+        std::cerr << "[1541 IEC SEM] FAIL: B-W status failed for mounted D64 backend." << std::endl;
+        assert(false);
+    }
+    {
+        std::ifstream in(d64Path, std::ios::binary);
+        in.seekg(static_cast<std::streamoff>(d64Off), std::ios::beg);
+        uint8_t verify[2] = {0, 0};
+        in.read(reinterpret_cast<char *>(verify), 2);
+        if (verify[0] != 0xCC || verify[1] != 0xDD) {
+            std::cerr << "[1541 IEC SEM] FAIL: B-W did not persist bytes into mounted D64 backend." << std::endl;
+            assert(false);
+        }
+    }
+    std::error_code rmEc;
+    std::filesystem::remove(d64Path, rmEc);
+
     std::cerr << "[1541 IEC SEM] PASS: M-E dispatch + virtual B-R/B-W semantics "
               << "dispatches=" << std::dec << drive.iecExecDispatchCount
               << " base=$" << std::hex << base

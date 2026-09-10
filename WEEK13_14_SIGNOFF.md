@@ -1016,6 +1016,16 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - then default all-active.
 - Empty/invalid parsed active-set falls back to all-active.
 
+## D64 Read/Write Backend Path (Commit 10)
+
+- `Drive1541` now supports active mounted D64 backend for block operations (`B-R` / `B-W`).
+- Added track/sector -> file offset mapping for standard 35-track D64 geometry.
+- `loadVirtualBlock` and `flushVirtualBlock` now route to mounted D64 file when active; otherwise they keep previous in-memory virtual behavior.
+- Added smoke coverage in `runDrive1541IecExecBlockSemanticsSmoke(...)`:
+  - temporary D64 creation,
+  - seed/read verify via `B-R`,
+  - write-back verify via `B-W`.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

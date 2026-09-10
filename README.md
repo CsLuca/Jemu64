@@ -229,3 +229,56 @@ Methods:
 
 `IecBusDomain` now stores and operates on `IIecDevice*` instead of `Drive1541*`.
 This removes direct compile-time dependence on concrete drive internals in bus orchestration logic.
+
+## Per-Slot D64 R/W Backend Path (Commit 10)
+
+Commit 10 enables an actual D64 read/write backend path for block-level operations used by IEC DOS commands.
+
+### Updated Functions
+
+#### `Drive1541::isMountedD64BackendActive() const` (`drive_1541.hpp`)
+
+Purpose:
+
+- declare whether mounted image metadata represents an active writable D64 backend.
+
+Condition:
+
+- true only when all are true:
+  - image is configured,
+  - image exists,
+  - format is `d64`.
+
+#### `Drive1541::d64TrackSectorToOffset(uint8_t track, uint8_t sector, uint32_t &offset) const` (`drive_1541.hpp`)
+
+Purpose:
+
+- map Commodore 1541 CHS (`track/sector`) to byte offset inside a standard 35-track D64 image.
+
+Behavior:
+
+- validates track range `1..35`;
+- validates sector against per-track geometry (`21/19/18/17` zones);
+- computes `offset = linearSectorIndex * 256`.
+
+#### `Drive1541::loadVirtualBlock(...)` / `Drive1541::flushVirtualBlock(...)` (`drive_1541.hpp`)
+
+New backend behavior:
+
+- when D64 backend is active, B-R/B-W block flow reads/writes sector bytes from/to mounted D64 file.
+- when backend is not active, previous in-memory virtual block behavior is preserved.
+- error handling on D64 path:
+  - invalid CHS -> `66,ILLEGAL TRACK OR SECTOR,00,00`
+  - missing/unopenable image on write -> `74,DRIVE NOT READY,00,00`
+
+### Updated Smoke Test
+
+#### `runDrive1541IecExecBlockSemanticsSmoke(...)` (`drive_iec_exec_block_sem_smoke.hpp`)
+
+Added coverage:
+
+- creates a temporary D64 image (`174848` bytes),
+- seeds known bytes at `T18/S1`,
+- mounts it via `configureMountedImage(..., "d64", true)`,
+- verifies `B-R` reads seeded bytes,
+- verifies `B-W` persists modified bytes back to D64 file.
