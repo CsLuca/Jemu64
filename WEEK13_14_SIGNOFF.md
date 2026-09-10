@@ -776,6 +776,22 @@
 - BA/AEC edge handoff hard-ref (Week15): PASS
 - cross-domain edge hard-ref + temporal fuzz determinism (Week16): PASS
 
+## 1541 Release Closure (Formal)
+
+- Status: release-grade closure criteria satisfied on local signoff with integrated real golden gate.
+- Fixed real-disk per-title gate:
+  - manifest: `real_golden_manifest.json`
+  - runner: `run_real_golden_gate.ps1`
+  - runtime report: `real_golden_gate_runtime.csv`
+- Current golden outcome:
+  - `13/13` titles PASS (`G64/NIB/D64/RAW`) with per-title checks (`path`, `oracle`, `host_fallback_no`).
+- Required closure commands:
+  - `./run_prepare_edge_references.ps1 -Manifest external_tests_manifest.json -RebuildStrict`
+  - `./run_signoff_week13_14.ps1 -Manifest external_tests_manifest.json -FastManifest external_tests_manifest.json -Manifest6510 external_tests_manifest.json -Manifest8500 external_tests_manifest.json -FastManifest6510 external_tests_manifest.json -FastManifest8500 external_tests_manifest.json -PureStabilityRuns 12 -SkipFastExternal`
+  - `./run_check_revision_tolerance.ps1`
+  - `./run_real_golden_gate.ps1 -Manifest real_golden_manifest.json -Mode pure -DefaultMaxHalfCycles 700000 -ReportCsv real_golden_gate_runtime.csv`
+- CI/manual refresh now enforces real golden runtime generation during edge reference preparation.
+
 ## No Default-On Hacks Policy
 
 - `run_kernel_iec_e2e.ps1` now defaults to pure mode with no compatibility/test helpers enabled by default.
@@ -902,6 +918,10 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
     - `reference/edge/week80_release_readiness_trace.csv`
     - `reference/edge/week81_flux_behavior_parity_trace.csv`
     - `reference/vice/c64_lorenz_brkn_edge_ref.trace.csv` (pc_only)
+    - `real_golden_gate_runtime.csv` (per-title fixed real disk gate report)
+- `run_real_golden_gate.ps1`
+  - executes fixed per-title real-disk gate from `real_golden_manifest.json` and writes:
+    - `real_golden_gate_runtime.csv`
 - `run_prepare_pla_snapshot.ps1`
   - boots strict with `VIC_EXPORT_PLA_SPEC=1` and refreshes:
     - `reference/edge/vic_pla_spec.csv`
