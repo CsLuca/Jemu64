@@ -11,11 +11,15 @@
 #include <fstream>
 #include <iomanip>
 #include <iterator>
+#include <memory>
 #include <sstream>
+#include <utility>
 #include <string>
 #include <vector>
 
+#include "d64_image_backend.hpp"
 #include "drive_via6522.hpp"
+#include "image_backend.hpp"
 #include "iec_device.hpp"
 
 class Drive1541 : public IIecDevice {
@@ -222,12 +226,20 @@ public:
     std::string mountedImageFormat;
     bool mountedImageConfigured = false;
     bool mountedImageExists = false;
+    std::shared_ptr<IImageBackend> mountedImageBackend;
 
     void configureMountedImage(const std::string &path, const std::string &format, bool exists) {
         mountedImageConfigured = !path.empty();
         mountedImagePath = path;
         mountedImageFormat = format;
         mountedImageExists = exists;
+        mountedImageBackend.reset();
+        if (!mountedImageConfigured || !mountedImageExists) {
+            return;
+        }
+        if (mountedImageFormat == "d64") {
+            mountedImageBackend = std::make_shared<D64ImageBackend>(mountedImagePath);
+        }
     }
 
     // Drive CPU scaffold state (placeholder for real core)
@@ -1496,7 +1508,7 @@ public:
     }
 
     bool isMountedD64BackendActive() const {
-        return mountedImageConfigured && mountedImageExists && mountedImageFormat == "d64";
+        return mountedImageBackend != nullptr && std::string(mountedImageBackend->formatName()) == "d64" && mountedImageBackend->isReady();
     }
 
     bool d64TrackSectorToOffset(uint8_t track, uint8_t sector, uint32_t &offset) const {
@@ -1841,16 +1853,9 @@ public:
     void loadVirtualBlock(uint8_t track, uint8_t sector) {
         bool loadedFromD64 = false;
         if (isMountedD64BackendActive()) {
-            uint32_t offset = 0;
-            if (d64TrackSectorToOffset(track, sector, offset)) {
-                std::ifstream in(mountedImagePath, std::ios::binary);
-                if (in.is_open()) {
-                    in.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-                    in.read(reinterpret_cast<char *>(iecBlockBuffer.data()), 256);
-                    if (in.gcount() == 256) {
-                        loadedFromD64 = true;
-                    }
-                }
+            ImageIoError err = ImageIoError::None;
+            if (mountedImageBackend->readBlock(track, sector, iecBlockBuffer, err)) {
+                loadedFromD64 = true;
             }
         }
 
@@ -1875,22 +1880,16 @@ public:
 
         bool flushedToD64 = false;
         if (isMountedD64BackendActive()) {
-            uint32_t offset = 0;
-            if (!d64TrackSectorToOffset(track, sector, offset)) {
-                iecStatusLine = "66,ILLEGAL TRACK OR SECTOR,00,00";
+            ImageIoError err = ImageIoError::None;
+            if (!mountedImageBackend->writeBlock(track, sector, iecBlockBuffer, err)) {
+                if (err == ImageIoError::InvalidAddress) {
+                    iecStatusLine = "66,ILLEGAL TRACK OR SECTOR,00,00";
+                } else {
+                    iecStatusLine = "74,DRIVE NOT READY,00,00";
+                }
                 return;
             }
-            std::fstream io(mountedImagePath, std::ios::in | std::ios::out | std::ios::binary);
-            if (!io.is_open()) {
-                iecStatusLine = "74,DRIVE NOT READY,00,00";
-                return;
-            }
-            io.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
-            io.write(reinterpret_cast<const char *>(iecBlockBuffer.data()), 256);
-            if (!io.fail()) {
-                io.flush();
-                flushedToD64 = true;
-            }
+            flushedToD64 = true;
         }
 
         if (!flushedToD64) {
@@ -1930,17 +1929,8 @@ public:
         if (!isMountedD64BackendActive()) {
             return false;
         }
-        uint32_t offset = 0;
-        if (!d64TrackSectorToOffset(track, sector, offset)) {
-            return false;
-        }
-        std::ifstream in(mountedImagePath, std::ios::binary);
-        if (!in.is_open()) {
-            return false;
-        }
-        in.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-        in.read(reinterpret_cast<char *>(out.data()), 256);
-        return in.gcount() == 256;
+        ImageIoError err = ImageIoError::None;
+        return mountedImageBackend->readBlock(track, sector, out, err);
     }
 
     std::string decodeD64Name(const uint8_t *bytes, size_t len) const {
@@ -1978,14 +1968,10 @@ public:
             return false;
         }
 
-        std::array<uint8_t, 256> bam = {};
-        if (!readMountedD64Sector(18, 0, bam)) {
+        ImageDirectoryListing listing;
+        ImageIoError err = ImageIoError::None;
+        if (!mountedImageBackend->readDirectoryListing(listing, err)) {
             return false;
-        }
-
-        std::string diskName = decodeD64Name(&bam[0x90], 16);
-        if (diskName.empty()) {
-            diskName = "D64 MOUNT";
         }
 
         std::vector<uint8_t> prg;
@@ -1994,51 +1980,33 @@ public:
         prg.push_back(0x08);
 
         uint16_t cursor = 0x0801;
-        enqueueBasicLine(prg, cursor, 0, std::string("0 \"") + diskName + "\" 00 2A");
+        enqueueBasicLine(prg, cursor, 0, std::string("0 \"") + listing.diskName + "\" 00 2A");
 
         uint16_t lineNo = 1;
         bool anyCatalog = false;
-        uint8_t trk = 18;
-        uint8_t sec = 1;
-        int guard = 0;
-        while (trk != 0 && guard < 64) {
-            std::array<uint8_t, 256> dirSector = {};
-            if (!readMountedD64Sector(trk, sec, dirSector)) {
-                break;
+        for (const auto &entry : listing.entries) {
+            if (!wildcardMatch(iecDirectoryWildcardPattern, entry.name)) {
+                continue;
             }
-            const uint8_t nextTrk = dirSector[0];
-            const uint8_t nextSec = dirSector[1];
-
-            for (int entry = 0; entry < 8; ++entry) {
-                const int off = 2 + (entry * 32);
-                const uint8_t fileType = dirSector[off + 2];
-                if ((fileType & 0x07) == 0) {
+            if (!iecDirectoryTypeFilter.empty() && entry.type != iecDirectoryTypeFilter) {
+                continue;
+            }
+            if (!iecDirectoryModeFilter.empty()) {
+                const bool modeMatch = (entry.mode == iecDirectoryModeFilter);
+                if ((!iecDirectoryModeFilterNegated && !modeMatch) ||
+                    (iecDirectoryModeFilterNegated && modeMatch)) {
                     continue;
                 }
-                const std::string name = decodeD64Name(&dirSector[off + 5], 16);
-                const std::string type = d64FileTypeToString(fileType);
-                const uint16_t blocks = static_cast<uint16_t>(dirSector[off + 30] | (uint16_t(dirSector[off + 31]) << 8));
-
-                if (!wildcardMatch(iecDirectoryWildcardPattern, name)) {
-                    continue;
-                }
-                if (!iecDirectoryTypeFilter.empty() && type != iecDirectoryTypeFilter) {
-                    continue;
-                }
-                if (!iecDirectoryModeFilter.empty()) {
-                    continue;
-                }
-
-                anyCatalog = true;
-                std::ostringstream row;
-                row << blocks << " \"" << name << "\" " << type;
-                enqueueBasicLine(prg, cursor, lineNo, row.str());
-                lineNo = static_cast<uint16_t>(lineNo + 1);
             }
 
-            trk = nextTrk;
-            sec = nextSec;
-            guard++;
+            anyCatalog = true;
+            std::ostringstream row;
+            row << entry.blocks << " \"" << entry.name << "\" " << entry.type;
+            if (!entry.mode.empty()) {
+                row << "," << entry.mode;
+            }
+            enqueueBasicLine(prg, cursor, lineNo, row.str());
+            lineNo = static_cast<uint16_t>(lineNo + 1);
         }
 
         if (!anyCatalog) {
@@ -2046,15 +2014,8 @@ public:
             lineNo = static_cast<uint16_t>(lineNo + 1);
         }
 
-        uint16_t freeBlocks = 0;
-        for (uint8_t t = 1; t <= 35; ++t) {
-            const size_t off = 4 + (static_cast<size_t>(t - 1) * 4);
-            if (off < bam.size()) {
-                freeBlocks = static_cast<uint16_t>(freeBlocks + bam[off]);
-            }
-        }
         std::ostringstream freeLine;
-        freeLine << freeBlocks << " BLOCKS FREE.";
+        freeLine << listing.freeBlocks << " BLOCKS FREE.";
         enqueueBasicLine(prg, cursor, lineNo, freeLine.str());
 
         prg.push_back(0x00);

@@ -1049,6 +1049,14 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - verifies each unit returns its own directory content,
   - verifies no cross-unit directory contamination.
 
+## Common Image Backend API (Commit 13)
+
+- Added image abstraction layer:
+  - `image_backend.hpp` with `IImageBackend` contract and common IO/directory structs.
+- Added first concrete backend:
+  - `d64_image_backend.hpp` implementing block IO and directory listing for D64.
+- `Drive1541` now wires mounted image handling through `IImageBackend` (D64 adapter), keeping behavior equivalent while decoupling format-specific logic from drive core.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

@@ -358,3 +358,30 @@ Coverage:
 - triggers `LOAD"$"` command flow on each unit,
 - verifies returned directory payload reflects the correct per-unit mounted image,
 - verifies no cross-unit contamination.
+
+## Common Image Backend API (Commit 13)
+
+Commit 13 introduces a shared image backend abstraction and migrates D64 handling behind that API.
+
+### New API
+
+- `image_backend.hpp`
+  - `IImageBackend`
+    - `isReady()`
+    - `formatName()`
+    - `readBlock(track, sector, out, error)`
+    - `writeBlock(track, sector, in, error)`
+    - `readDirectoryListing(listing, error)`
+  - `ImageIoError`, `ImageDirectoryEntry`, `ImageDirectoryListing`
+
+### First Adapter
+
+- `d64_image_backend.hpp`
+  - `D64ImageBackend : IImageBackend`
+  - implements CHS mapping, block read/write, and directory listing extraction for standard 35-track D64.
+
+### Drive Integration
+
+- `Drive1541` now keeps `std::unique_ptr<IImageBackend> mountedImageBackend`.
+- `configureMountedImage(...)` instantiates `D64ImageBackend` when format is `d64`.
+- block and directory paths now use the common backend API instead of ad-hoc direct file code.
