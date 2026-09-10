@@ -5941,6 +5941,51 @@ struct DriveSlotMountConfig {
     bool exists = false;
 };
 
+static std::array<bool, 4> resolveActiveDriveSlotsFromEnv() {
+    std::array<bool, 4> active = {true, true, true, true};
+
+    const char *legacySingle = std::getenv("C64_IEC_LEGACY_SINGLE_DRIVE");
+    if (legacySingle != nullptr) {
+        const std::string v = asciiLower(legacySingle);
+        if (v == "1" || v == "true" || v == "yes" || v == "on") {
+            active = {true, false, false, false};
+            return active;
+        }
+    }
+
+    const char *activeUnitsEnv = std::getenv("IEC_ACTIVE_DRIVES");
+    if (activeUnitsEnv == nullptr || activeUnitsEnv[0] == '\0') {
+        return active;
+    }
+
+    active = {false, false, false, false};
+    std::string token;
+    std::stringstream ss(activeUnitsEnv);
+    while (std::getline(ss, token, ',')) {
+        token = Drive1541::trimAscii(token);
+        if (token.empty()) {
+            continue;
+        }
+        const int unit = std::atoi(token.c_str());
+        if (unit >= 8 && unit <= 11) {
+            active[static_cast<size_t>(unit - 8)] = true;
+        }
+    }
+
+    bool any = false;
+    for (bool flag : active) {
+        if (flag) {
+            any = true;
+            break;
+        }
+    }
+    if (!any) {
+        active = {true, true, true, true};
+    }
+
+    return active;
+}
+
 static DriveSlotMountConfig loadDriveSlotMountConfig(uint8_t unit) {
     DriveSlotMountConfig cfg;
     const std::string unitLabel = std::to_string(static_cast<unsigned>(unit));
@@ -6186,6 +6231,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     CPU6510 cpu(bus);
     configureChipRevisionsFromEnv(bus, cpu, vic, cia1, cia2);
 
+    const std::array<bool, 4> activeDriveSlots = resolveActiveDriveSlotsFromEnv();
     std::array<Drive1541, 4> driveSlots;
     for (size_t i = 0; i < driveSlots.size(); ++i) {
         Drive1541 &slotDrive = driveSlots[i];
@@ -6199,6 +6245,9 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
         const DriveSlotMountConfig mountCfg = loadDriveSlotMountConfig(deviceUnit);
         slotDrive.configureMountedImage(mountCfg.path, mountCfg.format, mountCfg.exists);
         slotDrive.cpuEnabled = false;
+        if (!activeDriveSlots[i]) {
+            slotDrive.iecDeviceAddress = static_cast<uint8_t>(deviceUnit + 16);
+        }
     }
 
     Drive1541 &drive = driveSlots[0];
@@ -6495,9 +6544,19 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     if (std::getenv("KERNAL_DD00_EDWINDOW_RMW") != nullptr) {
         kernelPolarity.readbackBusOnEdWindowOnly = true;
     }
-    IecBusDomain sharedDomain(cia2, driveSlots[0], kernelPolarity);
-    for (size_t i = 1; i < driveSlots.size(); ++i) {
-        sharedDomain.attachDrive(driveSlots[i]);
+    size_t primaryActiveSlot = 0;
+    for (size_t i = 0; i < activeDriveSlots.size(); ++i) {
+        if (activeDriveSlots[i]) {
+            primaryActiveSlot = i;
+            break;
+        }
+    }
+
+    IecBusDomain sharedDomain(cia2, driveSlots[primaryActiveSlot], kernelPolarity);
+    for (size_t i = 0; i < driveSlots.size(); ++i) {
+        if (i != primaryActiveSlot && activeDriveSlots[i]) {
+            sharedDomain.attachDrive(driveSlots[i]);
+        }
     }
     bool edWindowReadbackOverrideActive = false;
 

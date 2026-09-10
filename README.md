@@ -163,3 +163,41 @@ The current smoke/signoff path validates unit-address isolation for these flows.
 - Commit 8 provides operational guidance and migration notes.
 - Format-specific full ingest semantics per slot remain staged for later commits.
 - Current CI/signoff already enforces multi-unit marker coverage in fast/strict profiles.
+
+## Default Policy Flip (Commit 9)
+
+Commit 9 makes multi-drive readiness explicit as runtime default policy.
+
+- default active units are now `8,9,10,11`.
+- legacy behavior can be forced with:
+  - `C64_IEC_LEGACY_SINGLE_DRIVE=1`
+
+Optional explicit active-drive selection:
+
+- `IEC_ACTIVE_DRIVES` as comma-separated units in range `8..11`
+  - example: `IEC_ACTIVE_DRIVES=8,9`
+
+Selection precedence:
+
+1. `C64_IEC_LEGACY_SINGLE_DRIVE=1` -> only unit `8` active.
+2. else if `IEC_ACTIVE_DRIVES` is set -> active set parsed from it.
+3. else -> default all active (`8,9,10,11`).
+
+Safety fallback:
+
+- if `IEC_ACTIVE_DRIVES` parses to an empty/invalid set, runtime falls back to all active.
+
+### New Function (Commit 9)
+
+#### `resolveActiveDriveSlotsFromEnv()` (`c64_11.cpp`)
+
+Purpose:
+
+- compute the active slot mask (`slot0..slot3`) from environment policy.
+
+Behavior:
+
+- initializes default mask to all active;
+- checks legacy single-drive override;
+- parses `IEC_ACTIVE_DRIVES` tokens, validates unit range, builds mask;
+- applies fallback to all active when parsed set is empty.

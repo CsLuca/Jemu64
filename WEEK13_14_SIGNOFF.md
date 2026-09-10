@@ -1002,6 +1002,20 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - signoff/CI now validates multi-unit IEC addressing marker,
   - per-slot format-specific ingest internals remain follow-up work.
 
+## Default Multi-Drive Policy Flip (Commit 9)
+
+- Runtime default policy is now explicitly multi-drive ready:
+  - active units default to `8,9,10,11`.
+- Legacy override:
+  - `C64_IEC_LEGACY_SINGLE_DRIVE=1` forces unit `8` only.
+- Explicit active-set override:
+  - `IEC_ACTIVE_DRIVES=8,9` (comma-separated, units in `8..11`).
+- Precedence:
+  - legacy single-drive override first,
+  - then explicit active-set,
+  - then default all-active.
+- Empty/invalid parsed active-set falls back to all-active.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
