@@ -1,0 +1,230 @@
+{
+  "manifest_version": 1,
+  "name": "1541_real_golden_must_pass",
+  "description": "Fixed real-disk golden list for 1541 release gating with per-title oracle fields.",
+  "sources": [
+    {
+      "id": "copy-ii-64",
+      "url": "https://archive.org/details/copy-ii-64"
+    },
+    {
+      "id": "Commodore64DiskNIBG64",
+      "url": "https://archive.org/details/Commodore64DiskNIBG64"
+    },
+    {
+      "id": "d64_1541_Disk_Drive_Tester_19xx_-",
+      "url": "https://archive.org/details/d64_1541_Disk_Drive_Tester_19xx_-"
+    }
+  ],
+  "global_oracle": {
+    "require_no_host_fallback": true,
+    "require_iec_done": true,
+    "default_timing_window": {
+      "max_halfcycles": 700000,
+      "min_done_hits": 1
+    }
+  },
+  "titles": [
+    {
+      "id": "d64_1541_disk_drive_tester",
+      "source_id": "d64_1541_Disk_Drive_Tester_19xx_-",
+      "format": "d64",
+      "path": "testdata/real_corpus_draven_top10/1541_Disk_Drive_Tester_19xx_-.d64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "g64_128_data_base",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/128_data_base.g64/128 data base.g64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_128_data_base",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/128_data_base.nib/128 data base.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "g64_vic1541_test_demo",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021].g64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_vic1541_test_demo_side0",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_vic1541_test_demo_side1",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo1.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "g64_adv_wrt",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/adv_wrt.g64/adv wrt.g64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_adv_wrt",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/adv_wrt.nib/adv wrt.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "g64_adv_s1",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/adv_s1.g64/adv s1.g64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_adv_s1",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/adv_s1.nib/adv s1.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "g64_3d_construction_kit",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/3D_Construction_Kit/3dkit-disk-bcp.g64",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "nib_3d_construction_kit",
+      "source_id": "Commodore64DiskNIBG64",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/3D_Construction_Kit/3dkit-disk-bcp.nib",
+      "oracle": {
+        "load": "must_complete",
+        "run": "must_reach_done",
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        },
+        "host_fallback": "must_be_no"
+      }
+    },
+    {
+      "id": "raw_copy_ii_pc_v1",
+      "source_id": "copy-ii-64",
+      "format": "raw",
+      "path": "testdata/real_corpus_draven_top10/kryoflux/Copy.II.PC.v1.0",
+      "oracle": {
+        "sample_floor": 160,
+        "expected_sample_count": 168,
+        "loader_timing_parity": {
+          "min_runs": 480,
+          "max_mismatches": 0
+        },
+        "sync_loss_recovery": {
+          "min_rows": 15
+        },
+        "weak_halftrack_observed": {
+          "min_rows": 25
+        },
+        "host_fallback": "must_be_no"
+      }
+    }
+  ]
+}
