@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "advanced_image_backends.hpp"
 #include "d64_image_backend.hpp"
 #include "drive_via6522.hpp"
 #include "image_backend.hpp"
@@ -239,6 +240,12 @@ public:
         }
         if (mountedImageFormat == "d64") {
             mountedImageBackend = std::make_shared<D64ImageBackend>(mountedImagePath);
+        } else if (mountedImageFormat == "g64") {
+            mountedImageBackend = std::make_shared<G64ImageBackend>(mountedImagePath);
+        } else if (mountedImageFormat == "nib") {
+            mountedImageBackend = std::make_shared<NIBImageBackend>(mountedImagePath);
+        } else if (mountedImageFormat == "raw") {
+            mountedImageBackend = std::make_shared<RAWImageBackend>(mountedImagePath);
         }
     }
 
@@ -1511,32 +1518,12 @@ public:
         return mountedImageBackend != nullptr && std::string(mountedImageBackend->formatName()) == "d64" && mountedImageBackend->isReady();
     }
 
-    bool d64TrackSectorToOffset(uint8_t track, uint8_t sector, uint32_t &offset) const {
-        if (track < 1 || track > 35) {
-            return false;
-        }
+    bool isMountedBlockBackendActive() const {
+        return mountedImageBackend != nullptr && mountedImageBackend->isReady();
+    }
 
-        static const uint8_t sectorsPerTrack[36] = {
-            0,
-            21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
-            19,19,19,19,19,19,19,
-            18,18,18,18,18,18,
-            17,17,17,17,17
-        };
-
-        const uint8_t spt = sectorsPerTrack[track];
-        if (sector >= spt) {
-            return false;
-        }
-
-        uint32_t sectorsBefore = 0;
-        for (uint8_t t = 1; t < track; ++t) {
-            sectorsBefore += sectorsPerTrack[t];
-        }
-
-        const uint32_t sectorIndex = sectorsBefore + sector;
-        offset = sectorIndex * 256u;
-        return true;
+    bool isMountedImageBackendActiveFor(const std::string &format) const {
+        return mountedImageBackend != nullptr && std::string(mountedImageBackend->formatName()) == format && mountedImageBackend->isReady();
     }
 
     uint16_t blockAllocIndex(uint8_t track, uint8_t sector) const {
@@ -1851,15 +1838,15 @@ public:
     }
 
     void loadVirtualBlock(uint8_t track, uint8_t sector) {
-        bool loadedFromD64 = false;
-        if (isMountedD64BackendActive()) {
+        bool loadedFromImage = false;
+        if (isMountedBlockBackendActive()) {
             ImageIoError err = ImageIoError::None;
             if (mountedImageBackend->readBlock(track, sector, iecBlockBuffer, err)) {
-                loadedFromD64 = true;
+                loadedFromImage = true;
             }
         }
 
-        if (!loadedFromD64) {
+        if (!loadedFromImage) {
             const uint16_t base = blockLinearBase(track, sector);
             for (uint16_t i = 0; i < 256; ++i) {
                 iecBlockBuffer[i] = memory[static_cast<uint16_t>((base + i) & 0xBFFF)];
@@ -1878,8 +1865,8 @@ public:
             return;
         }
 
-        bool flushedToD64 = false;
-        if (isMountedD64BackendActive()) {
+        bool flushedToImage = false;
+        if (isMountedBlockBackendActive()) {
             ImageIoError err = ImageIoError::None;
             if (!mountedImageBackend->writeBlock(track, sector, iecBlockBuffer, err)) {
                 if (err == ImageIoError::InvalidAddress) {
@@ -1889,10 +1876,10 @@ public:
                 }
                 return;
             }
-            flushedToD64 = true;
+            flushedToImage = true;
         }
 
-        if (!flushedToD64) {
+        if (!flushedToImage) {
             const uint16_t base = blockLinearBase(track, sector);
             for (uint16_t i = 0; i < 256; ++i) {
                 write(static_cast<uint16_t>((base + i) & 0xBFFF), iecBlockBuffer[i]);
@@ -1923,44 +1910,6 @@ public:
             return false;
         }
         return iecNameBuffer[0] == static_cast<uint8_t>('$');
-    }
-
-    bool readMountedD64Sector(uint8_t track, uint8_t sector, std::array<uint8_t, 256> &out) const {
-        if (!isMountedD64BackendActive()) {
-            return false;
-        }
-        ImageIoError err = ImageIoError::None;
-        return mountedImageBackend->readBlock(track, sector, out, err);
-    }
-
-    std::string decodeD64Name(const uint8_t *bytes, size_t len) const {
-        std::string out;
-        out.reserve(len);
-        for (size_t i = 0; i < len; ++i) {
-            uint8_t c = bytes[i];
-            if (c == 0x00 || c == 0xA0) {
-                break;
-            }
-            c = static_cast<uint8_t>(c & 0x7F);
-            if (c >= 'a' && c <= 'z') {
-                c = static_cast<uint8_t>(c - 32);
-            }
-            if (c >= 32 && c <= 126) {
-                out.push_back(static_cast<char>(c));
-            }
-        }
-        return out;
-    }
-
-    std::string d64FileTypeToString(uint8_t ft) const {
-        switch (ft & 0x07) {
-            case 0x00: return "DEL";
-            case 0x01: return "SEQ";
-            case 0x02: return "PRG";
-            case 0x03: return "USR";
-            case 0x04: return "REL";
-            default: return "PRG";
-        }
     }
 
     bool buildDirectoryPayloadFromMountedD64() {

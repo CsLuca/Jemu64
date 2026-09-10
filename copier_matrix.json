@@ -62,6 +62,87 @@
         "Manifest match=1 is mandatory",
         "Validated in fast/strict signoff runs"
       ]
+    },
+    {
+      "id": "advanced_g64_mount_baseline",
+      "description": "Advanced-format baseline backend mount/read path for G64",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_mount_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 19 baseline",
+        "Read-path focused scaffolding"
+      ]
+    },
+    {
+      "id": "advanced_nib_mount_baseline",
+      "description": "Advanced-format baseline backend mount/read path for NIB",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_mount_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 19 baseline",
+        "Read-path focused scaffolding"
+      ]
+    },
+    {
+      "id": "advanced_raw_mount_baseline",
+      "description": "Advanced-format baseline backend mount/read/write path for RAW",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "raw",
+      "target_format": "raw",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_raw_mount_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 19 baseline",
+        "Includes write baseline for RAW"
+      ]
     }
   ]
 }

@@ -498,3 +498,48 @@ Both manual workflows now upload copier matrix reports as artifacts:
 
 - `.github/workflows/revision-signoff-matrix.yml`
 - `.github/workflows/revision-tolerance-check.yml`
+
+## Advanced Image Backends Baseline (Commit 19)
+
+Commit 19 extends `IImageBackend` wiring with baseline adapters for advanced image formats.
+
+### New Backends
+
+- `advanced_image_backends.hpp`
+  - `G64ImageBackend` (read baseline)
+  - `NIBImageBackend` (read baseline)
+  - `RAWImageBackend` (read/write baseline)
+
+All three backends expose:
+
+- `isReady()`
+- `formatName()`
+- `readBlock(track, sector, ...)`
+
+`RAWImageBackend` additionally enables `writeBlock(...)` for baseline persistence checks.
+
+### Drive Mount Wiring
+
+- `Drive1541::configureMountedImage(...)` now instantiates:
+  - `D64ImageBackend` for `d64`
+  - `G64ImageBackend` for `g64`
+  - `NIBImageBackend` for `nib`
+  - `RAWImageBackend` for `raw`
+
+### New Smoke Coverage
+
+- `drive_iec_advanced_image_mount_smoke.hpp`
+  - verifies backend activation and read baseline for `g64`, `nib`, `raw`
+  - verifies write baseline persistence for `raw`
+  - emits markers:
+    - `[IEC COPY E2E] PASS: advanced_g64_mount_baseline`
+    - `[IEC COPY E2E] PASS: advanced_nib_mount_baseline`
+    - `[IEC COPY E2E] PASS: advanced_raw_mount_baseline`
+
+### Copier Matrix Extension
+
+`copier_matrix.json` now includes advanced baseline scenarios:
+
+- `advanced_g64_mount_baseline`
+- `advanced_nib_mount_baseline`
+- `advanced_raw_mount_baseline`

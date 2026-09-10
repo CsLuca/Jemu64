@@ -1128,6 +1128,31 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Updated `.github/workflows/revision-tolerance-check.yml`:
   - always uploads `copier_matrix_report.json` and `copier_matrix_report.csv`.
 
+## Advanced Image Backend Scaffolding + Matrix Baseline (Commit 19)
+
+- Added `advanced_image_backends.hpp` with initial advanced format adapters under `IImageBackend`:
+  - `G64ImageBackend` (mount + readiness + block read baseline),
+  - `NIBImageBackend` (mount + readiness + block read baseline),
+  - `RAWImageBackend` (mount + readiness + block read/write baseline).
+
+- Updated `Drive1541::configureMountedImage(...)` wiring:
+  - `d64 -> D64ImageBackend`
+  - `g64 -> G64ImageBackend`
+  - `nib -> NIBImageBackend`
+  - `raw -> RAWImageBackend`
+
+- Added smoke suite `runDrive1541IecAdvancedImageMountSmoke()`:
+  - validates backend activation for `g64/nib/raw`,
+  - validates read baseline via `loadVirtualBlock(1,0)`,
+  - validates write persistence baseline on RAW.
+
+- Added runtime markers for matrix gating:
+  - `[IEC COPY E2E] PASS: advanced_g64_mount_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_mount_baseline`
+  - `[IEC COPY E2E] PASS: advanced_raw_mount_baseline`
+
+- Extended `copier_matrix.json` with advanced baseline scenarios using the above markers.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
