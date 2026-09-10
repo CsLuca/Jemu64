@@ -480,3 +480,50 @@ struct SharedIecClockDomain {
         }
     }
 };
+
+struct IecBusDomain {
+    CIA6526 &cia2;
+    IecBridgePolarity polarity;
+    std::vector<Drive1541 *> attachedDrives;
+    SharedIecClockDomain singleDomain;
+
+    IecBusDomain(CIA6526 &c, Drive1541 &primaryDrive, const IecBridgePolarity &p)
+        : cia2(c), polarity(p), attachedDrives{&primaryDrive}, singleDomain(c, primaryDrive, p) {
+    }
+
+    void attachDrive(Drive1541 &drive) {
+        attachedDrives.push_back(&drive);
+    }
+
+    size_t driveCount() const {
+        return attachedDrives.size();
+    }
+
+    void configureDomainRatesForTest(uint64_t c64Hz, uint64_t driveHz, int32_t driftPpmValue, uint32_t seed, int32_t amp) {
+        singleDomain.configureDomainRatesForTest(c64Hz, driveHz, driftPpmValue, seed, amp);
+    }
+
+    uint64_t getCurrentTimeUnits() const {
+        return singleDomain.getCurrentTimeUnits();
+    }
+
+    uint64_t getC64HalfTicks() const {
+        return singleDomain.getC64HalfTicks();
+    }
+
+    uint64_t getDriveHalfTicks() const {
+        return singleDomain.getDriveHalfTicks();
+    }
+
+    void scheduleEventAfter(uint64_t delta, const std::function<void()> &callback) {
+        singleDomain.scheduleEventAfter(delta, callback);
+    }
+
+    void scheduleEventAtNextC64Boundary(const std::function<void()> &callback) {
+        singleDomain.scheduleEventAtNextC64Boundary(callback);
+    }
+
+    void tickHalfCycle() {
+        singleDomain.tickHalfCycle();
+    }
+};

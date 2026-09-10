@@ -8330,6 +8330,23 @@ static void runWeek12InterruptBoundaryChecks(Bus &bus, CPU6510 &cpu, VICII &vic,
 }
 
 static void runWeek45TimeCoreMultiDomainSelfCheck() {
+    {
+        CIA6526 cia2Scaffold;
+        Drive1541 drivePrimary;
+        Drive1541 driveSecondary;
+        IecBridgePolarity polScaffold = makeRuntimeDefaultIecPolarity();
+        IecBusDomain busScaffold(cia2Scaffold, drivePrimary, polScaffold);
+        if (busScaffold.driveCount() != 1u) {
+            std::cerr << "[WEEK45 TIME] FAIL: IEC bus scaffold must start with one primary drive." << std::endl;
+            assert(false);
+        }
+        busScaffold.attachDrive(driveSecondary);
+        if (busScaffold.driveCount() != 2u) {
+            std::cerr << "[WEEK45 TIME] FAIL: IEC bus scaffold attachDrive did not register second drive." << std::endl;
+            assert(false);
+        }
+    }
+
     CIA6526 cia2A;
     Drive1541 driveA;
     IecBridgePolarity pol = makeRuntimeDefaultIecPolarity();
