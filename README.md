@@ -282,3 +282,29 @@ Added coverage:
 - mounts it via `configureMountedImage(..., "d64", true)`,
 - verifies `B-R` reads seeded bytes,
 - verifies `B-W` persists modified bytes back to D64 file.
+
+## Dual-Drive Copy-Like E2E Smoke (Commit 11)
+
+Commit 11 adds a dual-drive smoke to validate the first copy-like transfer path from unit 8 to unit 9 using mounted D64 backend blocks.
+
+### New Function
+
+#### `runDrive1541IecDualDriveCopySmoke()` (`drive_iec_dualdrive_copy_smoke.hpp`)
+
+Purpose:
+
+- verify that two mounted D64-backed drives can transfer a block payload from source (`unit 8`) to destination (`unit 9`) without regressions.
+
+Behavior:
+
+- creates temporary source and destination D64 images,
+- seeds a known payload on source track/sector (`T18/S1`),
+- mounts source image on drive 8 and destination image on drive 9,
+- reads source block via `loadVirtualBlock`,
+- copies block buffer into destination drive buffer,
+- writes destination via `flushVirtualBlock`,
+- verifies destination D64 file contains expected payload bytes.
+
+Integration:
+
+- wired into `runDriveIecSmokeSuite(...)` so fast/strict signoff paths cover it.

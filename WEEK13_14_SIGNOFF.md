@@ -1026,6 +1026,17 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - seed/read verify via `B-R`,
   - write-back verify via `B-W`.
 
+## Dual-Drive Copy-Like E2E Smoke (Commit 11)
+
+- Added `runDrive1541IecDualDriveCopySmoke(...)` and wired it into `runDriveIecSmokeSuite(...)`.
+- Coverage objective:
+  - validate block transfer path from unit `8` mounted D64 to unit `9` mounted D64.
+- Validation steps in smoke:
+  - create source/target temporary D64 images,
+  - seed source block bytes at `T18/S1`,
+  - perform source read + destination write through drive block buffer path,
+  - verify destination bytes persisted as expected.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

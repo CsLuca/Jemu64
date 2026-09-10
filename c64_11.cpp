@@ -6175,6 +6175,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "drive_iec_multiunit_smoke.hpp"
 
+#include "drive_iec_dualdrive_copy_smoke.hpp"
+
 #include "drive_iec_cmd_smoke.hpp"
 
 #include "drive_iec_dir_smoke.hpp"
@@ -8563,6 +8565,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541IecDirectoryStubSmoke(cia2);
     runDrive1541IecHostSessionSmoke(cia2);
     runDrive1541IecMultiUnitSmoke();
+    runDrive1541IecDualDriveCopySmoke();
     runDrive1541IecStatusTimeoutSmoke(cia2);
     runDrive1541IecMemoryCommandSmoke(cia2);
     runDrive1541IecExecBlockCommandSmoke(cia2);
