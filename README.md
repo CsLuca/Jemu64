@@ -437,3 +437,32 @@ Commit 16 introduces a versioned copier compatibility matrix manifest plus schem
   - required runtime markers,
   - manifest match requirement,
   - expected manifest column contract.
+
+## Copier Matrix Runner (Commit 17)
+
+### New Script
+
+- `run_copier_matrix.ps1`
+
+Purpose:
+
+- execute the baseline copier matrix from `copier_matrix.json`,
+- build selected profile (`fast` or `strict`),
+- run emulator once,
+- evaluate scenario gates (markers + manifest checks),
+- emit consolidated reports.
+
+Outputs:
+
+- JSON report: `copier_matrix_report.json`
+- CSV report: `copier_matrix_report.csv`
+
+Terminal summary marker:
+
+- `[COPIER-MATRIX] profile=... pass=X/Y ...`
+
+Example:
+
+```powershell
+.\run_copier_matrix.ps1 -Profile fast -Manifest external_tests_manifest.json
+```

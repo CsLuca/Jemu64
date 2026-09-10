@@ -1084,6 +1084,19 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `copy_8_to_9_disk_e2e`
 - Matrix codifies gates/markers/manifest expectations used by current signoff policy.
 
+## Copier Matrix Consolidated Runner (Commit 17)
+
+- Added `run_copier_matrix.ps1` for matrix execution and reporting.
+- Script responsibilities:
+  - build selected profile (`fast`/`strict`),
+  - execute emulator run against matrix context,
+  - evaluate per-scenario gates (markers + manifest checks),
+  - emit consolidated artifacts:
+    - `copier_matrix_report.json`
+    - `copier_matrix_report.csv`
+- Summary line emitted:
+  - `[COPIER-MATRIX] profile=... pass=X/Y ...`
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
