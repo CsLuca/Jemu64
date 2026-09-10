@@ -978,6 +978,16 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `LISTEN/TALK` for unit `9` must not activate unit `8`.
   - non-addressed unit must not queue TX payload while the other unit is addressed.
 
+## Signoff Gate Wiring for Multi-Unit IEC (Commit 7)
+
+- `run_signoff_week13_14.ps1` now exposes `NeedIecMultiUnit` in `Run-Binary(...)`.
+- When enabled, `Run-Binary(...)` requires marker:
+  - `[1541 IEC MULTI] PASS:`
+- Wiring policy:
+  - enabled on `run-fast` (including 6510/8500 slot-specific runs),
+  - enabled on `run-strict` (including 6510/8500 slot-specific runs),
+  - disabled on `run-full` to preserve current full-profile manifest contract.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

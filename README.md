@@ -97,3 +97,32 @@ What it does:
 Integration:
 
 - added to the existing drive IEC smoke suite in `c64_11.cpp` via `runDriveIecSmokeSuite(...)`.
+
+## Signoff Integration (Commit 7)
+
+Commit 7 wires multi-unit verification directly into signoff gating.
+
+### Updated Function
+
+#### `Run-Binary(...)` (`run_signoff_week13_14.ps1`)
+
+New parameter:
+
+- `NeedIecMultiUnit` (`bool`)
+
+New gate behavior:
+
+- when `NeedIecMultiUnit` is `true`, the run output must contain:
+  - `[1541 IEC MULTI] PASS:`
+- missing marker is treated as signoff failure.
+
+### Call-Site Wiring
+
+`NeedIecMultiUnit` is now enabled for:
+
+- fast run (`run-fast`) including 6510/8500 revision slots
+- strict run (`run-strict`) including 6510/8500 revision slots
+
+`NeedIecMultiUnit` is disabled for:
+
+- full run (`run-full`), which keeps current external-manifest contract unchanged.
