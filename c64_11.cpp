@@ -6147,13 +6147,19 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     CPU6510 cpu(bus);
     configureChipRevisionsFromEnv(bus, cpu, vic, cia1, cia2);
 
-    Drive1541 drive;
-    configureDriveRevisionFromEnv(drive);
-    if (!drive.loadRom("roms/dos1541.rom")) {
-        std::cerr << "[KERNAL IEC E2E] FAIL: cannot load roms/dos1541.rom" << std::endl;
-        assert(false);
+    std::array<Drive1541, 4> driveSlots;
+    for (size_t i = 0; i < driveSlots.size(); ++i) {
+        Drive1541 &slotDrive = driveSlots[i];
+        slotDrive.iecDeviceAddress = static_cast<uint8_t>(8 + i);
+        configureDriveRevisionFromEnv(slotDrive);
+        if (!slotDrive.loadRom("roms/dos1541.rom")) {
+            std::cerr << "[KERNAL IEC E2E] FAIL: cannot load roms/dos1541.rom" << std::endl;
+            assert(false);
+        }
+        slotDrive.cpuEnabled = false;
     }
-    drive.cpuEnabled = false;
+
+    Drive1541 &drive = driveSlots[0];
     drive.iecEnableAtnAck = (std::getenv("KERNAL_DRIVE_DISABLE_ATN_ACK") == nullptr);
     drive.iecEnableListenerByteAck = (std::getenv("KERNAL_DRIVE_DISABLE_LISTENER_ACK") == nullptr);
     drive.iecKernelCompatSampleBothClockEdges = (std::getenv("KERNAL_DRIVE_SAMPLE_BOTH_EDGES") != nullptr);
@@ -6181,6 +6187,25 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     drive.iecPrevATN = true;
     drive.iecPrevDATA = true;
     drive.iecAtnHandshakeActive = false;
+
+    for (size_t i = 1; i < driveSlots.size(); ++i) {
+        Drive1541 &slotDrive = driveSlots[i];
+        slotDrive.iecListening = false;
+        slotDrive.iecTalking = false;
+        slotDrive.iecListenSecondary = 0xFF;
+        slotDrive.iecTalkSecondary = 0xFF;
+        slotDrive.iecTalkSa0Confirmed = false;
+        slotDrive.iecExpectingNameBytes = false;
+        slotDrive.iecNameBuffer.clear();
+        slotDrive.iecTxQueue.clear();
+        slotDrive.iecRxQueue.clear();
+        slotDrive.iecRxShift = 0;
+        slotDrive.iecRxBitCount = 0;
+        slotDrive.iecPrevCLK = true;
+        slotDrive.iecPrevATN = true;
+        slotDrive.iecPrevDATA = true;
+        slotDrive.iecAtnHandshakeActive = false;
+    }
 
     const uint16_t start = 0x2000;
     const uint16_t doneLoop = 0x2028;
@@ -6428,7 +6453,10 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     if (std::getenv("KERNAL_DD00_EDWINDOW_RMW") != nullptr) {
         kernelPolarity.readbackBusOnEdWindowOnly = true;
     }
-    SharedIecClockDomain sharedDomain(cia2, drive, kernelPolarity);
+    IecBusDomain sharedDomain(cia2, driveSlots[0], kernelPolarity);
+    for (size_t i = 1; i < driveSlots.size(); ++i) {
+        sharedDomain.attachDrive(driveSlots[i]);
+    }
     bool edWindowReadbackOverrideActive = false;
 
     bus.preReadTap = [&](uint16_t addr) {
