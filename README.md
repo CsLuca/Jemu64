@@ -319,8 +319,16 @@ Integration:
 
 - new `Run-Binary(...)` flag:
   - `NeedIecCopyFileE2E`
+  - `NeedIecCopyDiskE2E`
 - marker required when enabled:
   - `[IEC COPY E2E] PASS: copy_8_to_9_file_e2e`
+  - `[IEC COPY E2E] PASS: copy_8_to_9_disk_e2e`
+
+Manifest/checksum artifact:
+
+- dual-drive copy smoke emits:
+  - `copy_8_to_9_disk_e2e_manifest.csv`
+- signoff validates the manifest exists and reports `match=1`.
 
 ### Wiring Policy
 

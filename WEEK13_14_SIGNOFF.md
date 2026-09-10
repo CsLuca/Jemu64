@@ -1064,6 +1064,17 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - `run_signoff_week13_14.ps1` now supports `NeedIecCopyFileE2E` in `Run-Binary(...)`.
 - Gate enabled for fast/strict runs (including revision-slot runs), and disabled for full run to preserve full-profile contract.
 
+## Copy Disk E2E + Checksum Manifest Gate (Commit 15)
+
+- Dual-drive copy smoke now includes full-disk block copy pass and emits marker:
+  - `[IEC COPY E2E] PASS: copy_8_to_9_disk_e2e`
+- Smoke also emits `copy_8_to_9_disk_e2e_manifest.csv` with source/destination checksums and match flag.
+- Signoff wiring adds `NeedIecCopyDiskE2E`:
+  - requires disk e2e marker in output,
+  - requires manifest file presence,
+  - requires manifest `match=1`.
+- Enabled on fast/strict runs (including revision-slot runs), disabled on full run.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

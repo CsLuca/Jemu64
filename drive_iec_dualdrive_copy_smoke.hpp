@@ -68,6 +68,61 @@ static void runDrive1541IecDualDriveCopySmoke() {
         }
     }
 
+    static const uint8_t sectorsPerTrack[36] = {
+        0,
+        21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
+        19,19,19,19,19,19,19,
+        18,18,18,18,18,18,
+        17,17,17,17,17
+    };
+
+    for (uint8_t t = 1; t <= 35; ++t) {
+        for (uint8_t s = 0; s < sectorsPerTrack[t]; ++s) {
+            drive8.loadVirtualBlock(t, s);
+            for (size_t i = 0; i < drive8.iecBlockBuffer.size(); ++i) {
+                drive9.iecBlockBuffer[i] = drive8.iecBlockBuffer[i];
+            }
+            drive9.iecBlockBufferValid = true;
+            drive9.iecBlockBufferTrack = t;
+            drive9.iecBlockBufferSector = s;
+            drive9.flushVirtualBlock(t, s);
+        }
+    }
+
+    auto checksumFileFnv1a64 = [](const std::filesystem::path &path) -> uint64_t {
+        std::ifstream in(path, std::ios::binary);
+        if (!in.is_open()) {
+            return 0;
+        }
+        uint64_t h = 1469598103934665603ull;
+        char ch = 0;
+        while (in.get(ch)) {
+            h ^= static_cast<uint8_t>(ch);
+            h *= 1099511628211ull;
+        }
+        return h;
+    };
+
+    const uint64_t srcChecksum = checksumFileFnv1a64(srcPath);
+    const uint64_t dstChecksum = checksumFileFnv1a64(dstPath);
+    const bool diskMatch = (srcChecksum == dstChecksum && srcChecksum != 0);
+
+    {
+        std::ofstream manifest("copy_8_to_9_disk_e2e_manifest.csv", std::ios::binary | std::ios::trunc);
+        manifest << "src_path,dst_path,src_checksum,dst_checksum,match\n";
+        manifest << srcPath.string() << ","
+                 << dstPath.string() << ","
+                 << std::hex << srcChecksum << ","
+                 << std::hex << dstChecksum << ","
+                 << std::dec << (diskMatch ? 1 : 0)
+                 << "\n";
+    }
+
+    if (!diskMatch) {
+        std::cerr << "[1541 IEC COPY] FAIL: disk-level copy checksum mismatch." << std::endl;
+        assert(false);
+    }
+
     std::error_code ec;
     std::filesystem::remove(srcPath, ec);
     std::filesystem::remove(dstPath, ec);
@@ -79,4 +134,10 @@ static void runDrive1541IecDualDriveCopySmoke() {
               << " s=" << 0x01
               << std::dec << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: copy_8_to_9_file_e2e" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: copy_8_to_9_disk_e2e"
+              << " src_checksum=" << std::hex << srcChecksum
+              << " dst_checksum=" << dstChecksum
+              << std::dec
+              << " manifest=copy_8_to_9_disk_e2e_manifest.csv"
+              << std::endl;
 }
