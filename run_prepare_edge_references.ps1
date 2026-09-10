@@ -1,5 +1,6 @@
 param(
     [string]$Manifest = "external_tests_golden_corpus.json",
+    [string]$RealGoldenManifest = "real_golden_manifest.json",
     [switch]$RebuildStrict
 )
 
@@ -14,6 +15,28 @@ $savedPath = $env:PATH
 
 try {
     $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
+
+    $realGoldenPath = $RealGoldenManifest
+    if (-not [System.IO.Path]::IsPathRooted($realGoldenPath)) {
+        $realGoldenPath = Join-Path -Path $repo -ChildPath $realGoldenPath
+    }
+    if (-not (Test-Path -LiteralPath $realGoldenPath)) {
+        throw "Missing real golden manifest: $realGoldenPath"
+    }
+    $realGoldenObj = Get-Content -LiteralPath $realGoldenPath -Raw | ConvertFrom-Json
+    if ($null -eq $realGoldenObj -or $null -eq $realGoldenObj.titles -or $realGoldenObj.titles.Count -lt 1) {
+        throw "Invalid real golden manifest (titles missing): $realGoldenPath"
+    }
+    foreach ($title in $realGoldenObj.titles) {
+        $titlePath = [string]$title.path
+        if (-not [System.IO.Path]::IsPathRooted($titlePath)) {
+            $titlePath = Join-Path -Path $repo -ChildPath $titlePath
+        }
+        if (-not (Test-Path -LiteralPath $titlePath)) {
+            throw "Real golden title path missing: $titlePath"
+        }
+    }
+    "[EDGE-REF] INFO: real golden manifest validated path=$realGoldenPath titles=$($realGoldenObj.titles.Count)"
 
 if (-not (Test-Path -LiteralPath $pcTool)) {
     throw "Missing tool: $pcTool"

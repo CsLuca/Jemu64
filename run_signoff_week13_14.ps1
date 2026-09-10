@@ -1,5 +1,6 @@
 param(
     [string]$Manifest = "external_tests_golden_corpus.json",
+    [string]$RealGoldenManifest = "real_golden_manifest.json",
     [string]$FastManifest = "external_tests_golden_corpus_fast.json",
     [string]$Manifest6510 = "external_tests_golden_corpus_6510.json",
     [string]$Manifest8500 = "external_tests_golden_corpus_8500.json",
@@ -202,6 +203,47 @@ function Resolve-ManifestPath {
         }
     }
     return $path
+}
+
+function Resolve-PathOrThrow {
+    param([string]$PathInput, [string]$Label)
+
+    $path = $PathInput
+    if (-not [System.IO.Path]::IsPathRooted($path)) {
+        $path = Join-Path -Path $repo -ChildPath $path
+    }
+    if (-not (Test-Path -LiteralPath $path)) {
+        throw "Missing ${Label}: $path"
+    }
+    return $path
+}
+
+function Test-RealGoldenManifest {
+    param([string]$ManifestPath)
+
+    $jsonText = Get-Content -LiteralPath $ManifestPath -Raw
+    $obj = $jsonText | ConvertFrom-Json
+    if ($null -eq $obj) {
+        throw "Invalid real golden manifest JSON: $ManifestPath"
+    }
+    if ($null -eq $obj.titles -or $obj.titles.Count -lt 1) {
+        throw "Invalid real golden manifest (missing titles): $ManifestPath"
+    }
+
+    foreach ($title in $obj.titles) {
+        if ($null -eq $title.path -or [string]::IsNullOrWhiteSpace([string]$title.path)) {
+            throw "Invalid real golden manifest title with empty path: $ManifestPath"
+        }
+        $titlePath = [string]$title.path
+        if (-not [System.IO.Path]::IsPathRooted($titlePath)) {
+            $titlePath = Join-Path -Path $repo -ChildPath $titlePath
+        }
+        if (-not (Test-Path -LiteralPath $titlePath)) {
+            throw "Real golden title path missing: $titlePath"
+        }
+    }
+
+    return $obj.titles.Count
 }
 
 function Update-MetricsFromEdgeReferences {
@@ -537,6 +579,9 @@ $savedPath = $env:PATH
 try {
     $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
 
+    $realGoldenManifestPath = Resolve-PathOrThrow -PathInput $RealGoldenManifest -Label "real golden manifest"
+    $realGoldenTitles = Test-RealGoldenManifest -ManifestPath $realGoldenManifestPath
+
     $results = @()
 
     $results += Invoke-Step -Name "build-fast" -Action { Build-Profile -Macro "RUN_PROFILE_FAST" -OutFile "c64_11_fast_signoff.exe" } -Assert { param($o, $e) $e -eq 0 }
@@ -688,6 +733,8 @@ try {
     "[SIGNOFF] interrupt boundary: zero mismatch ([WEEK12] PASS)"
     "[SIGNOFF] no hidden fallback: enforced (host_fallback=no)"
     "[SIGNOFF] strict/full manifest: $Manifest"
+    "[SIGNOFF] real golden manifest: $realGoldenManifestPath"
+    "[SIGNOFF] real golden titles: $realGoldenTitles"
     $fastManifestReport = Resolve-ManifestPath -ManifestInput $FastManifest -FallbackManifestInput $Manifest
     "[SIGNOFF] fast manifest: $fastManifestReport"
     "[SIGNOFF] strict 6510 manifest: $(Resolve-ManifestPath -ManifestInput $Manifest6510 -FallbackManifestInput $Manifest)"
