@@ -16,8 +16,9 @@
 #include <vector>
 
 #include "drive_via6522.hpp"
+#include "iec_device.hpp"
 
-class Drive1541 {
+class Drive1541 : public IIecDevice {
 public:
     enum Revision : uint8_t {
         REV_1541 = 0,
@@ -446,7 +447,7 @@ public:
         tickIecHalfCycle();
     }
 
-    void tickIecHalfCycle() {
+    void tickIecHalfCycle() override {
         cycles++;
 
         via1.tick();
@@ -735,10 +736,18 @@ public:
         }
     }
 
-    void setIecLines(bool atnHigh, bool clkHigh, bool dataHigh) {
+    void setIecLines(bool atnHigh, bool clkHigh, bool dataHigh) override {
         iecATN = atnHigh;
         iecCLK = clkHigh;
         iecDATA = dataHigh;
+    }
+
+    bool getIecDrivePullCLK() const override {
+        return iecDrivePullCLK;
+    }
+
+    bool getIecDrivePullDATA() const override {
+        return iecDrivePullDATA;
     }
 
     void enqueueIecCommandByte(uint8_t cmd) {

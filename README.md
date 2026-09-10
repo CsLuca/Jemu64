@@ -201,3 +201,31 @@ Behavior:
 - checks legacy single-drive override;
 - parses `IEC_ACTIVE_DRIVES` tokens, validates unit range, builds mask;
 - applies fallback to all active when parsed set is empty.
+
+## IEC Device Abstraction (Decoupling Step)
+
+To reduce runtime coupling between bus orchestration and concrete drive implementation, the IEC stack now includes an abstract device interface.
+
+### New Interface
+
+#### `class IIecDevice` (`iec_device.hpp`)
+
+Purpose:
+
+- define the minimal contract required by IEC bus scheduling and line propagation.
+
+Methods:
+
+- `tickIecHalfCycle()`
+- `setIecLines(bool atnHigh, bool clkHigh, bool dataHigh)`
+- `getIecDrivePullCLK() const`
+- `getIecDrivePullDATA() const`
+
+### Drive Integration
+
+`Drive1541` now implements `IIecDevice` and provides the required overrides without changing existing drive semantics.
+
+### Bus Integration
+
+`IecBusDomain` now stores and operates on `IIecDevice*` instead of `Drive1541*`.
+This removes direct compile-time dependence on concrete drive internals in bus orchestration logic.

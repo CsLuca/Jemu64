@@ -6,6 +6,8 @@
 #include <queue>
 #include <vector>
 
+#include "iec_device.hpp"
+
 struct IecBridgePolarity {
     bool atnPullWhenBitSet = true;
     bool clkPullWhenBitSet = true;
@@ -484,7 +486,7 @@ struct SharedIecClockDomain {
 struct IecBusDomain {
     CIA6526 &cia2;
     IecBridgePolarity polarity;
-    std::vector<Drive1541 *> attachedDrives;
+    std::vector<IIecDevice *> attachedDrives;
     struct TimedEvent {
         uint64_t when = 0;
         uint64_t seq = 0;
@@ -531,7 +533,7 @@ struct IecBusDomain {
 
     std::priority_queue<TimedEvent, std::vector<TimedEvent>, TimedEventCompare> events;
 
-    IecBusDomain(CIA6526 &c, Drive1541 &primaryDrive, const IecBridgePolarity &p)
+    IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
         : cia2(c), polarity(p), attachedDrives{&primaryDrive} {
         if (const char *driveHzEnv = std::getenv("IEC_DRIVE_HALF_HZ")) {
             const unsigned long long parsed = std::strtoull(driveHzEnv, nullptr, 10);
@@ -579,8 +581,8 @@ struct IecBusDomain {
         bootstrapIecLink();
     }
 
-    void attachDrive(Drive1541 &drive) {
-        for (Drive1541 *existing : attachedDrives) {
+    void attachDrive(IIecDevice &drive) {
+        for (IIecDevice *existing : attachedDrives) {
             if (existing == &drive) {
                 return;
             }
@@ -673,8 +675,8 @@ struct IecBusDomain {
     }
 
     bool anyDrivePullCLK() const {
-        for (const Drive1541 *drive : attachedDrives) {
-            if (drive != nullptr && drive->iecDrivePullCLK) {
+        for (const IIecDevice *drive : attachedDrives) {
+            if (drive != nullptr && drive->getIecDrivePullCLK()) {
                 return true;
             }
         }
@@ -682,8 +684,8 @@ struct IecBusDomain {
     }
 
     bool anyDrivePullDATA() const {
-        for (const Drive1541 *drive : attachedDrives) {
-            if (drive != nullptr && drive->iecDrivePullDATA) {
+        for (const IIecDevice *drive : attachedDrives) {
+            if (drive != nullptr && drive->getIecDrivePullDATA()) {
                 return true;
             }
         }
@@ -691,7 +693,7 @@ struct IecBusDomain {
     }
 
     void propagateLinesToDrives() {
-        for (Drive1541 *drive : attachedDrives) {
+        for (IIecDevice *drive : attachedDrives) {
             if (drive != nullptr) {
                 drive->setIecLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
             }
@@ -777,7 +779,7 @@ struct IecBusDomain {
         const bool prevPullCLK = anyDrivePullCLK();
         const bool prevPullDATA = anyDrivePullDATA();
 
-        for (Drive1541 *drive : attachedDrives) {
+        for (IIecDevice *drive : attachedDrives) {
             if (drive != nullptr) {
                 drive->tickIecHalfCycle();
             }
