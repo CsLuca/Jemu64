@@ -1037,6 +1037,18 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - perform source read + destination write through drive block buffer path,
   - verify destination bytes persisted as expected.
 
+## Mounted D64 Directory Per-Unit DoD (Commit 12)
+
+- `LOAD"$",8` / `LOAD"$",9` path now attempts directory payload generation from mounted D64 images.
+- Added D64 directory parsing path for:
+  - disk name from BAM (`T18/S0`),
+  - directory entries from chain starting at `T18/S1`,
+  - free blocks from BAM counters.
+- Added smoke `runDrive1541IecD64DirectoryMountSmoke(...)`:
+  - mounts two different D64 images for unit 8 and unit 9,
+  - verifies each unit returns its own directory content,
+  - verifies no cross-unit directory contamination.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

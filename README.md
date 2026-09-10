@@ -308,3 +308,53 @@ Behavior:
 Integration:
 
 - wired into `runDriveIecSmokeSuite(...)` so fast/strict signoff paths cover it.
+
+## Per-Unit Mounted D64 Directory Path (Commit 12)
+
+Commit 12 closes the phase-1 DoD by ensuring directory payloads for `LOAD"$",8` and `LOAD"$",9` can come from different mounted D64 images.
+
+### Updated Functions
+
+#### `Drive1541::readMountedD64Sector(...)` (`drive_1541.hpp`)
+
+Purpose:
+
+- read one 256-byte sector from mounted D64 backend by CHS.
+
+#### `Drive1541::decodeD64Name(...)` (`drive_1541.hpp`)
+
+Purpose:
+
+- decode PETSCII-like padded names from D64 BAM/directory entries into printable uppercase ASCII.
+
+#### `Drive1541::d64FileTypeToString(...)` (`drive_1541.hpp`)
+
+Purpose:
+
+- map directory file-type nibble to user-visible type labels (`PRG/SEQ/USR/REL/DEL`).
+
+#### `Drive1541::buildDirectoryPayloadFromMountedD64()` (`drive_1541.hpp`)
+
+Purpose:
+
+- build the IEC directory stream directly from mounted D64:
+  - disk name from BAM (`T18/S0`),
+  - entries from directory chain (`T18/S1` onward),
+  - free block count from BAM per-track counters.
+
+Integration behavior:
+
+- directory request handling now tries mounted D64 directory build first;
+- if unavailable, it falls back to previous virtual/stub directory behavior.
+
+### New Smoke Test
+
+#### `runDrive1541IecD64DirectoryMountSmoke()` (`drive_iec_d64_directory_mount_smoke.hpp`)
+
+Coverage:
+
+- creates two different temporary D64 images (unit 8 and unit 9),
+- mounts them separately,
+- triggers `LOAD"$"` command flow on each unit,
+- verifies returned directory payload reflects the correct per-unit mounted image,
+- verifies no cross-unit contamination.

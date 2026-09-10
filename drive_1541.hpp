@@ -1926,6 +1926,149 @@ public:
         return iecNameBuffer[0] == static_cast<uint8_t>('$');
     }
 
+    bool readMountedD64Sector(uint8_t track, uint8_t sector, std::array<uint8_t, 256> &out) const {
+        if (!isMountedD64BackendActive()) {
+            return false;
+        }
+        uint32_t offset = 0;
+        if (!d64TrackSectorToOffset(track, sector, offset)) {
+            return false;
+        }
+        std::ifstream in(mountedImagePath, std::ios::binary);
+        if (!in.is_open()) {
+            return false;
+        }
+        in.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+        in.read(reinterpret_cast<char *>(out.data()), 256);
+        return in.gcount() == 256;
+    }
+
+    std::string decodeD64Name(const uint8_t *bytes, size_t len) const {
+        std::string out;
+        out.reserve(len);
+        for (size_t i = 0; i < len; ++i) {
+            uint8_t c = bytes[i];
+            if (c == 0x00 || c == 0xA0) {
+                break;
+            }
+            c = static_cast<uint8_t>(c & 0x7F);
+            if (c >= 'a' && c <= 'z') {
+                c = static_cast<uint8_t>(c - 32);
+            }
+            if (c >= 32 && c <= 126) {
+                out.push_back(static_cast<char>(c));
+            }
+        }
+        return out;
+    }
+
+    std::string d64FileTypeToString(uint8_t ft) const {
+        switch (ft & 0x07) {
+            case 0x00: return "DEL";
+            case 0x01: return "SEQ";
+            case 0x02: return "PRG";
+            case 0x03: return "USR";
+            case 0x04: return "REL";
+            default: return "PRG";
+        }
+    }
+
+    bool buildDirectoryPayloadFromMountedD64() {
+        if (!isMountedD64BackendActive()) {
+            return false;
+        }
+
+        std::array<uint8_t, 256> bam = {};
+        if (!readMountedD64Sector(18, 0, bam)) {
+            return false;
+        }
+
+        std::string diskName = decodeD64Name(&bam[0x90], 16);
+        if (diskName.empty()) {
+            diskName = "D64 MOUNT";
+        }
+
+        std::vector<uint8_t> prg;
+        prg.reserve(2048);
+        prg.push_back(0x01);
+        prg.push_back(0x08);
+
+        uint16_t cursor = 0x0801;
+        enqueueBasicLine(prg, cursor, 0, std::string("0 \"") + diskName + "\" 00 2A");
+
+        uint16_t lineNo = 1;
+        bool anyCatalog = false;
+        uint8_t trk = 18;
+        uint8_t sec = 1;
+        int guard = 0;
+        while (trk != 0 && guard < 64) {
+            std::array<uint8_t, 256> dirSector = {};
+            if (!readMountedD64Sector(trk, sec, dirSector)) {
+                break;
+            }
+            const uint8_t nextTrk = dirSector[0];
+            const uint8_t nextSec = dirSector[1];
+
+            for (int entry = 0; entry < 8; ++entry) {
+                const int off = 2 + (entry * 32);
+                const uint8_t fileType = dirSector[off + 2];
+                if ((fileType & 0x07) == 0) {
+                    continue;
+                }
+                const std::string name = decodeD64Name(&dirSector[off + 5], 16);
+                const std::string type = d64FileTypeToString(fileType);
+                const uint16_t blocks = static_cast<uint16_t>(dirSector[off + 30] | (uint16_t(dirSector[off + 31]) << 8));
+
+                if (!wildcardMatch(iecDirectoryWildcardPattern, name)) {
+                    continue;
+                }
+                if (!iecDirectoryTypeFilter.empty() && type != iecDirectoryTypeFilter) {
+                    continue;
+                }
+                if (!iecDirectoryModeFilter.empty()) {
+                    continue;
+                }
+
+                anyCatalog = true;
+                std::ostringstream row;
+                row << blocks << " \"" << name << "\" " << type;
+                enqueueBasicLine(prg, cursor, lineNo, row.str());
+                lineNo = static_cast<uint16_t>(lineNo + 1);
+            }
+
+            trk = nextTrk;
+            sec = nextSec;
+            guard++;
+        }
+
+        if (!anyCatalog) {
+            enqueueBasicLine(prg, cursor, lineNo, "1 \"$\" PRG");
+            lineNo = static_cast<uint16_t>(lineNo + 1);
+        }
+
+        uint16_t freeBlocks = 0;
+        for (uint8_t t = 1; t <= 35; ++t) {
+            const size_t off = 4 + (static_cast<size_t>(t - 1) * 4);
+            if (off < bam.size()) {
+                freeBlocks = static_cast<uint16_t>(freeBlocks + bam[off]);
+            }
+        }
+        std::ostringstream freeLine;
+        freeLine << freeBlocks << " BLOCKS FREE.";
+        enqueueBasicLine(prg, cursor, lineNo, freeLine.str());
+
+        prg.push_back(0x00);
+        prg.push_back(0x00);
+
+        iecTxQueue.clear();
+        for (uint8_t b : prg) {
+            iecTxQueue.push_back(b);
+        }
+        iecDirectoryStubPrepared = true;
+        iecDirectoryFromBlockBuffer = false;
+        return true;
+    }
+
     void enqueueBasicLine(std::vector<uint8_t> &prg, uint16_t &cursor, uint16_t lineNo, const std::string &text) {
         const uint16_t next = static_cast<uint16_t>(cursor + 2 + 2 + text.size() + 1);
         prg.push_back(static_cast<uint8_t>(next & 0xFF));
@@ -2036,10 +2179,13 @@ public:
                     iecDirectoryTypeFilter = filters.type;
                     iecDirectoryModeFilter = filters.mode;
                     iecDirectoryModeFilterNegated = filters.modeNegated;
-                    buildDirectoryStubPayload();
-                    if (iecBlockBufferValid) {
-                        buildDirectoryFromBlockBufferPayload(0);
-                        iecDirectoryFromBlockBuffer = true;
+                    const bool builtMounted = buildDirectoryPayloadFromMountedD64();
+                    if (!builtMounted) {
+                        buildDirectoryStubPayload();
+                        if (iecBlockBufferValid) {
+                            buildDirectoryFromBlockBufferPayload(0);
+                            iecDirectoryFromBlockBuffer = true;
+                        }
                     }
                     iecOpenTalkChannels[0] = true;
                 }
