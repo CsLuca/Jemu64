@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "defaults": {
+    "require_no_host_fallback": true,
+    "checksum_algorithm": "fnv1a64",
+    "artifacts": {
+      "manifest_csv": "copy_8_to_9_disk_e2e_manifest.csv",
+      "report_json": "copier_matrix_report.json"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "copy_8_to_9_file_e2e",
+      "description": "Baseline file-level transfer path from unit 8 to unit 9 on D64",
+      "level": "baseline",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "d64",
+      "target_format": "d64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: copy_8_to_9_file_e2e"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Validated in fast/strict signoff runs",
+        "No host fallback allowed"
+      ]
+    },
+    {
+      "id": "copy_8_to_9_disk_e2e",
+      "description": "Baseline disk-level transfer path from unit 8 to unit 9 on D64 with checksum manifest",
+      "level": "baseline",
+      "mode": "disk_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "d64",
+      "target_format": "d64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: copy_8_to_9_disk_e2e"
+        ],
+        "require_manifest_match": true,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Manifest match=1 is mandatory",
+        "Validated in fast/strict signoff runs"
+      ]
+    }
+  ]
+}

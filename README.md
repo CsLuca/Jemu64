@@ -411,3 +411,29 @@ Commit 13 introduces a shared image backend abstraction and migrates D64 handlin
 - `Drive1541` now keeps `std::unique_ptr<IImageBackend> mountedImageBackend`.
 - `configureMountedImage(...)` instantiates `D64ImageBackend` when format is `d64`.
 - block and directory paths now use the common backend API instead of ad-hoc direct file code.
+
+## Copier Matrix Manifest (Commit 16)
+
+Commit 16 introduces a versioned copier compatibility matrix manifest plus schema to make pass criteria explicit and machine-readable.
+
+### New Artifacts
+
+- `copier_matrix.json`
+  - initial baseline matrix with:
+    - `copy_8_to_9_file_e2e`
+    - `copy_8_to_9_disk_e2e`
+  - includes per-scenario format/unit/mode and required pass gates.
+
+- `copier_matrix.schema.json`
+  - schema for validating matrix structure and required fields.
+
+### Matrix Semantics
+
+- `defaults` section declares global policy:
+  - no host fallback requirement,
+  - checksum algorithm,
+  - expected artifact filenames.
+- `scenarios` section defines measurable gates:
+  - required runtime markers,
+  - manifest match requirement,
+  - expected manifest column contract.

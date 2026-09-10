@@ -1075,6 +1075,15 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - requires manifest `match=1`.
 - Enabled on fast/strict runs (including revision-slot runs), disabled on full run.
 
+## Copier Matrix Baseline Manifest (Commit 16)
+
+- Added `copier_matrix.json` as baseline compatibility matrix for copier scenarios.
+- Added `copier_matrix.schema.json` for matrix validation contract.
+- Current baseline scenarios included:
+  - `copy_8_to_9_file_e2e`
+  - `copy_8_to_9_disk_e2e`
+- Matrix codifies gates/markers/manifest expectations used by current signoff policy.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
