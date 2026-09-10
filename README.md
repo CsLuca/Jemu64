@@ -126,3 +126,40 @@ New gate behavior:
 `NeedIecMultiUnit` is disabled for:
 
 - full run (`run-full`), which keeps current external-manifest contract unchanged.
+
+## Multi-Drive Quickstart (Commit 8)
+
+### PowerShell Example (Units 8 and 9)
+
+```powershell
+$env:DRIVE8_IMAGE = "testdata\real_corpus_draven_top10\g64\TheLastV8_v2.g64"
+$env:DRIVE8_FORMAT = "g64"
+$env:DRIVE9_IMAGE = "testdata\real_corpus_draven_top10\d64\Mule_v1.d64"
+$env:DRIVE9_FORMAT = "d64"
+```
+
+Notes:
+
+- `DRIVE*_FORMAT` is optional when extension is already one of `d64/g64/nib/raw`.
+- unset variables for a slot means no configured image metadata for that slot.
+
+### Suggested BASIC Usage Pattern
+
+- Unit 8 directory:
+  - `LOAD"$",8`
+- Unit 9 directory:
+  - `LOAD"$",9`
+
+The current smoke/signoff path validates unit-address isolation for these flows.
+
+## Migration Notes (Single Drive -> Multi-Drive)
+
+- Existing single-drive setups remain valid because slot 0 is still unit 8.
+- If you already use `C64_DRIVE_REVISION`, it still applies to each instantiated slot drive.
+- New per-slot env vars are additive and non-breaking.
+
+## Operational Boundaries
+
+- Commit 8 provides operational guidance and migration notes.
+- Format-specific full ingest semantics per slot remain staged for later commits.
+- Current CI/signoff already enforces multi-unit marker coverage in fast/strict profiles.

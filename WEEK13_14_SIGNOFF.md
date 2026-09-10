@@ -988,6 +988,20 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - enabled on `run-strict` (including 6510/8500 slot-specific runs),
   - disabled on `run-full` to preserve current full-profile manifest contract.
 
+## Multi-Drive Operational Notes (Commit 8)
+
+- Recommended env wiring (PowerShell):
+  - `$env:DRIVE8_IMAGE = "..."`
+  - `$env:DRIVE9_IMAGE = "..."`
+  - optional overrides: `$env:DRIVE8_FORMAT`, `$env:DRIVE9_FORMAT`
+- If `DRIVE*_FORMAT` is omitted, runtime infers format from extension when possible.
+- Migration compatibility:
+  - existing unit-8 single-drive workflows remain valid,
+  - per-slot image env vars are additive and non-breaking.
+- Current scope reminder:
+  - signoff/CI now validates multi-unit IEC addressing marker,
+  - per-slot format-specific ingest internals remain follow-up work.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
