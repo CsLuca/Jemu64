@@ -670,6 +670,15 @@ try {
         return ($txt -match "\[RUNNER\] mode=compat" -and $txt -match "pass=True")
     }
 
+    $results += Invoke-Step -Name "run-real-golden-gate" -Action {
+        & "$repo\run_real_golden_gate.ps1" -Manifest $realGoldenManifestPath -Mode pure -DefaultMaxHalfCycles $KernelMaxHalfCycles -ReportCsv "real_golden_gate_runtime.csv"
+    } -Assert {
+        param($o, $e)
+        if ($e -ne 0) { return $false }
+        $txt = ($o | Out-String)
+        return ($txt -match "\[REAL-GOLDEN\] summary pass=")
+    }
+
     $pureResult = $results | Where-Object { $_.Name -eq "run-pure" } | Select-Object -First 1
     if ($pureResult -ne $null) {
         $pureText = ($pureResult.Output | Out-String)
@@ -729,6 +738,7 @@ try {
     "[SIGNOFF] week79 real hard corpus (G64/NIB/D64/RAW) hard-ref: PASS"
     "[SIGNOFF] week80 release-readiness closure hard-ref: PASS"
     "[SIGNOFF] week81 flux ingest/decode/replay behavior parity hard-ref: PASS"
+    "[SIGNOFF] real golden per-title gate (G64/NIB/D64/RAW): PASS"
     "[SIGNOFF] 1541 physical-grade beta: PASS"
     "[SIGNOFF] interrupt boundary: zero mismatch ([WEEK12] PASS)"
     "[SIGNOFF] no hidden fallback: enforced (host_fallback=no)"

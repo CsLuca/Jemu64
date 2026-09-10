@@ -11,6 +11,7 @@ $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 $py = "python"
 $pcTool = Join-Path $repo "tools\make_pc_only_reference.py"
 $strictExe = Join-Path $repo "c64_11_strict_edge_ref.exe"
+$realGoldenGateScript = Join-Path $repo "run_real_golden_gate.ps1"
 $savedPath = $env:PATH
 
 try {
@@ -40,6 +41,9 @@ try {
 
 if (-not (Test-Path -LiteralPath $pcTool)) {
     throw "Missing tool: $pcTool"
+}
+if (-not (Test-Path -LiteralPath $realGoldenGateScript)) {
+    throw "Missing tool: $realGoldenGateScript"
 }
 
     if ($RebuildStrict -or -not (Test-Path -LiteralPath $strictExe)) {
@@ -192,6 +196,11 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Strict run failed during edge reference bootstrap"
     }
+
+    & $realGoldenGateScript -Manifest $realGoldenPath -Mode pure -DefaultMaxHalfCycles 700000 -ReportCsv "real_golden_gate_runtime.csv"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Real golden gate failed during edge reference bootstrap"
+    }
 }
 finally {
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $savedManifest, "Process")
@@ -330,6 +339,7 @@ $week78Runtime = Join-Path $repo "week78_real_disk_corpus_runtime.csv"
 $week79Runtime = Join-Path $repo "week79_real_hard_corpus_runtime.csv"
 $week80Runtime = Join-Path $repo "week80_release_readiness_runtime.csv"
 $week81Runtime = Join-Path $repo "week81_flux_behavior_parity_runtime.csv"
+$realGoldenRuntime = Join-Path $repo "real_golden_gate_runtime.csv"
 $brknRuntime = Join-Path $repo "c64_lorenz_brkn_edge_ref.trace.csv"
 
 if (-not (Test-Path -LiteralPath $week15Runtime)) {
@@ -529,6 +539,9 @@ if (-not (Test-Path -LiteralPath $week80Runtime)) {
 }
 if (-not (Test-Path -LiteralPath $week81Runtime)) {
     throw "Missing runtime edge trace: $week81Runtime"
+}
+if (-not (Test-Path -LiteralPath $realGoldenRuntime)) {
+    throw "Missing real golden runtime report: $realGoldenRuntime"
 }
 if (-not (Test-Path -LiteralPath $brknRuntime)) {
     throw "Missing runtime trace: $brknRuntime"
