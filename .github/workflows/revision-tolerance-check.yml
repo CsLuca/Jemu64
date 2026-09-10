@@ -31,3 +31,14 @@ jobs:
       - name: Check tolerance policy
         shell: powershell
         run: .\run_check_revision_tolerance.ps1
+
+      - name: Upload tolerance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: revision-tolerance-artifacts
+          path: |
+            copier_matrix_report.json
+            copier_matrix_report.csv
+            real_golden_gate_runtime.csv
+            reference/edge/revision_tolerance_metrics.json

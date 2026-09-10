@@ -466,3 +466,35 @@ Example:
 ```powershell
 .\run_copier_matrix.ps1 -Profile fast -Manifest external_tests_manifest.json
 ```
+
+## Copier Matrix Signoff/CI Gate (Commit 18)
+
+Commit 18 promotes copier matrix evaluation to a mandatory signoff gate.
+
+### Signoff Integration
+
+- `run_signoff_week13_14.ps1` now always runs `run_copier_matrix.ps1` as step `run-copier-matrix`.
+- The step fails signoff if copier matrix exit is non-zero or if expected summary marker is missing.
+- Default signoff profile for matrix gate is `fast`.
+
+### New Signoff Parameters
+
+- `CopierMatrixPath` (default `copier_matrix.json`)
+- `CopierMatrixManifest` (default `external_tests_manifest.json`)
+- `CopierMatrixProfile` (`fast` or `strict`, default `fast`)
+- `CopierMatrixReportJson` (default `copier_matrix_report.json`)
+- `CopierMatrixReportCsv` (default `copier_matrix_report.csv`)
+
+### Report Availability in Signoff Output
+
+On success, signoff prints resolved output paths for:
+
+- copier matrix JSON report
+- copier matrix CSV report
+
+### CI Artifact Publishing
+
+Both manual workflows now upload copier matrix reports as artifacts:
+
+- `.github/workflows/revision-signoff-matrix.yml`
+- `.github/workflows/revision-tolerance-check.yml`

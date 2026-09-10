@@ -52,3 +52,14 @@ jobs:
             -FastManifest6510 "${{ matrix.rev.manifest_fast }}" `
             -FastManifest8500 "${{ matrix.rev.manifest_fast }}" `
             -RevisionSlot "${{ matrix.rev.slot }}"
+
+      - name: Upload signoff artifacts (${{ matrix.rev.name }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: revision-signoff-${{ matrix.rev.name }}
+          path: |
+            copier_matrix_report.json
+            copier_matrix_report.csv
+            real_golden_gate_runtime.csv
+            reference/edge/revision_tolerance_metrics.json

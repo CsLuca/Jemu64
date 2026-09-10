@@ -10,7 +10,13 @@ param(
     [string]$RevisionSlot = "all",
     [int]$KernelMaxHalfCycles = 700000,
     [int]$PureStabilityRuns = 12,
-    [switch]$SkipFastExternal
+    [switch]$SkipFastExternal,
+    [string]$CopierMatrixPath = "copier_matrix.json",
+    [string]$CopierMatrixManifest = "external_tests_manifest.json",
+    [ValidateSet("fast", "strict")]
+    [string]$CopierMatrixProfile = "fast",
+    [string]$CopierMatrixReportJson = "copier_matrix_report.json",
+    [string]$CopierMatrixReportCsv = "copier_matrix_report.csv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -636,6 +642,16 @@ try {
         }
     } -Assert { param($o, $e) $e -eq 0 }
 
+    $copierMatrixManifestInput = Resolve-ManifestPath -ManifestInput $CopierMatrixManifest -FallbackManifestInput $Manifest
+    $results += Invoke-Step -Name "run-copier-matrix" -Action {
+        & "$repo\run_copier_matrix.ps1" -MatrixPath $CopierMatrixPath -Profile $CopierMatrixProfile -Manifest $copierMatrixManifestInput -ReportJson $CopierMatrixReportJson -ReportCsv $CopierMatrixReportCsv
+    } -Assert {
+        param($o, $e)
+        if ($e -ne 0) { return $false }
+        $txt = ($o | Out-String)
+        return ($txt -match "\[COPIER-MATRIX\]" -and $txt -match "pass=")
+    }
+
     $results += Invoke-Step -Name "run-strict" -Action {
         $r = Run-Binary -ExePath "$repo\c64_11_strict_signoff.exe" -ManifestPath $Manifest -NeedWeek45:$true -NeedWeek46:$true -NeedWeek47:$true -NeedWeek48:$true -NeedWeek49:$true -NeedWeek50:$true -NeedWeek51:$true -NeedWeek52:$true -NeedWeek53:$true -NeedWeek54:$true -NeedWeek55:$true -NeedWeek56:$true -NeedWeek57:$true -NeedWeek58:$true -NeedWeek59:$true -NeedWeek60:$true -NeedWeek61:$true -NeedWeek62:$true -NeedWeek63:$true -NeedWeek64:$true -NeedWeek65:$true -NeedWeek66:$true -NeedWeek67:$true -NeedWeek68:$true -NeedWeek69:$true -NeedWeek70:$true -NeedWeek71:$true -NeedWeek72:$true -NeedWeek73:$true -NeedWeek74:$true -NeedWeek75:$true -NeedWeek76:$true -NeedWeek77:$true -NeedWeek78:$true -NeedWeek79:$true -NeedWeek80:$true -NeedWeek81:$true -NeedWeek12:$true -NeedExternal:$true -NeedNoFallback:$true -NeedIecMultiUnit:$true -NeedIecCopyFileE2E:$true -NeedIecCopyDiskE2E:$true -ExtraEnv $null
         $script:__runStrict = $r
@@ -712,6 +728,7 @@ try {
     "[SIGNOFF] ----------------------------------------"
     "[SIGNOFF] Week13-14 status: PASS"
     "[SIGNOFF] strict/full/fast: green"
+    "[SIGNOFF] copier matrix gate: green (profile=$CopierMatrixProfile)"
     "[SIGNOFF] pure/compat: green"
     "[SIGNOFF] drift test: stable ([WEEK45 TIME] PASS)"
     "[SIGNOFF] week46 IEC timing-grade hard-ref: PASS"
@@ -763,6 +780,9 @@ try {
     "[SIGNOFF] strict 8500 manifest: $(Resolve-ManifestPath -ManifestInput $Manifest8500 -FallbackManifestInput $Manifest)"
     "[SIGNOFF] fast 6510 manifest: $(Resolve-ManifestPath -ManifestInput $FastManifest6510 -FallbackManifestInput $Manifest)"
     "[SIGNOFF] fast 8500 manifest: $(Resolve-ManifestPath -ManifestInput $FastManifest8500 -FallbackManifestInput $Manifest)"
+    "[SIGNOFF] copier matrix manifest: $copierMatrixManifestInput"
+    "[SIGNOFF] copier matrix report json: $(Resolve-PathOrThrow -PathInput $CopierMatrixReportJson -Label 'copier matrix json report')"
+    "[SIGNOFF] copier matrix report csv: $(Resolve-PathOrThrow -PathInput $CopierMatrixReportCsv -Label 'copier matrix csv report')"
     $week18Ref = Join-Path -Path $repo -ChildPath "reference\edge\week18_openbus_revision_trace.csv"
     if (Test-Path -LiteralPath $week18Ref) {
         $rows = @(Get-Content -LiteralPath $week18Ref)

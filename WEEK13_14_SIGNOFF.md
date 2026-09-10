@@ -1097,6 +1097,37 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Summary line emitted:
   - `[COPIER-MATRIX] profile=... pass=X/Y ...`
 
+## Copier Matrix Mandatory Gate + CI Artifacts (Commit 18)
+
+- `run_signoff_week13_14.ps1` now includes a dedicated signoff step:
+  - `run-copier-matrix`
+- This step runs:
+  - `run_copier_matrix.ps1`
+- Gate behavior:
+  - signoff fails if copier matrix exits non-zero,
+  - signoff fails if copier matrix summary marker is missing.
+
+### New Signoff Inputs
+
+- `CopierMatrixPath` (default `copier_matrix.json`)
+- `CopierMatrixManifest` (default `external_tests_manifest.json`)
+- `CopierMatrixProfile` (`fast`/`strict`, default `fast`)
+- `CopierMatrixReportJson` (default `copier_matrix_report.json`)
+- `CopierMatrixReportCsv` (default `copier_matrix_report.csv`)
+
+### Signoff Output Contract
+
+- Final signoff summary now includes resolved paths for:
+  - copier matrix JSON report,
+  - copier matrix CSV report.
+
+### Workflow Artifact Wiring
+
+- Updated `.github/workflows/revision-signoff-matrix.yml`:
+  - always uploads `copier_matrix_report.json` and `copier_matrix_report.csv`.
+- Updated `.github/workflows/revision-tolerance-check.yml`:
+  - always uploads `copier_matrix_report.json` and `copier_matrix_report.csv`.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
