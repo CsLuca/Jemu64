@@ -560,6 +560,33 @@ The advanced backend baseline now enforces read-only semantics for `g64` and `ni
   - `g64`
   - `nib`
 - New runtime markers:
-  - `[IEC COPY E2E] PASS: advanced_g64_write_protect_baseline`
-  - `[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline`
+- `[IEC COPY E2E] PASS: advanced_g64_write_protect_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline`
 - `copier_matrix.json` includes both scenarios as advanced baseline gates.
+
+## Advanced Track/Zone/Sync/Weakbit Mapper (Next Step)
+
+Advanced format backends now run a format-aware read path baseline with deterministic mapping stages.
+
+### Backend Model
+
+- `advanced_image_backends.hpp` now uses `FluxMappedImageBackend` for `g64/nib/raw`.
+- Read path stages:
+  - CHS validation (`track/sector` geometry)
+  - track-zone mapping transform
+  - sync-loss marker perturbation
+  - weakbit dynamic nibble variance (`g64`/`nib` only)
+
+### Format Policy
+
+- `g64`: read-only, sync-loss + weakbit model enabled
+- `nib`: read-only, sync-loss + weakbit model enabled
+- `raw`: writable, sync-loss model enabled, weakbit model disabled
+
+### Smoke and Matrix Markers
+
+- Advanced smoke now verifies weakbit variance on repeated reads for `g64` and `nib`.
+- New markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline`
+- `copier_matrix.json` includes both weakbit baseline scenarios.

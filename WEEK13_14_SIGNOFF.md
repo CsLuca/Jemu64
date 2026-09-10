@@ -1169,6 +1169,29 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with both write-protect baseline scenarios.
 
+## Advanced Track/Zone/Sync/Weakbit Mapper Baseline (Follow-up)
+
+- Replaced linear advanced backend path with `FluxMappedImageBackend` in `advanced_image_backends.hpp`.
+- New read pipeline stages for advanced formats:
+  - CHS mapper (`track/sector` validation + addressing),
+  - track-zone transform,
+  - sync-loss model perturbation,
+  - weakbit nibble-variance model (`g64`/`nib`).
+
+- Format behavior policy:
+  - `g64`: read-only + sync-loss + weakbit,
+  - `nib`: read-only + sync-loss + weakbit,
+  - `raw`: writable + sync-loss (weakbit disabled baseline).
+
+- Extended advanced smoke validation:
+  - verifies repeated-read weakbit variance for `g64` and `nib`.
+
+- Added matrix gate markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline`
+
+- Extended `copier_matrix.json` with weakbit baseline scenarios.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

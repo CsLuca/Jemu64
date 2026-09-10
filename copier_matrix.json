@@ -197,6 +197,60 @@
         "Read-only backend baseline",
         "Expects WRITE PROTECT ON status"
       ]
+    },
+    {
+      "id": "advanced_g64_weakbit_baseline",
+      "description": "Advanced-format baseline weakbit variance behavior for G64",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Weakbit dynamic-read baseline",
+        "Track/zone/sync mapper active"
+      ]
+    },
+    {
+      "id": "advanced_nib_weakbit_baseline",
+      "description": "Advanced-format baseline weakbit variance behavior for NIB",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Weakbit dynamic-read baseline",
+        "Track/zone/sync mapper active"
+      ]
     }
   ]
 }
