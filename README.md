@@ -543,3 +543,23 @@ All three backends expose:
 - `advanced_g64_mount_baseline`
 - `advanced_nib_mount_baseline`
 - `advanced_raw_mount_baseline`
+
+## Advanced Write-Protect Baseline (Next Step)
+
+The advanced backend baseline now enforces read-only semantics for `g64` and `nib` writes.
+
+### Error Contract
+
+- `ImageIoError` now includes `WriteProtected`.
+- `Drive1541` maps write-protected backend writes to status:
+  - `26,WRITE PROTECT ON,00,00`
+
+### Smoke and Matrix Coverage
+
+- `drive_iec_advanced_image_mount_smoke.hpp` now verifies write-protect behavior for:
+  - `g64`
+  - `nib`
+- New runtime markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_write_protect_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline`
+- `copier_matrix.json` includes both scenarios as advanced baseline gates.

@@ -41,6 +41,22 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     verifyRead("nib", nibPath, 0x6B);
     verifyRead("raw", rawPath, 0x7C);
 
+    auto verifyWriteProtect = [&](const std::string &format, const std::filesystem::path &path) {
+        drive.configureMountedImage(path.string(), format, true);
+        drive.loadVirtualBlock(1, 0);
+        drive.iecBlockBuffer[0] = 0x22;
+        drive.iecBlockBufferValid = true;
+        drive.flushVirtualBlock(1, 0);
+        if (drive.iecStatusLine.rfind("26,WRITE PROTECT ON", 0) != 0) {
+            std::cerr << "[1541 IMG ADV] FAIL: expected write protect status on format " << format
+                      << " got=" << drive.iecStatusLine << std::endl;
+            assert(false);
+        }
+    };
+
+    verifyWriteProtect("g64", g64Path);
+    verifyWriteProtect("nib", nibPath);
+
     drive.configureMountedImage(rawPath.string(), "raw", true);
     drive.loadVirtualBlock(1, 0);
     drive.iecBlockBuffer[0] = 0x33;
@@ -67,4 +83,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_mount_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_mount_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_raw_mount_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_write_protect_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline" << std::endl;
 }

@@ -1153,6 +1153,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with advanced baseline scenarios using the above markers.
 
+## Advanced Write-Protect Semantics Baseline (Follow-up)
+
+- Extended `ImageIoError` with `WriteProtected` to represent explicit read-only backend rejection.
+- `G64ImageBackend` and `NIBImageBackend` now fail writes as write-protected baseline behavior.
+- `Drive1541::flushVirtualBlock(...)` maps write-protect backend failure to DOS status:
+  - `26,WRITE PROTECT ON,00,00`
+
+- Extended advanced smoke (`runDrive1541IecAdvancedImageMountSmoke()`):
+  - verifies write-protect status path for `g64` and `nib`.
+
+- Added matrix gate markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_write_protect_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline`
+
+- Extended `copier_matrix.json` with both write-protect baseline scenarios.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

@@ -1871,6 +1871,8 @@ public:
             if (!mountedImageBackend->writeBlock(track, sector, iecBlockBuffer, err)) {
                 if (err == ImageIoError::InvalidAddress) {
                     iecStatusLine = "66,ILLEGAL TRACK OR SECTOR,00,00";
+                } else if (err == ImageIoError::WriteProtected) {
+                    iecStatusLine = "26,WRITE PROTECT ON,00,00";
                 } else {
                     iecStatusLine = "74,DRIVE NOT READY,00,00";
                 }

@@ -51,7 +51,7 @@ public:
                     const std::array<uint8_t, 256> &in,
                     ImageIoError &error) override {
         if (!canWrite) {
-            error = ImageIoError::IoFailure;
+            error = ImageIoError::WriteProtected;
             return false;
         }
         uint32_t offset = 0;

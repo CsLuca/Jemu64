@@ -9,6 +9,7 @@ enum class ImageIoError {
     None,
     NotReady,
     InvalidAddress,
+    WriteProtected,
     IoFailure
 };
 
