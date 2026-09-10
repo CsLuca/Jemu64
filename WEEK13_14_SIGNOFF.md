@@ -1057,6 +1057,13 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `d64_image_backend.hpp` implementing block IO and directory listing for D64.
 - `Drive1541` now wires mounted image handling through `IImageBackend` (D64 adapter), keeping behavior equivalent while decoupling format-specific logic from drive core.
 
+## Copy File E2E Gate Wiring (Commit 14)
+
+- Added explicit runtime marker in dual-drive copy smoke:
+  - `[IEC COPY E2E] PASS: copy_8_to_9_file_e2e`
+- `run_signoff_week13_14.ps1` now supports `NeedIecCopyFileE2E` in `Run-Binary(...)`.
+- Gate enabled for fast/strict runs (including revision-slot runs), and disabled for full run to preserve full-profile contract.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

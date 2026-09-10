@@ -308,6 +308,24 @@ Behavior:
 Integration:
 
 - wired into `runDriveIecSmokeSuite(...)` so fast/strict signoff paths cover it.
+- emits dedicated marker:
+  - `[IEC COPY E2E] PASS: copy_8_to_9_file_e2e`
+
+## Signoff Gate for Copy File E2E (Commit 14)
+
+`run_signoff_week13_14.ps1` now has an explicit pass gate for file copy path.
+
+### Updated Signoff Contract
+
+- new `Run-Binary(...)` flag:
+  - `NeedIecCopyFileE2E`
+- marker required when enabled:
+  - `[IEC COPY E2E] PASS: copy_8_to_9_file_e2e`
+
+### Wiring Policy
+
+- enabled in fast/strict runs (including revision-slot variants),
+- disabled in full run (keeps existing full-profile external contract unchanged).
 
 ## Per-Unit Mounted D64 Directory Path (Commit 12)
 

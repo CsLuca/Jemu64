@@ -78,4 +78,5 @@ static void runDrive1541IecDualDriveCopySmoke() {
               << " t=" << std::hex << 0x12
               << " s=" << 0x01
               << std::dec << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: copy_8_to_9_file_e2e" << std::endl;
 }
