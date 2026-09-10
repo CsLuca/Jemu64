@@ -71,3 +71,29 @@ State updated in `Drive1541`:
 ### Current Scope
 
 This commit wires per-slot independent mount metadata and configuration. It does not yet implement full image ingest semantics for each format in the 1541 data path.
+
+## Multi-Unit IEC Smoke Test (Commit 6)
+
+Commit 6 adds a dedicated multi-unit smoke test to lock expected address-isolation behavior.
+
+### New Function
+
+#### `runDrive1541IecMultiUnitSmoke()` (`drive_iec_multiunit_smoke.hpp`)
+
+Purpose:
+
+- verify that unit-level IEC addressing (`8` vs `9`) keeps LISTEN/TALK behavior isolated per drive instance.
+
+What it does:
+
+- creates two independent drives (`unit 8` and `unit 9`) with distinct catalog payload markers.
+- broadcasts the same IEC command bytes to both drives and validates only the addressed unit transitions to LISTEN/TALK.
+- runs two flows:
+  - `LOAD "$",8` equivalent command sequence (`LISTEN 8`, `SA0`, name `$`, `UNLISTEN`, `TALK 8`, `TALK SA0`)
+  - `LOAD "$",9` equivalent command sequence
+- verifies non-addressed unit does not emit talk payload (`pendingIecTx() == 0`).
+- verifies addressed unit emits payload (`hostReadTalkByte` succeeds).
+
+Integration:
+
+- added to the existing drive IEC smoke suite in `c64_11.cpp` via `runDriveIecSmokeSuite(...)`.

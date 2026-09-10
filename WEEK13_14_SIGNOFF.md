@@ -970,6 +970,14 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Commit 5 provides independent per-slot mount metadata wiring.
 - Full format-specific disk ingest semantics are intentionally deferred to next commits.
 
+## Multi-Unit IEC Address-Isolation Smoke (Commit 6)
+
+- Added `runDrive1541IecMultiUnitSmoke()` and wired it into `runDriveIecSmokeSuite(...)`.
+- The smoke validates that two drives (`unit 8` and `unit 9`) remain isolated on shared IEC command broadcast:
+  - `LISTEN/TALK` for unit `8` must not activate unit `9`.
+  - `LISTEN/TALK` for unit `9` must not activate unit `8`.
+  - non-addressed unit must not queue TX payload while the other unit is addressed.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
