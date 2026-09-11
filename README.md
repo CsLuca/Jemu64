@@ -754,3 +754,20 @@ Current status in the checklist:
 
 - all active matrix scenarios are currently marked `PASS`,
 - hard advanced scenarios are included in the same consolidated status view.
+
+### CI Gate Integration
+
+- New script: `run_check_phase5_closure.ps1`
+
+What it validates:
+
+- matrix/report scenario count alignment,
+- all `overall_pass` values are `1` in `copier_matrix_report.json`,
+- every matrix scenario ID is present in `COPIER_SUPPORT_MATRIX.md`.
+
+CI wiring:
+
+- `.github/workflows/revision-tolerance-check.yml`
+- `.github/workflows/revision-signoff-matrix.yml`
+
+Both workflows now execute phase5 closure gate and upload `COPIER_SUPPORT_MATRIX.md` as artifact.

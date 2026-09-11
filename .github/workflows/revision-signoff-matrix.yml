@@ -53,6 +53,10 @@ jobs:
             -FastManifest8500 "${{ matrix.rev.manifest_fast }}" `
             -RevisionSlot "${{ matrix.rev.slot }}"
 
+      - name: Check phase5 closure gate (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_check_phase5_closure.ps1
+
       - name: Upload signoff artifacts (${{ matrix.rev.name }})
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,5 +65,6 @@ jobs:
           path: |
             copier_matrix_report.json
             copier_matrix_report.csv
+            COPIER_SUPPORT_MATRIX.md
             real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json

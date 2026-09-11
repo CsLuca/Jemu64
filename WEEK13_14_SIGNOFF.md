@@ -1299,6 +1299,20 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - This creates a stable handoff artifact for signoff/release review, aligned with current matrix gates.
 
+## Phase 5 Closure CI Gate (Follow-up)
+
+- Added `run_check_phase5_closure.ps1` with three enforced checks:
+  - matrix/report scenario count alignment,
+  - all scenarios must be `overall_pass=1` in `copier_matrix_report.json`,
+  - every scenario ID from `copier_matrix.json` must appear in `COPIER_SUPPORT_MATRIX.md`.
+
+- CI integration updated:
+  - `.github/workflows/revision-tolerance-check.yml` now runs the phase5 closure gate.
+  - `.github/workflows/revision-signoff-matrix.yml` now runs the phase5 closure gate.
+
+- Artifact contract extended:
+  - both workflows now upload `COPIER_SUPPORT_MATRIX.md` together with matrix reports.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
