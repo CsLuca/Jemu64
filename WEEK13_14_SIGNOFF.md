@@ -1275,6 +1275,20 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with all four hard scenarios while preserving previous gates.
 
+## Jitter Window + Relock Soak Hard Baseline (Follow-up)
+
+- Extended advanced smoke with windowed stress checks:
+  - repeated-read jitter digest evolution (`g64` and `nib`),
+  - short soak relock-class stability window (3 reads).
+
+- Added hard markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_jitter_window_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_jitter_window_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_g64_relock_window_soak_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline`
+
+- Extended `copier_matrix.json` with all four scenarios while preserving previous gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

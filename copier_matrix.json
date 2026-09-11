@@ -521,6 +521,114 @@
         "Repeated-read classification stability",
         "Sync relock drift envelope"
       ]
+    },
+    {
+      "id": "advanced_g64_jitter_window_hard_baseline",
+      "description": "Hard baseline for G64 jitter-window digest evolution under repeated reads",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_jitter_window_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Windowed jitter stress",
+        "Digest must evolve"
+      ]
+    },
+    {
+      "id": "advanced_nib_jitter_window_hard_baseline",
+      "description": "Hard baseline for NIB jitter-window digest evolution under repeated reads",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_jitter_window_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Windowed jitter stress",
+        "Digest must evolve"
+      ]
+    },
+    {
+      "id": "advanced_g64_relock_window_soak_hard_baseline",
+      "description": "Hard baseline for G64 relock classification stability in short soak window",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_relock_window_soak_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Relock drift soak",
+        "3-read stability envelope"
+      ]
+    },
+    {
+      "id": "advanced_nib_relock_window_soak_hard_baseline",
+      "description": "Hard baseline for NIB relock classification stability in short soak window",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Relock drift soak",
+        "3-read stability envelope"
+      ]
     }
   ]
 }

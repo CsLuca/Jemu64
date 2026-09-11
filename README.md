@@ -714,3 +714,26 @@ Advanced hard coverage now includes track-window realism and relock drift stabil
 - `[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline`
 
 All four are included in `copier_matrix.json` as hard advanced scenarios.
+
+## Jitter Window + Relock Soak Hard Baseline (Next Step)
+
+Added hard stress checks focused on temporal jitter and short soak stability.
+
+### New Hard Behaviors in Advanced Smoke
+
+- **Windowed jitter digest (`g64`/`nib`)**
+  - runs repeated reads and builds an FNV-style digest from weakbit-sensitive and DOS-map bytes.
+  - pass condition: digest must evolve from initial seed.
+
+- **Relock soak window (`g64`/`nib`)**
+  - performs 3 repeated reads in a short window.
+  - pass condition: classification byte remains stable across the window.
+
+### New Hard Markers
+
+- `[IEC COPY E2E] PASS: advanced_g64_jitter_window_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_jitter_window_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_g64_relock_window_soak_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline`
+
+All are wired into `copier_matrix.json` as advanced hard scenarios.

@@ -165,6 +165,21 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
         assert(false);
     }
 
+    {
+        uint64_t g64JitterDigest = 1469598103934665603ull;
+        for (int i = 0; i < 8; ++i) {
+            drive.loadVirtualBlock(1, 0);
+            g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[7]);
+            g64JitterDigest *= 1099511628211ull;
+            g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
+            g64JitterDigest *= 1099511628211ull;
+        }
+        if (g64JitterDigest == 0 || g64JitterDigest == 1469598103934665603ull) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 jitter digest did not evolve." << std::endl;
+            assert(false);
+        }
+    }
+
     drive.configureMountedImage(nibPath.string(), "nib", true);
     drive.loadVirtualBlock(1, 0);
     const uint8_t nibRelockA = drive.iecBlockBuffer[3];
@@ -177,6 +192,47 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     if (drive.iecBlockBuffer[1] == 0x00 || drive.iecBlockBuffer[2] == 0x00) {
         std::cerr << "[1541 IMG ADV] FAIL: NIB sync/gap classification not applied." << std::endl;
         assert(false);
+    }
+
+    {
+        uint64_t nibJitterDigest = 1469598103934665603ull;
+        for (int i = 0; i < 8; ++i) {
+            drive.loadVirtualBlock(1, 0);
+            nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[7]);
+            nibJitterDigest *= 1099511628211ull;
+            nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
+            nibJitterDigest *= 1099511628211ull;
+        }
+        if (nibJitterDigest == 0 || nibJitterDigest == 1469598103934665603ull) {
+            std::cerr << "[1541 IMG ADV] FAIL: NIB jitter digest did not evolve." << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        drive.configureMountedImage(g64Path.string(), "g64", true);
+        std::array<uint8_t, 3> window = {0, 0, 0};
+        for (int i = 0; i < 3; ++i) {
+            drive.loadVirtualBlock(1, 0);
+            window[static_cast<size_t>(i)] = drive.iecBlockBuffer[3];
+        }
+        if (!(window[0] == window[1] && window[1] == window[2])) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 relock window drift out of envelope." << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        drive.configureMountedImage(nibPath.string(), "nib", true);
+        std::array<uint8_t, 3> window = {0, 0, 0};
+        for (int i = 0; i < 3; ++i) {
+            drive.loadVirtualBlock(1, 0);
+            window[static_cast<size_t>(i)] = drive.iecBlockBuffer[3];
+        }
+        if (!(window[0] == window[1] && window[1] == window[2])) {
+            std::cerr << "[1541 IMG ADV] FAIL: NIB relock window drift out of envelope." << std::endl;
+            assert(false);
+        }
     }
 
     auto verifyWriteProtect = [&](const std::string &format, const std::filesystem::path &path) {
@@ -239,4 +295,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_multitrack_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_sync_relock_drift_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_jitter_window_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_jitter_window_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_relock_window_soak_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline" << std::endl;
 }
