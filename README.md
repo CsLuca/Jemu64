@@ -738,6 +738,36 @@ Added hard stress checks focused on temporal jitter and short soak stability.
 
 All are wired into `copier_matrix.json` as advanced hard scenarios.
 
+## Advanced Real Corpus Gate Bootstrap (Commit 1)
+
+### New Manifest
+
+- `advanced_real_corpus_manifest.json`
+
+Purpose:
+
+- bootstrap an advanced real-corpus gate for `g64`/`nib`/`raw` titles,
+- keep no-host-fallback and timing-window expectations explicit per title.
+
+### New Runner
+
+- `run_advanced_real_corpus_gate.ps1`
+
+What it does:
+
+- parses `advanced_real_corpus_manifest.json`,
+- verifies title paths,
+- validates RAW sample and week81-oracle constraints when requested,
+- executes `run_kernel_iec_e2e.ps1` per-title,
+- enforces no-host-fallback contract,
+- emits per-title lines and summary marker:
+  - `[ADV-REAL-CORPUS] title=... pass=...`
+  - `[ADV-REAL-CORPUS] summary pass=X/Y report=...`
+
+Artifact:
+
+- `advanced_real_corpus_runtime.csv`
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

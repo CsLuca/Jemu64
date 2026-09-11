@@ -1289,6 +1289,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with all four scenarios while preserving previous gates.
 
+## Advanced Real Corpus Bootstrap Gate (Commit 1)
+
+- Added `advanced_real_corpus_manifest.json` as initial advanced corpus list across `g64/nib/raw`.
+- Added `run_advanced_real_corpus_gate.ps1` for per-title execution and oracle validation.
+
+- Runner responsibilities:
+  - manifest parsing + path validation,
+  - RAW oracle checks (`sample_floor`, `expected_sample_count`, week81 constraints),
+  - per-title kernel runner invocation,
+  - no-host-fallback enforcement,
+  - CSV emission (`advanced_real_corpus_runtime.csv`).
+
+- Runtime contract markers:
+  - `[ADV-REAL-CORPUS] title=...`
+  - `[ADV-REAL-CORPUS] summary pass=X/Y ...`
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

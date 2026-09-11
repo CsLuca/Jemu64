@@ -1,0 +1,154 @@
+{
+  "manifest_version": 1,
+  "name": "advanced_real_corpus_phase5_bootstrap",
+  "description": "Phase5 advanced real corpus bootstrap list for g64/nib/raw with no-fallback contract.",
+  "global_oracle": {
+    "require_no_host_fallback": true,
+    "default_timing_window": {
+      "max_halfcycles": 700000,
+      "min_done_hits": 1
+    }
+  },
+  "titles": [
+    {
+      "id": "adv_g64_128_data_base",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/128_data_base.g64/128 data base.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_128_data_base",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/128_data_base.nib/128 data base.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_vic1541_test_demo",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021].g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_vic1541_test_demo_side0",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_vic1541_test_demo_side1",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/commodorevic1541testdemo/Commodore VIC-1541 Test-Demo (Commodore Business Machines, Inc.)(1982) [C1988021]/vic1541testdemo1.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_adv_wrt",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/adv_wrt.g64/adv wrt.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_adv_wrt",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/adv_wrt.nib/adv wrt.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_adv_s1",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/adv_s1.g64/adv s1.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_adv_s1",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/adv_s1.nib/adv s1.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_3d_construction_kit",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/3D_Construction_Kit/3dkit-disk-bcp.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_3d_construction_kit",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/3D_Construction_Kit/3dkit-disk-bcp.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_raw_copy_ii_pc_v1",
+      "format": "raw",
+      "path": "testdata/real_corpus_draven_top10/kryoflux/Copy.II.PC.v1.0",
+      "oracle": {
+        "sample_floor": 160,
+        "expected_sample_count": 168,
+        "loader_timing_parity": {
+          "min_runs": 480,
+          "max_mismatches": 0
+        },
+        "sync_loss_recovery": {
+          "min_rows": 15
+        },
+        "weak_halftrack_observed": {
+          "min_rows": 25
+        }
+      }
+    }
+  ]
+}
