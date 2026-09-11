@@ -686,3 +686,31 @@ New hard markers:
 - `[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline`
 
 Both are now in `copier_matrix.json` as additional hard scenarios.
+
+## Multi-Track / Half-Track / Relock Hard Baseline (Next Step)
+
+Advanced hard coverage now includes track-window realism and relock drift stability checks.
+
+### New Debug Functions (`advanced_image_backends.hpp`)
+
+- `G64ImageBackend::debugTrackSliceTag(uint8_t track)`
+  - returns a deterministic tag derived from parsed track slice offset/size.
+  - used to verify multi-track payload differentiation.
+
+- `G64ImageBackend::debugHasHalfTrackSlice(uint8_t track)`
+  - reports whether half-track-style slot data is available for the given track.
+
+- `NIBImageBackend::debugTrackStrideTag()`
+  - returns parsed track stride low-byte tag for stride sanity checks.
+
+- `NIBImageBackend::debugTrackWindowReadable(uint8_t track)`
+  - verifies computed per-track stride window stays in bounds.
+
+### New Hard Markers
+
+- `[IEC COPY E2E] PASS: advanced_g64_multitrack_halftrack_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_multitrack_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_g64_sync_relock_drift_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline`
+
+All four are included in `copier_matrix.json` as hard advanced scenarios.

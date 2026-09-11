@@ -413,6 +413,114 @@
         "DOS error-map coverage",
         "Expected classes: 20/21/22/23/27"
       ]
+    },
+    {
+      "id": "advanced_g64_multitrack_halftrack_hard_baseline",
+      "description": "Hard baseline for G64 multi-track plus half-track mapping behavior",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_multitrack_halftrack_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Multi-track payload differentiation",
+        "Half-track slice presence"
+      ]
+    },
+    {
+      "id": "advanced_nib_multitrack_hard_baseline",
+      "description": "Hard baseline for NIB multi-track stride/window behavior",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_multitrack_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Track-stride mapping coverage",
+        "Multi-track window readability"
+      ]
+    },
+    {
+      "id": "advanced_g64_sync_relock_drift_hard_baseline",
+      "description": "Hard baseline for sync relock drift stability on G64 classification",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_sync_relock_drift_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Repeated-read classification stability",
+        "Sync relock drift envelope"
+      ]
+    },
+    {
+      "id": "advanced_nib_sync_relock_drift_hard_baseline",
+      "description": "Hard baseline for sync relock drift stability on NIB classification",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Repeated-read classification stability",
+        "Sync relock drift envelope"
+      ]
     }
   ]
 }

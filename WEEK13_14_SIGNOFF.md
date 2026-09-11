@@ -1253,6 +1253,28 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with DOS error-map hard scenarios, preserving all prior gates.
 
+## Multi-Track / Half-Track / Sync-Relock Drift Hard Baseline (Follow-up)
+
+- Added hard debug helpers in `advanced_image_backends.hpp`:
+  - `G64ImageBackend::debugTrackSliceTag(track)`,
+  - `G64ImageBackend::debugHasHalfTrackSlice(track)`,
+  - `NIBImageBackend::debugTrackStrideTag()`,
+  - `NIBImageBackend::debugTrackWindowReadable(track)`.
+
+- Extended advanced smoke to validate:
+  - G64 multi-track differentiation via per-track slice tags,
+  - G64 half-track slot availability baseline,
+  - NIB per-track stride-window readability,
+  - repeated-read sync-relock classification stability on G64/NIB.
+
+- Added hard markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_multitrack_halftrack_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_multitrack_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_g64_sync_relock_drift_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline`
+
+- Extended `copier_matrix.json` with all four hard scenarios while preserving previous gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

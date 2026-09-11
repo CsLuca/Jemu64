@@ -25,8 +25,9 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
         const uint32_t tableOffset = 0x0C;
         const uint32_t tableBytes = static_cast<uint32_t>(trackCount) * 4u;
         const uint32_t firstTrackOffset = tableOffset + tableBytes;
+        const uint32_t secondTrackOffset = firstTrackOffset + 2u + 256u;
         const uint16_t trackLen = 256;
-        std::vector<uint8_t> data(firstTrackOffset + 2u + trackLen, 0);
+        std::vector<uint8_t> data(secondTrackOffset + 2u + trackLen, 0);
 
         data[0] = 'G'; data[1] = 'C'; data[2] = 'R'; data[3] = '-';
         data[4] = '1'; data[5] = '5'; data[6] = '4'; data[7] = '1';
@@ -39,11 +40,21 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
         data[tableOffset + 1] = static_cast<uint8_t>((firstTrackOffset >> 8) & 0xFF);
         data[tableOffset + 2] = static_cast<uint8_t>((firstTrackOffset >> 16) & 0xFF);
         data[tableOffset + 3] = static_cast<uint8_t>((firstTrackOffset >> 24) & 0xFF);
+        data[tableOffset + 4] = static_cast<uint8_t>(secondTrackOffset & 0xFF);
+        data[tableOffset + 5] = static_cast<uint8_t>((secondTrackOffset >> 8) & 0xFF);
+        data[tableOffset + 6] = static_cast<uint8_t>((secondTrackOffset >> 16) & 0xFF);
+        data[tableOffset + 7] = static_cast<uint8_t>((secondTrackOffset >> 24) & 0xFF);
 
         data[firstTrackOffset + 0] = static_cast<uint8_t>(trackLen & 0xFF);
         data[firstTrackOffset + 1] = static_cast<uint8_t>((trackLen >> 8) & 0xFF);
         for (uint16_t i = 0; i < trackLen; ++i) {
             data[firstTrackOffset + 2u + i] = seed;
+        }
+
+        data[secondTrackOffset + 0] = static_cast<uint8_t>(trackLen & 0xFF);
+        data[secondTrackOffset + 1] = static_cast<uint8_t>((trackLen >> 8) & 0xFF);
+        for (uint16_t i = 0; i < trackLen; ++i) {
+            data[secondTrackOffset + 2u + i] = static_cast<uint8_t>(seed ^ 0x33u);
         }
 
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
@@ -117,8 +128,38 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     verifyRead("nib", nibPath, 0x66, true);
     verifyRead("raw", rawPath, 0x77, false);
 
+    {
+        G64ImageBackend g64Debug(g64Path.string());
+        if (!g64Debug.isReady() || !g64Debug.debugHasHalfTrackSlice(1)) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 half-track slice baseline missing." << std::endl;
+            assert(false);
+        }
+        const uint8_t t1 = g64Debug.debugTrackSliceTag(1);
+        const uint8_t t2 = g64Debug.debugTrackSliceTag(2);
+        if (t1 == 0 || t2 == 0 || t1 == t2) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 multi-track slice tag baseline mismatch." << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        NIBImageBackend nibDebug(nibPath.string());
+        if (!nibDebug.isReady() || !nibDebug.debugTrackWindowReadable(1) || !nibDebug.debugTrackWindowReadable(2)) {
+            std::cerr << "[1541 IMG ADV] FAIL: NIB multi-track window baseline mismatch." << std::endl;
+            assert(false);
+        }
+        (void)nibDebug.debugTrackStrideTag();
+    }
+
     drive.configureMountedImage(g64Path.string(), "g64", true);
     drive.loadVirtualBlock(1, 0);
+    const uint8_t g64RelockA = drive.iecBlockBuffer[3];
+    drive.loadVirtualBlock(1, 0);
+    const uint8_t g64RelockB = drive.iecBlockBuffer[3];
+    if (g64RelockA != g64RelockB) {
+        std::cerr << "[1541 IMG ADV] FAIL: G64 relock drift classification unstable." << std::endl;
+        assert(false);
+    }
     if (drive.iecBlockBuffer[1] == 0x00 || drive.iecBlockBuffer[2] == 0x00) {
         std::cerr << "[1541 IMG ADV] FAIL: G64 sync/gap classification not applied." << std::endl;
         assert(false);
@@ -126,6 +167,13 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
 
     drive.configureMountedImage(nibPath.string(), "nib", true);
     drive.loadVirtualBlock(1, 0);
+    const uint8_t nibRelockA = drive.iecBlockBuffer[3];
+    drive.loadVirtualBlock(1, 0);
+    const uint8_t nibRelockB = drive.iecBlockBuffer[3];
+    if (nibRelockA != nibRelockB) {
+        std::cerr << "[1541 IMG ADV] FAIL: NIB relock drift classification unstable." << std::endl;
+        assert(false);
+    }
     if (drive.iecBlockBuffer[1] == 0x00 || drive.iecBlockBuffer[2] == 0x00) {
         std::cerr << "[1541 IMG ADV] FAIL: NIB sync/gap classification not applied." << std::endl;
         assert(false);
@@ -187,4 +235,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_dos_error_map_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_multitrack_halftrack_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_multitrack_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_sync_relock_drift_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_sync_relock_drift_hard_baseline" << std::endl;
 }

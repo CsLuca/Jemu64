@@ -391,6 +391,22 @@ public:
         : FluxMappedImageBackend(path, "g64", false, true, true) {
     }
 
+    uint8_t debugTrackSliceTag(uint8_t track) const {
+        const TrackSlice *slice = resolveTrackSlice(track);
+        if (slice == nullptr || slice->dataSize == 0) {
+            return 0;
+        }
+        return static_cast<uint8_t>(((slice->dataOffset & 0xFFu) ^ (slice->dataSize & 0xFFu)) & 0xFFu);
+    }
+
+    bool debugHasHalfTrackSlice(uint8_t track) const {
+        if (!ensureParsed() || track < 1) {
+            return false;
+        }
+        const size_t idxHalf = static_cast<size_t>(track - 1u) * 2u;
+        return idxHalf < trackSlices.size() && trackSlices[idxHalf].dataSize >= 256;
+    }
+
 private:
     struct TrackSlice {
         uint32_t dataOffset = 0;
@@ -504,6 +520,21 @@ class NIBImageBackend : public FluxMappedImageBackend {
 public:
     explicit NIBImageBackend(const std::string &path)
         : FluxMappedImageBackend(path, "nib", false, true, true) {
+    }
+
+    uint8_t debugTrackStrideTag() const {
+        if (!ensureParsed()) {
+            return 0;
+        }
+        return static_cast<uint8_t>(trackSize & 0xFFu);
+    }
+
+    bool debugTrackWindowReadable(uint8_t track) const {
+        if (!ensureParsed() || track < 1 || track > 35) {
+            return false;
+        }
+        const uint32_t base = static_cast<uint32_t>(track - 1u) * trackSize;
+        return (base + trackSize) <= fileBytes.size();
     }
 
 private:
