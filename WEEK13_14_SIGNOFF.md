@@ -1313,6 +1313,15 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Artifact contract extended:
   - both workflows now upload `COPIER_SUPPORT_MATRIX.md` together with matrix reports.
 
+## Phase 5 Near-Closure Freeze Snapshot (Follow-up)
+
+- `COPIER_SUPPORT_MATRIX.md` now includes an explicit freeze statement declaring phase5 near-closure achieved under active hard-gate contract.
+- Freeze snapshot explicitly anchors on:
+  - signoff green,
+  - copier matrix full-pass,
+  - phase5 closure gate pass,
+  - CI gate parity with artifact publication.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

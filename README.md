@@ -755,6 +755,13 @@ Current status in the checklist:
 - all active matrix scenarios are currently marked `PASS`,
 - hard advanced scenarios are included in the same consolidated status view.
 
+### Freeze Note
+
+`COPIER_SUPPORT_MATRIX.md` now carries a freeze statement:
+
+- phase5 near-closure is considered achieved under current hard-gate contract,
+- freeze status is tied to signoff + matrix + phase5 closure gate consistency.
+
 ### CI Gate Integration
 
 - New script: `run_check_phase5_closure.ps1`

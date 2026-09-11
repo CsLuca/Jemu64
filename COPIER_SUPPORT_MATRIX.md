@@ -57,6 +57,19 @@ The project can be considered near closure for phase 5 when all of the following
 - No regression in mandatory runtime markers for D64 and advanced format scenarios.
 - No host fallback regressions in matrix/signoff contract.
 
+## Freeze Statement
+
+Phase 5 is currently considered **near-closure achieved** under frozen gate conditions.
+
+Frozen conditions snapshot:
+
+- `run_signoff_week13_14.ps1` is green with active copier matrix gating.
+- `run_copier_matrix.ps1` is full-pass on the active hard scenario set.
+- `run_check_phase5_closure.ps1` is green (matrix/report/checklist consistency).
+- CI workflows enforce the same phase5 closure gate and publish checklist artifacts.
+
+Freeze does not imply final physical parity completion; it certifies current hard-gate contract stability.
+
 ## Remaining Work Before Full Closure
 
 - Introduce format-native edge corpus cases with real-world stress traces for `g64/nib/raw`.
