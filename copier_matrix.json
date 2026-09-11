@@ -359,6 +359,60 @@
         "Sync/gap/error classification active",
         "GCR hard-fidelity baseline"
       ]
+    },
+    {
+      "id": "advanced_g64_dos_error_map_hard_baseline",
+      "description": "Hard baseline for DOS error-map classes 20/21/22/23/27 on G64 path",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_dos_error_map_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "DOS error-map coverage",
+        "Expected classes: 20/21/22/23/27"
+      ]
+    },
+    {
+      "id": "advanced_nib_dos_error_map_hard_baseline",
+      "description": "Hard baseline for DOS error-map classes 20/21/22/23/27 on NIB path",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "DOS error-map coverage",
+        "Expected classes: 20/21/22/23/27"
+      ]
     }
   ]
 }

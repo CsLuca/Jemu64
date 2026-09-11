@@ -1237,6 +1237,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with hard GCR baseline scenarios while preserving all previous gates.
 
+## DOS Error-Map Hard Baseline (Follow-up)
+
+- Added `advanced_image_detail::mapMetricsToDosErrorCode(const GcrMetrics &metrics)` in `advanced_image_backends.hpp`.
+- Mapping policy baseline covers DOS-like classes:
+  - `20`, `21`, `22`, `23`, `27`.
+
+- `applyStrictGcrDecodePipeline(...)` now stamps mapped DOS code into decoded block byte `5`.
+
+- Extended advanced smoke with explicit DOS error-map coverage checks (`20/21/22/23/27` set membership).
+
+- Added hard markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_dos_error_map_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline`
+
+- Extended `copier_matrix.json` with DOS error-map hard scenarios, preserving all prior gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

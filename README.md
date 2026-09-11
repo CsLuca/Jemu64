@@ -659,3 +659,30 @@ Advanced smoke now emits:
 - `[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline`
 
 `copier_matrix.json` includes both hard scenarios while keeping prior gates active.
+
+## DOS Error-Map Hard Baseline (Next Step)
+
+The strict GCR pipeline now exposes DOS-oriented error classes for hard scenarios.
+
+### New Function
+
+- `advanced_image_detail::mapMetricsToDosErrorCode(const GcrMetrics &metrics)`
+  - maps strict GCR metrics to DOS-like codes:
+    - `20` (header-like)
+    - `21` (sync)
+    - `22` (data block/gap quality)
+    - `23` (checksum/data)
+    - `27` (hard checksum)
+
+### Decode Output Contract
+
+- `FluxMappedImageBackend::applyStrictGcrDecodePipeline(...)` now stores mapped DOS code in decoded block byte index `5`.
+
+### Smoke and Matrix Hard Scenarios
+
+New hard markers:
+
+- `[IEC COPY E2E] PASS: advanced_g64_dos_error_map_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline`
+
+Both are now in `copier_matrix.json` as additional hard scenarios.

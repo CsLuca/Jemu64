@@ -31,6 +31,25 @@ struct GcrMetrics {
     GcrErrorClass errorClass = GcrErrorClass::None;
 };
 
+static inline uint8_t mapMetricsToDosErrorCode(const GcrMetrics &metrics) {
+    if (metrics.invalidSymbols >= 8) {
+        return 27; // READ ERROR (checksum)
+    }
+    if (metrics.syncLossEvents >= 2) {
+        return 21; // READ ERROR (sync)
+    }
+    if (metrics.gapQuality == GcrGapQuality::Poor) {
+        return 22; // READ ERROR (data block not present)
+    }
+    if (metrics.invalidSymbols > 0) {
+        return 23; // READ ERROR (checksum/data)
+    }
+    if (metrics.gapQuality == GcrGapQuality::Marginal) {
+        return 20; // READ ERROR (header)
+    }
+    return 0;
+}
+
 static inline bool isValidChsAddress(uint8_t track, uint8_t sector, uint32_t &offset) {
     if (track < 1 || track > 35) {
         return false;
@@ -346,6 +365,7 @@ protected:
         }
 
         decoded[4] = static_cast<uint8_t>((track << 2) ^ sector);
+        decoded[5] = advanced_image_detail::mapMetricsToDosErrorCode(metrics);
         buffer = decoded;
     }
 

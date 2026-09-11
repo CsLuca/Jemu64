@@ -82,6 +82,27 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             assert(false);
         }
 
+        const uint8_t dosErr = drive.iecBlockBuffer[5];
+        auto rotr8 = [](uint8_t v, uint8_t n) -> uint8_t {
+            return static_cast<uint8_t>((v >> (n & 7)) | (v << ((8 - (n & 7)) & 7)));
+        };
+        const uint8_t candidates[10] = {
+            20, 21, 22, 23, 27,
+            rotr8(20, 1), rotr8(21, 1), rotr8(22, 1), rotr8(23, 1), rotr8(27, 1)
+        };
+        bool matchDosClass = false;
+        for (uint8_t c : candidates) {
+            if (dosErr == c) {
+                matchDosClass = true;
+                break;
+            }
+        }
+        if (!matchDosClass) {
+            std::cerr << "[1541 IMG ADV] FAIL: DOS error-map class missing for format " << format
+                      << " got=" << std::dec << static_cast<int>(dosErr) << std::endl;
+            assert(false);
+        }
+
         if (expectWeakbit) {
             const uint8_t first = drive.iecBlockBuffer[7];
             drive.loadVirtualBlock(1, 0);
@@ -164,4 +185,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_gcr_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_dos_error_map_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_dos_error_map_hard_baseline" << std::endl;
 }
