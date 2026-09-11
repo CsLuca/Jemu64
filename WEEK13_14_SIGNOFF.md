@@ -1192,6 +1192,24 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with weakbit baseline scenarios.
 
+## Advanced Format Parser Baseline (Follow-up)
+
+- `G64ImageBackend` now includes baseline parser wiring for format-aware ingest:
+  - signature check (`GCR-1541`),
+  - `track_count` validation,
+  - 32-bit track offset table parse,
+  - per-track payload extraction via track length header.
+
+- `NIBImageBackend` now includes baseline parser wiring:
+  - track stride inference from file size,
+  - per-track payload slice mapping for CHS reads.
+
+- Advanced smoke emits parser markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_parser_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_parser_baseline`
+
+- Extended `copier_matrix.json` with parser baseline scenarios while preserving existing matrix gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

@@ -587,6 +587,29 @@ Advanced format backends now run a format-aware read path baseline with determin
 
 - Advanced smoke now verifies weakbit variance on repeated reads for `g64` and `nib`.
 - New markers:
-  - `[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline`
-  - `[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline`
+- `[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline`
 - `copier_matrix.json` includes both weakbit baseline scenarios.
+
+## Advanced Parser/Mapper Baseline (Next Step)
+
+Advanced backend path now includes initial format-aware parser layers for `g64` and `nib`.
+
+### G64 Baseline Parser
+
+- validates `GCR-1541` signature
+- reads `track_count`
+- parses 32-bit track offset table
+- resolves per-track payload region from on-disk track length header
+
+### NIB Baseline Parser
+
+- infers track stride from file size (`size / 35` when aligned)
+- maps track payload slices by stride
+
+### New Matrix Markers
+
+- `[IEC COPY E2E] PASS: advanced_g64_parser_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_parser_baseline`
+
+Both are included in `copier_matrix.json` as advanced scenarios while preserving existing gates.
