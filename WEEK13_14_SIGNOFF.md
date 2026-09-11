@@ -1387,6 +1387,15 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - active baseline values,
   - required release artifacts.
 
+## Phase5 Release Pin Manifest (Follow-up)
+
+- Added `PHASE5_RELEASE_PIN.json` for formal phase5 release pinning.
+- Manifest freezes:
+  - active gate inputs (matrix/thresholds/corpus manifests),
+  - final signoff/support docs,
+  - gate script set.
+- The pin is behavior-neutral and serves as formal release closure anchor.
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

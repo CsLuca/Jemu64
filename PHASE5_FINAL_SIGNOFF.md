@@ -42,8 +42,14 @@ The final phase5 contract is considered satisfied when all checks below are gree
 - `advanced_dos_recovery_runtime.csv`
 - `phase5_soak_runtime.csv`
 - `COPIER_SUPPORT_MATRIX.md` (auto-generated)
+- `PHASE5_RELEASE_PIN.json`
 
 ## Notes
 
 - This signoff certifies stability under current gate set and dataset.
 - Further parity improvements for long-tail copier/protection cases can continue without reopening the phase5 gate framework.
+
+## Release Pin
+
+- Release pin manifest: `PHASE5_RELEASE_PIN.json`
+- This pin freezes gate inputs/docs without changing runtime behavior.

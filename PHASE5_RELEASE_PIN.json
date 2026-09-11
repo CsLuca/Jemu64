@@ -1,0 +1,25 @@
+{
+  "release_pin_version": 1,
+  "release_name": "phase5_final_ready",
+  "scope": "1541_phase5_release_pinning",
+  "behavior_change": false,
+  "frozen_inputs": {
+    "copier_matrix": "copier_matrix.json",
+    "phase5_hard_thresholds": "phase5_hard_thresholds.json",
+    "advanced_real_corpus": "advanced_real_corpus_manifest.json",
+    "advanced_dos_recovery": "advanced_dos_recovery_manifest.json"
+  },
+  "frozen_docs": {
+    "phase5_final_signoff": "PHASE5_FINAL_SIGNOFF.md",
+    "copier_support_matrix": "COPIER_SUPPORT_MATRIX.md"
+  },
+  "frozen_gates": [
+    "run_signoff_week13_14.ps1",
+    "run_copier_matrix.ps1",
+    "run_advanced_real_corpus_gate.ps1",
+    "run_advanced_dos_recovery_gate.ps1",
+    "run_phase5_soak_gate.ps1",
+    "run_check_phase5_hard_thresholds.ps1",
+    "run_check_phase5_closure.ps1"
+  ]
+}

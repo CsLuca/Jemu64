@@ -934,6 +934,10 @@ Content includes:
 - active baseline values,
 - release artifacts expected for phase5 closure.
 
+Release pin manifest:
+
+- `PHASE5_RELEASE_PIN.json` (formal freeze of manifests/gates/docs, behavior-neutral).
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
