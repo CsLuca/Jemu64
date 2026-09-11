@@ -1378,6 +1378,15 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - hard-threshold checker,
   - closure gate with generated checklist.
 
+## Phase5 Final Signoff Snapshot (Follow-up)
+
+- Added `PHASE5_FINAL_SIGNOFF.md` as final phase snapshot document.
+- The document captures:
+  - final gate contract,
+  - mandatory closure criteria,
+  - active baseline values,
+  - required release artifacts.
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

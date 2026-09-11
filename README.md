@@ -922,6 +922,18 @@ Workflows:
 - `.github/workflows/revision-tolerance-check.yml`
 - `.github/workflows/revision-signoff-matrix.yml`
 
+## Phase5 Final Signoff
+
+- New final snapshot document:
+  - `PHASE5_FINAL_SIGNOFF.md`
+
+Content includes:
+
+- final gate contract,
+- mandatory criteria,
+- active baseline values,
+- release artifacts expected for phase5 closure.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
