@@ -804,6 +804,46 @@ Pass marker:
 
 - `[PHASE5-HARD] PASS: ...`
 
+## Flux/Bitcell Fidelity Upgrade (Commit 3)
+
+Commit 3 adds a first bitcell-style hysteresis layer to the advanced read model.
+
+### New Internal State (`advanced_image_backends.hpp`)
+
+- `relockClassState`
+  - per track/sector last accepted relock class byte.
+- `relockConfidence`
+  - per track/sector confidence counter for class persistence.
+- `weakWindowPhase`
+  - per track/sector phase cursor for weakbit window drift progression.
+
+### New Functions (`advanced_image_backends.hpp`)
+
+- `modelIndex(uint8_t track, uint8_t sector)`
+  - maps CHS to stable index in model-state arrays.
+
+- `applyRelockHysteresis(uint8_t track, uint8_t sector, uint8_t &classByte)`
+  - applies confidence-based hysteresis:
+    - stable class strengthens confidence,
+    - transient class changes are damped,
+    - class flip accepted only after confidence exhaustion.
+
+### Updated Functions (`advanced_image_backends.hpp`)
+
+- `applySyncAndWeakBitModel(...)`
+  - now injects bitcell-style sync perturbation byte,
+  - weakbit drift uses phased window progression (`weakWindowPhase`) instead of static-only positions.
+
+- `applyStrictGcrDecodePipeline(...)`
+  - now runs relock hysteresis before publishing class byte.
+
+### New Hard Markers
+
+- `[IEC COPY E2E] PASS: advanced_g64_flux_hysteresis_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline`
+
+Both are included in `copier_matrix.json`.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

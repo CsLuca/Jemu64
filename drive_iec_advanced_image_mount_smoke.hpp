@@ -171,6 +171,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             drive.loadVirtualBlock(1, 0);
             g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[7]);
             g64JitterDigest *= 1099511628211ull;
+            g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[8]);
+            g64JitterDigest *= 1099511628211ull;
             g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
             g64JitterDigest *= 1099511628211ull;
         }
@@ -200,6 +202,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             drive.loadVirtualBlock(1, 0);
             nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[7]);
             nibJitterDigest *= 1099511628211ull;
+            nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[8]);
+            nibJitterDigest *= 1099511628211ull;
             nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
             nibJitterDigest *= 1099511628211ull;
         }
@@ -220,6 +224,14 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             std::cerr << "[1541 IMG ADV] FAIL: G64 relock window drift out of envelope." << std::endl;
             assert(false);
         }
+
+        drive.loadVirtualBlock(1, 0);
+        const uint8_t stableClass = drive.iecBlockBuffer[3];
+        drive.loadVirtualBlock(1, 0);
+        if (drive.iecBlockBuffer[3] != stableClass) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 relock hysteresis unstable after soak." << std::endl;
+            assert(false);
+        }
     }
 
     {
@@ -231,6 +243,14 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
         }
         if (!(window[0] == window[1] && window[1] == window[2])) {
             std::cerr << "[1541 IMG ADV] FAIL: NIB relock window drift out of envelope." << std::endl;
+            assert(false);
+        }
+
+        drive.loadVirtualBlock(1, 0);
+        const uint8_t stableClass = drive.iecBlockBuffer[3];
+        drive.loadVirtualBlock(1, 0);
+        if (drive.iecBlockBuffer[3] != stableClass) {
+            std::cerr << "[1541 IMG ADV] FAIL: NIB relock hysteresis unstable after soak." << std::endl;
             assert(false);
         }
     }
@@ -299,4 +319,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_jitter_window_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_relock_window_soak_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_flux_hysteresis_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline" << std::endl;
 }

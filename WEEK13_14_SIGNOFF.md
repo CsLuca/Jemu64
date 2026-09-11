@@ -1321,6 +1321,26 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Runtime marker:
   - `[PHASE5-HARD] PASS: ...`
 
+## Flux/Bitcell Hysteresis Upgrade (Commit 3)
+
+- Added per-CHS model state in `advanced_image_backends.hpp`:
+  - `relockClassState`,
+  - `relockConfidence`,
+  - `weakWindowPhase`.
+
+- Added `modelIndex(track, sector)` for deterministic state addressing.
+- Added `applyRelockHysteresis(track, sector, classByte)` for confidence-based class stabilization.
+
+- Updated `applySyncAndWeakBitModel(...)`:
+  - bitcell-style sync perturbation byte,
+  - phased weakbit drift window progression.
+
+- Updated `applyStrictGcrDecodePipeline(...)` to apply hysteresis before class publication.
+
+- Extended advanced smoke and matrix markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_flux_hysteresis_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline`
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

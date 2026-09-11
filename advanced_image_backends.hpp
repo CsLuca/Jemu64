@@ -194,6 +194,9 @@ private:
     bool hasWeakBits = false;
     bool hasSyncLossModel = false;
     mutable std::mt19937 weakBitRng;
+    mutable std::array<uint8_t, 36u * 21u> relockClassState = {};
+    mutable std::array<uint8_t, 36u * 21u> relockConfidence = {};
+    mutable std::array<uint8_t, 36u * 21u> weakWindowPhase = {};
 
 protected:
     const std::string &path() const {
@@ -276,6 +279,9 @@ protected:
             const size_t syncMark = static_cast<size_t>((track + sector) & 0x1F);
             const size_t syncPos = std::min<size_t>(syncMark, buffer.size() - 1);
             buffer[syncPos] = static_cast<uint8_t>(buffer[syncPos] ^ 0xFFu);
+            const size_t bitcellPos = std::min<size_t>(6u, buffer.size() - 1);
+            const uint8_t zone = advanced_image_detail::zoneFromTrack(track);
+            buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));
         }
 
         if (hasWeakBits) {
@@ -285,6 +291,14 @@ protected:
                 const uint8_t noise = static_cast<uint8_t>(weakBitRng() & 0x0Fu);
                 buffer[pos] = static_cast<uint8_t>((buffer[pos] & 0xF0u) | noise);
             }
+
+            const size_t idx = modelIndex(track, sector);
+            const uint8_t phase = weakWindowPhase[idx]++;
+            const uint8_t zone = advanced_image_detail::zoneFromTrack(track);
+            const uint8_t windowSpan = static_cast<uint8_t>(4u + zone);
+            const size_t windowPos = std::min<size_t>(8u + ((phase % windowSpan) * 2u), buffer.size() - 1);
+            const uint8_t driftNibble = static_cast<uint8_t>((phase + (track * 3u) + sector) & 0x0Fu);
+            buffer[windowPos] = static_cast<uint8_t>((buffer[windowPos] & 0xF0u) | driftNibble);
         }
     }
 
@@ -364,6 +378,8 @@ protected:
             decoded[3] = 0xCC;
         }
 
+        applyRelockHysteresis(track, sector, decoded[3]);
+
         decoded[4] = static_cast<uint8_t>((track << 2) ^ sector);
         decoded[5] = advanced_image_detail::mapMetricsToDosErrorCode(metrics);
         buffer = decoded;
@@ -382,6 +398,40 @@ protected:
             encoded[i] = static_cast<uint8_t>((gcrHi << 3) ^ gcrLo ^ static_cast<uint8_t>((track + sector) & 0x1F));
         }
         buffer = encoded;
+    }
+
+    size_t modelIndex(uint8_t track, uint8_t sector) const {
+        const uint8_t t = static_cast<uint8_t>(std::min<uint8_t>(35u, std::max<uint8_t>(1u, track)) - 1u);
+        const uint8_t s = static_cast<uint8_t>(sector % 21u);
+        return static_cast<size_t>(t) * 21u + static_cast<size_t>(s);
+    }
+
+    void applyRelockHysteresis(uint8_t track, uint8_t sector, uint8_t &classByte) const {
+        const size_t idx = modelIndex(track, sector);
+        uint8_t &last = relockClassState[idx];
+        uint8_t &conf = relockConfidence[idx];
+
+        if (last == 0u) {
+            last = classByte;
+            conf = 2u;
+            return;
+        }
+
+        if (classByte == last) {
+            if (conf < 7u) {
+                conf = static_cast<uint8_t>(conf + 1u);
+            }
+            return;
+        }
+
+        if (conf > 0u) {
+            conf = static_cast<uint8_t>(conf - 1u);
+            classByte = last;
+            return;
+        }
+
+        last = classByte;
+        conf = 1u;
     }
 };
 

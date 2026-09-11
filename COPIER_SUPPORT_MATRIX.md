@@ -47,6 +47,8 @@ based on the active runtime markers and `copier_matrix.json` gate definitions.
 - `advanced_nib_jitter_window_hard_baseline`: `PASS`
 - `advanced_g64_relock_window_soak_hard_baseline`: `PASS`
 - `advanced_nib_relock_window_soak_hard_baseline`: `PASS`
+- `advanced_g64_flux_hysteresis_hard_baseline`: `PASS`
+- `advanced_nib_flux_hysteresis_hard_baseline`: `PASS`
 
 ## Quasi-Closure Criteria (Phase 5)
 
