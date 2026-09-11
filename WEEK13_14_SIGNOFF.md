@@ -1341,6 +1341,23 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `[IEC COPY E2E] PASS: advanced_g64_flux_hysteresis_hard_baseline`
   - `[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline`
 
+## DOS Error/Recovery Parity Gate (Commit 4)
+
+- Added `advanced_dos_recovery_manifest.json` for DOS recovery hardset scenarios.
+- Added `run_advanced_dos_recovery_gate.ps1` to evaluate required DOS recovery markers.
+
+- Added hard matrix scenarios:
+  - `advanced_g64_dos_recovery_hard_baseline`
+  - `advanced_nib_dos_recovery_hard_baseline`
+
+- Extended advanced smoke with write-protect -> read recovery checks:
+  - class-byte stability after recovery,
+  - DOS-map class continuity after recovery path.
+
+- Runtime contract markers:
+  - `[ADV-DOS-RECOVERY] scenario=...`
+  - `[ADV-DOS-RECOVERY] summary pass=X/Y ...`
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "advanced_dos_recovery_hardset",
+  "description": "Hardset for DOS error/recovery parity paths over advanced formats.",
+  "scenarios": [
+    {
+      "id": "advanced_g64_dos_recovery_hard_baseline",
+      "format": "g64",
+      "expected_marker": "[IEC COPY E2E] PASS: advanced_g64_dos_recovery_hard_baseline"
+    },
+    {
+      "id": "advanced_nib_dos_recovery_hard_baseline",
+      "format": "nib",
+      "expected_marker": "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline"
+    }
+  ]
+}

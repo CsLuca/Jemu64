@@ -50,6 +50,11 @@ based on the active runtime markers and `copier_matrix.json` gate definitions.
 - `advanced_g64_flux_hysteresis_hard_baseline`: `PASS`
 - `advanced_nib_flux_hysteresis_hard_baseline`: `PASS`
 
+### Hard DOS Recovery
+
+- `advanced_g64_dos_recovery_hard_baseline`: `PASS`
+- `advanced_nib_dos_recovery_hard_baseline`: `PASS`
+
 ## Quasi-Closure Criteria (Phase 5)
 
 The project can be considered near closure for phase 5 when all of the following hold:

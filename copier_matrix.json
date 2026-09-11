@@ -683,6 +683,60 @@
         "Bitcell-style relock hysteresis",
         "Post-soak class stability"
       ]
+    },
+    {
+      "id": "advanced_g64_dos_recovery_hard_baseline",
+      "description": "Hard baseline for G64 DOS error/recovery parity after write-protect path",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_dos_recovery_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Write-protect -> read recovery parity",
+        "Class and DOS-map stability"
+      ]
+    },
+    {
+      "id": "advanced_nib_dos_recovery_hard_baseline",
+      "description": "Hard baseline for NIB DOS error/recovery parity after write-protect path",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Write-protect -> read recovery parity",
+        "Class and DOS-map stability"
+      ]
     }
   ]
 }

@@ -844,6 +844,39 @@ Commit 3 adds a first bitcell-style hysteresis layer to the advanced read model.
 
 Both are included in `copier_matrix.json`.
 
+## DOS Error/Recovery Parity Gate (Commit 4)
+
+### New Manifest
+
+- `advanced_dos_recovery_manifest.json`
+
+Purpose:
+
+- define hardset scenarios for advanced DOS recovery parity checks.
+
+### New Runner
+
+- `run_advanced_dos_recovery_gate.ps1`
+
+What it does:
+
+- runs `run_copier_matrix.ps1` (selected profile),
+- validates required recovery markers from manifest,
+- emits per-scenario status lines and summary marker:
+  - `[ADV-DOS-RECOVERY] scenario=... pass=...`
+  - `[ADV-DOS-RECOVERY] summary pass=X/Y ...`
+
+Artifact:
+
+- `advanced_dos_recovery_runtime.csv`
+
+### New Hard Matrix Scenarios
+
+- `advanced_g64_dos_recovery_hard_baseline`
+- `advanced_nib_dos_recovery_hard_baseline`
+
+These validate write-protect followed by read-path recovery parity stability.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

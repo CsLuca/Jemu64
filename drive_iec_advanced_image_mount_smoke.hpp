@@ -271,6 +271,40 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     verifyWriteProtect("g64", g64Path);
     verifyWriteProtect("nib", nibPath);
 
+    auto verifyRecoveryAfterWriteProtect = [&](const std::string &format, const std::filesystem::path &path) {
+        drive.configureMountedImage(path.string(), format, true);
+        drive.loadVirtualBlock(1, 0);
+        const uint8_t classBefore = drive.iecBlockBuffer[3];
+        const uint8_t mapBefore = drive.iecBlockBuffer[5];
+
+        drive.iecBlockBuffer[0] = 0x44;
+        drive.iecBlockBufferValid = true;
+        drive.flushVirtualBlock(1, 0);
+        if (drive.iecStatusLine.rfind("26,WRITE PROTECT ON", 0) != 0) {
+            std::cerr << "[1541 IMG ADV] FAIL: expected WRITE PROTECT ON before recovery on format " << format << std::endl;
+            assert(false);
+        }
+
+        drive.loadVirtualBlock(1, 0);
+        if (drive.iecBlockBuffer[3] != classBefore) {
+            std::cerr << "[1541 IMG ADV] FAIL: recovery class drift after write-protect on format " << format << std::endl;
+            assert(false);
+        }
+
+        const uint8_t mapAfter = drive.iecBlockBuffer[5];
+        auto isAllowedMap = [&](uint8_t code) {
+            return code == 20 || code == 21 || code == 22 || code == 23 || code == 27 ||
+                   code == 10 || code == 11 || code == 138 || code == 139 || code == 141;
+        };
+        if (!isAllowedMap(mapBefore) || !isAllowedMap(mapAfter)) {
+            std::cerr << "[1541 IMG ADV] FAIL: recovery DOS map invalid on format " << format << std::endl;
+            assert(false);
+        }
+    };
+
+    verifyRecoveryAfterWriteProtect("g64", g64Path);
+    verifyRecoveryAfterWriteProtect("nib", nibPath);
+
     drive.configureMountedImage(rawPath.string(), "raw", true);
     drive.loadVirtualBlock(1, 0);
     drive.iecBlockBuffer[0] = 0x33;
@@ -321,4 +355,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_flux_hysteresis_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_dos_recovery_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline" << std::endl;
 }
