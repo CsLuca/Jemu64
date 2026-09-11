@@ -197,6 +197,8 @@ private:
     mutable std::array<uint8_t, 36u * 21u> relockClassState = {};
     mutable std::array<uint8_t, 36u * 21u> relockConfidence = {};
     mutable std::array<uint8_t, 36u * 21u> weakWindowPhase = {};
+    mutable std::array<uint8_t, 36u * 21u> weakWindowSpanState = {};
+    mutable std::array<uint8_t, 36u * 21u> bitcellSlipState = {};
 
 protected:
     const std::string &path() const {
@@ -282,6 +284,14 @@ protected:
             const size_t bitcellPos = std::min<size_t>(6u, buffer.size() - 1);
             const uint8_t zone = advanced_image_detail::zoneFromTrack(track);
             buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));
+
+            const size_t idx = modelIndex(track, sector);
+            uint8_t &slip = bitcellSlipState[idx];
+            slip = static_cast<uint8_t>((slip + 1u + zone) & 0x07u);
+            if ((slip % 3u) == 0u) {
+                const size_t slipPos = std::min<size_t>(9u + slip, buffer.size() - 1);
+                buffer[slipPos] = static_cast<uint8_t>((buffer[slipPos] << 1) | (buffer[slipPos] >> 7));
+            }
         }
 
         if (hasWeakBits) {
@@ -295,10 +305,18 @@ protected:
             const size_t idx = modelIndex(track, sector);
             const uint8_t phase = weakWindowPhase[idx]++;
             const uint8_t zone = advanced_image_detail::zoneFromTrack(track);
-            const uint8_t windowSpan = static_cast<uint8_t>(4u + zone);
+            uint8_t &spanState = weakWindowSpanState[idx];
+            spanState = static_cast<uint8_t>((spanState + 1u + zone) % 5u);
+            const uint8_t windowSpan = static_cast<uint8_t>(4u + zone + spanState);
             const size_t windowPos = std::min<size_t>(8u + ((phase % windowSpan) * 2u), buffer.size() - 1);
             const uint8_t driftNibble = static_cast<uint8_t>((phase + (track * 3u) + sector) & 0x0Fu);
             buffer[windowPos] = static_cast<uint8_t>((buffer[windowPos] & 0xF0u) | driftNibble);
+
+            if ((phase % 5u) == 0u) {
+                const size_t burstPos = std::min<size_t>(windowPos + 3u, buffer.size() - 1);
+                const uint8_t burstMask = static_cast<uint8_t>(0x11u << (zone & 0x03u));
+                buffer[burstPos] = static_cast<uint8_t>(buffer[burstPos] ^ burstMask);
+            }
         }
     }
 
@@ -376,6 +394,11 @@ protected:
             decoded[3] = 0xEE;
         } else if (metrics.errorClass == advanced_image_detail::GcrErrorClass::Soft) {
             decoded[3] = 0xCC;
+        }
+
+        if (metrics.invalidSymbols >= 3u && metrics.syncLossEvents > 0u) {
+            decoded[0] = static_cast<uint8_t>(decoded[0] ^ 0x5Au);
+            decoded[6] = static_cast<uint8_t>(decoded[6] ^ 0xA5u);
         }
 
         applyRelockHysteresis(track, sector, decoded[3]);

@@ -6,7 +6,7 @@ Auto-generated from runtime report + matrix contract.
 
 - Matrix source: `copier_matrix.json`
 - Runtime report: `copier_matrix_report.json`
-- Summary: `PASS 27/27`
+- Summary: `PASS 29/29`
 
 ## Scenario Status
 
@@ -39,6 +39,8 @@ Auto-generated from runtime report + matrix contract.
 | advanced_nib_flux_hysteresis_hard_baseline | advanced | file_copy | nib->nib | PASS |
 | advanced_g64_dos_recovery_hard_baseline | advanced | file_copy | g64->g64 | PASS |
 | advanced_nib_dos_recovery_hard_baseline | advanced | file_copy | nib->nib | PASS |
+| advanced_g64_longtail_burst_hard_baseline | advanced | file_copy | g64->g64 | PASS |
+| advanced_nib_longtail_burst_hard_baseline | advanced | file_copy | nib->nib | PASS |
 
 ## Quasi-Closure Criteria (Phase 5)
 

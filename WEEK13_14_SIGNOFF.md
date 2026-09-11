@@ -1378,6 +1378,25 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - hard-threshold checker,
   - closure gate with generated checklist.
 
+## Long-Tail Real Parity + Physical Edge Refinement (Follow-up)
+
+- Expanded advanced real corpus manifest with long-tail additions:
+  - duplicate RAW recovery-profile coverage,
+  - loader-stress variants on `9.g64` / `9.nib`.
+
+- Added deeper physical edge states in `advanced_image_backends.hpp`:
+  - `weakWindowSpanState`,
+  - `bitcellSlipState`.
+
+- Updated edge model behavior:
+  - bitcell slip perturbation path,
+  - dynamic weakbit window span + periodic burst perturbation,
+  - additional long-tail mismatch marker path in strict decode under combined invalid-symbol + sync-loss stress.
+
+- Added hard markers and matrix scenarios:
+  - `[IEC COPY E2E] PASS: advanced_g64_longtail_burst_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_longtail_burst_hard_baseline`
+
 ## Phase5 Final Signoff Snapshot (Follow-up)
 
 - Added `PHASE5_FINAL_SIGNOFF.md` as final phase snapshot document.

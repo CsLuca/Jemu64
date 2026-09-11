@@ -922,6 +922,37 @@ Workflows:
 - `.github/workflows/revision-tolerance-check.yml`
 - `.github/workflows/revision-signoff-matrix.yml`
 
+## Long-Tail Real Parity Push (Current)
+
+### Expanded Long-Tail Corpus
+
+- `advanced_real_corpus_manifest.json` now includes additional long-tail entries for:
+  - repeated RAW recovery profile coverage,
+  - loader-stress variants on `9.g64` / `9.nib`.
+
+### Physical Edge Refinement
+
+`advanced_image_backends.hpp` now includes deeper edge-state modeling:
+
+- `weakWindowSpanState`
+  - dynamic weakbit window span per CHS.
+- `bitcellSlipState`
+  - per-CHS bitcell slip phase state.
+
+Updated behavior:
+
+- `applySyncAndWeakBitModel(...)`
+  - adds bitcell slip-driven perturbation,
+  - adds dynamic weakbit span and periodic burst perturbation.
+
+- `applyStrictGcrDecodePipeline(...)`
+  - adds long-tail mismatch marker path when invalid-symbol and sync-loss signals overlap.
+
+### New Long-Tail Hard Markers
+
+- `[IEC COPY E2E] PASS: advanced_g64_longtail_burst_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_longtail_burst_hard_baseline`
+
 ## Phase5 Final Signoff
 
 - New final snapshot document:

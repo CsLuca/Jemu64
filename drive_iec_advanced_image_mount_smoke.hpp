@@ -175,6 +175,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             g64JitterDigest *= 1099511628211ull;
             g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
             g64JitterDigest *= 1099511628211ull;
+            g64JitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[9]);
+            g64JitterDigest *= 1099511628211ull;
         }
         if (g64JitterDigest == 0 || g64JitterDigest == 1469598103934665603ull) {
             std::cerr << "[1541 IMG ADV] FAIL: G64 jitter digest did not evolve." << std::endl;
@@ -206,6 +208,8 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             nibJitterDigest *= 1099511628211ull;
             nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[5]);
             nibJitterDigest *= 1099511628211ull;
+            nibJitterDigest ^= static_cast<uint64_t>(drive.iecBlockBuffer[9]);
+            nibJitterDigest *= 1099511628211ull;
         }
         if (nibJitterDigest == 0 || nibJitterDigest == 1469598103934665603ull) {
             std::cerr << "[1541 IMG ADV] FAIL: NIB jitter digest did not evolve." << std::endl;
@@ -232,6 +236,17 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
             std::cerr << "[1541 IMG ADV] FAIL: G64 relock hysteresis unstable after soak." << std::endl;
             assert(false);
         }
+
+        uint8_t burstA = 0;
+        uint8_t burstB = 0;
+        drive.loadVirtualBlock(1, 0);
+        burstA = drive.iecBlockBuffer[9];
+        drive.loadVirtualBlock(1, 0);
+        burstB = drive.iecBlockBuffer[9];
+        if (burstA == burstB) {
+            std::cerr << "[1541 IMG ADV] FAIL: G64 long-tail burst model inactive." << std::endl;
+            assert(false);
+        }
     }
 
     {
@@ -251,6 +266,17 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
         drive.loadVirtualBlock(1, 0);
         if (drive.iecBlockBuffer[3] != stableClass) {
             std::cerr << "[1541 IMG ADV] FAIL: NIB relock hysteresis unstable after soak." << std::endl;
+            assert(false);
+        }
+
+        uint8_t burstA = 0;
+        uint8_t burstB = 0;
+        drive.loadVirtualBlock(1, 0);
+        burstA = drive.iecBlockBuffer[9];
+        drive.loadVirtualBlock(1, 0);
+        burstB = drive.iecBlockBuffer[9];
+        if (burstA == burstB) {
+            std::cerr << "[1541 IMG ADV] FAIL: NIB long-tail burst model inactive." << std::endl;
             assert(false);
         }
     }
@@ -357,4 +383,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_flux_hysteresis_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_dos_recovery_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_longtail_burst_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_longtail_burst_hard_baseline" << std::endl;
 }
