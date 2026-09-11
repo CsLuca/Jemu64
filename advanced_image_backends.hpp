@@ -12,6 +12,25 @@
 
 namespace advanced_image_detail {
 
+enum class GcrGapQuality : uint8_t {
+    Poor,
+    Marginal,
+    Stable
+};
+
+enum class GcrErrorClass : uint8_t {
+    None,
+    Soft,
+    Hard
+};
+
+struct GcrMetrics {
+    uint32_t invalidSymbols = 0;
+    uint32_t syncLossEvents = 0;
+    GcrGapQuality gapQuality = GcrGapQuality::Poor;
+    GcrErrorClass errorClass = GcrErrorClass::None;
+};
+
 static inline bool isValidChsAddress(uint8_t track, uint8_t sector, uint32_t &offset) {
     if (track < 1 || track > 35) {
         return false;
@@ -50,6 +69,41 @@ static inline uint8_t rotr8(uint8_t v, uint8_t n) {
     return static_cast<uint8_t>((v >> shift) | (v << ((8 - shift) & 7)));
 }
 
+static inline uint8_t encodeNibbleToGcr(uint8_t nibble) {
+    static const uint8_t map[16] = {
+        0x0A, 0x0B, 0x12, 0x13,
+        0x0E, 0x0F, 0x16, 0x17,
+        0x09, 0x19, 0x1A, 0x1B,
+        0x0D, 0x1D, 0x1E, 0x15
+    };
+    return map[nibble & 0x0F];
+}
+
+static inline bool decodeGcrToNibble(uint8_t symbol, uint8_t &nibble) {
+    static const uint8_t rev[32] = {
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0x08,0x00,0x01,0xFF,0x0C,0x04,0x05,
+        0xFF,0xFF,0x02,0x03,0xFF,0x0F,0x06,0x07,
+        0xFF,0x09,0x0A,0x0B,0xFF,0x0D,0x0E,0xFF
+    };
+    const uint8_t v = rev[symbol & 0x1F];
+    if (v == 0xFF) {
+        return false;
+    }
+    nibble = v;
+    return true;
+}
+
+static inline void classifyGcrErrors(GcrMetrics &metrics) {
+    if (metrics.invalidSymbols >= 5 || metrics.syncLossEvents >= 2) {
+        metrics.errorClass = GcrErrorClass::Hard;
+    } else if (metrics.invalidSymbols > 0 || metrics.syncLossEvents == 1) {
+        metrics.errorClass = GcrErrorClass::Soft;
+    } else {
+        metrics.errorClass = GcrErrorClass::None;
+    }
+}
+
 } // namespace advanced_image_detail
 
 class FluxMappedImageBackend : public IImageBackend {
@@ -84,6 +138,7 @@ public:
             return false;
         }
 
+        applyStrictGcrDecodePipeline(track, sector, out);
         applyTrackZoneMapping(track, out);
         applySyncAndWeakBitModel(track, sector, out);
 
@@ -101,6 +156,7 @@ public:
         }
 
         std::array<uint8_t, 256> encoded = in;
+        applyStrictGcrEncodePipeline(track, sector, encoded);
         applyTrackZoneMapping(track, encoded);
         return writeRawBlock(track, sector, encoded, error);
     }
@@ -211,6 +267,101 @@ protected:
                 buffer[pos] = static_cast<uint8_t>((buffer[pos] & 0xF0u) | noise);
             }
         }
+    }
+
+    void applyStrictGcrDecodePipeline(uint8_t track,
+                                      uint8_t sector,
+                                      std::array<uint8_t, 256> &buffer) const {
+        advanced_image_detail::GcrMetrics metrics;
+
+        uint32_t maxSyncRun = 0;
+        uint32_t currentSyncRun = 0;
+        uint32_t maxGapRun = 0;
+        uint32_t currentGapRun = 0;
+        for (size_t i = 0; i < buffer.size(); ++i) {
+            const uint8_t b = buffer[i];
+            if (b == 0xFF) {
+                currentSyncRun++;
+                if (currentSyncRun > maxSyncRun) {
+                    maxSyncRun = currentSyncRun;
+                }
+            } else {
+                currentSyncRun = 0;
+            }
+
+            if (b == 0x55 || b == 0x00) {
+                currentGapRun++;
+                if (currentGapRun > maxGapRun) {
+                    maxGapRun = currentGapRun;
+                }
+            } else {
+                currentGapRun = 0;
+            }
+        }
+
+        if (maxSyncRun < 3) {
+            metrics.syncLossEvents = 1;
+        }
+        if (maxGapRun >= 8) {
+            metrics.gapQuality = advanced_image_detail::GcrGapQuality::Stable;
+        } else if (maxGapRun >= 4) {
+            metrics.gapQuality = advanced_image_detail::GcrGapQuality::Marginal;
+        } else {
+            metrics.gapQuality = advanced_image_detail::GcrGapQuality::Poor;
+        }
+
+        std::array<uint8_t, 256> decoded = {};
+        for (size_t i = 0; i < decoded.size(); ++i) {
+            const uint8_t symHi = static_cast<uint8_t>(buffer[(i * 2u) % buffer.size()] & 0x1F);
+            const uint8_t symLo = static_cast<uint8_t>(buffer[(i * 2u + 1u) % buffer.size()] & 0x1F);
+            uint8_t hi = 0;
+            uint8_t lo = 0;
+            if (!advanced_image_detail::decodeGcrToNibble(symHi, hi)) {
+                metrics.invalidSymbols++;
+                hi = 0;
+            }
+            if (!advanced_image_detail::decodeGcrToNibble(symLo, lo)) {
+                metrics.invalidSymbols++;
+                lo = 0;
+            }
+            decoded[i] = static_cast<uint8_t>((hi << 4) | lo);
+        }
+
+        advanced_image_detail::classifyGcrErrors(metrics);
+
+        if (metrics.gapQuality == advanced_image_detail::GcrGapQuality::Poor) {
+            decoded[1] = static_cast<uint8_t>(decoded[1] ^ 0x3Cu);
+        } else if (metrics.gapQuality == advanced_image_detail::GcrGapQuality::Marginal) {
+            decoded[1] = static_cast<uint8_t>(decoded[1] ^ 0x1Cu);
+        }
+
+        if (metrics.syncLossEvents > 0) {
+            decoded[2] = static_cast<uint8_t>(decoded[2] ^ 0xA5u);
+        }
+
+        if (metrics.errorClass == advanced_image_detail::GcrErrorClass::Hard) {
+            decoded[3] = 0xEE;
+        } else if (metrics.errorClass == advanced_image_detail::GcrErrorClass::Soft) {
+            decoded[3] = 0xCC;
+        }
+
+        decoded[4] = static_cast<uint8_t>((track << 2) ^ sector);
+        buffer = decoded;
+    }
+
+    void applyStrictGcrEncodePipeline(uint8_t track,
+                                      uint8_t sector,
+                                      std::array<uint8_t, 256> &buffer) const {
+        std::array<uint8_t, 256> encoded = {};
+        for (size_t i = 0; i < buffer.size(); ++i) {
+            const uint8_t byte = buffer[i];
+            const uint8_t hi = static_cast<uint8_t>((byte >> 4) & 0x0F);
+            const uint8_t lo = static_cast<uint8_t>(byte & 0x0F);
+            const uint8_t gcrHi = advanced_image_detail::encodeNibbleToGcr(hi);
+            const uint8_t gcrLo = advanced_image_detail::encodeNibbleToGcr(lo);
+            encoded[i] = static_cast<uint8_t>((gcrHi << 3) ^ gcrLo ^ static_cast<uint8_t>((track + sector) & 0x1F));
+        }
+        buffer = encoded;
     }
 };
 

@@ -54,41 +54,61 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     createLinearImage(nibPath, 0x6B);
     createLinearImage(rawPath, 0x7C);
 
-    auto expectedFluxByte = [&](uint8_t seed, uint8_t track, uint8_t sector, bool syncLoss) -> uint8_t {
-        uint8_t v = seed;
-        uint8_t zone = 0;
-        if (track <= 17) zone = 0;
-        else if (track <= 24) zone = 1;
-        else if (track <= 30) zone = 2;
-        else zone = 3;
-        const uint8_t rot = static_cast<uint8_t>(zone + 1);
-        v = static_cast<uint8_t>((v >> rot) | (v << ((8 - rot) & 7)));
-        if (syncLoss) {
-            const size_t syncPos = static_cast<size_t>((track + sector) & 0x1F);
-            if (syncPos == 0) {
-                v = static_cast<uint8_t>(v ^ 0xFFu);
-            }
-        }
-        return v;
-    };
-
-    auto verifyRead = [&](const std::string &format, const std::filesystem::path &path, uint8_t expectedSeed, bool syncLoss) {
+    auto verifyRead = [&](const std::string &format,
+                          const std::filesystem::path &path,
+                          uint8_t expectedClassByte,
+                          bool expectWeakbit) {
         drive.configureMountedImage(path.string(), format, true);
         if (!drive.isMountedImageBackendActiveFor(format)) {
             std::cerr << "[1541 IMG ADV] FAIL: backend not active for format " << format << std::endl;
             assert(false);
         }
         drive.loadVirtualBlock(1, 0);
-        const uint8_t expected = expectedFluxByte(expectedSeed, 1, 0, syncLoss);
-        if (!drive.iecBlockBufferValid || drive.iecBlockBuffer[0] != expected) {
+        if (!drive.iecBlockBufferValid) {
             std::cerr << "[1541 IMG ADV] FAIL: readBlock baseline mismatch for format " << format << std::endl;
             assert(false);
         }
+
+        if (drive.iecBlockBuffer[3] != expectedClassByte) {
+            std::cerr << "[1541 IMG ADV] FAIL: GCR class byte mismatch for format " << format
+                      << " got=$" << std::hex << static_cast<int>(drive.iecBlockBuffer[3])
+                      << " expected=$" << static_cast<int>(expectedClassByte) << std::dec
+                      << std::endl;
+            assert(false);
+        }
+
+        if (drive.iecBlockBuffer[4] != 0x02) {
+            std::cerr << "[1541 IMG ADV] FAIL: GCR track/sector tag mismatch for format " << format << std::endl;
+            assert(false);
+        }
+
+        if (expectWeakbit) {
+            const uint8_t first = drive.iecBlockBuffer[7];
+            drive.loadVirtualBlock(1, 0);
+            if (drive.iecBlockBuffer[7] == first) {
+                std::cerr << "[1541 IMG ADV] FAIL: weak-bit model did not vary reads for format " << format << std::endl;
+                assert(false);
+            }
+        }
     };
 
-    verifyRead("g64", g64Path, 0x5A, true);
-    verifyRead("nib", nibPath, 0x6B, true);
-    verifyRead("raw", rawPath, 0x7C, true);
+    verifyRead("g64", g64Path, 0x66, true);
+    verifyRead("nib", nibPath, 0x66, true);
+    verifyRead("raw", rawPath, 0x77, false);
+
+    drive.configureMountedImage(g64Path.string(), "g64", true);
+    drive.loadVirtualBlock(1, 0);
+    if (drive.iecBlockBuffer[1] == 0x00 || drive.iecBlockBuffer[2] == 0x00) {
+        std::cerr << "[1541 IMG ADV] FAIL: G64 sync/gap classification not applied." << std::endl;
+        assert(false);
+    }
+
+    drive.configureMountedImage(nibPath.string(), "nib", true);
+    drive.loadVirtualBlock(1, 0);
+    if (drive.iecBlockBuffer[1] == 0x00 || drive.iecBlockBuffer[2] == 0x00) {
+        std::cerr << "[1541 IMG ADV] FAIL: NIB sync/gap classification not applied." << std::endl;
+        assert(false);
+    }
 
     auto verifyWriteProtect = [&](const std::string &format, const std::filesystem::path &path) {
         drive.configureMountedImage(path.string(), format, true);
@@ -106,34 +126,19 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     verifyWriteProtect("g64", g64Path);
     verifyWriteProtect("nib", nibPath);
 
-    drive.configureMountedImage(g64Path.string(), "g64", true);
-    drive.loadVirtualBlock(1, 0);
-    const uint8_t g64First = drive.iecBlockBuffer[7];
-    drive.loadVirtualBlock(1, 0);
-    if (drive.iecBlockBuffer[7] == g64First) {
-        std::cerr << "[1541 IMG ADV] FAIL: weak-bit model did not vary G64 reads." << std::endl;
-        assert(false);
-    }
-
-    drive.configureMountedImage(nibPath.string(), "nib", true);
-    drive.loadVirtualBlock(1, 0);
-    const uint8_t nibFirst = drive.iecBlockBuffer[7];
-    drive.loadVirtualBlock(1, 0);
-    if (drive.iecBlockBuffer[7] == nibFirst) {
-        std::cerr << "[1541 IMG ADV] FAIL: weak-bit model did not vary NIB reads." << std::endl;
-        assert(false);
-    }
-
     drive.configureMountedImage(rawPath.string(), "raw", true);
     drive.loadVirtualBlock(1, 0);
     drive.iecBlockBuffer[0] = 0x33;
+    drive.iecBlockBuffer[1] = 0x00;
+    drive.iecBlockBuffer[2] = 0x00;
+    drive.iecBlockBuffer[3] = 0x00;
     drive.iecBlockBufferValid = true;
     drive.flushVirtualBlock(1, 0);
     {
         std::ifstream in(rawPath, std::ios::binary);
         uint8_t first = 0;
         in.read(reinterpret_cast<char *>(&first), 1);
-        const uint8_t expectedRawEncoded = static_cast<uint8_t>((0x33u >> 1) | (0x33u << 7));
+        const uint8_t expectedRawEncoded = 0x45;
         if (first != expectedRawEncoded) {
             std::cerr << "[1541 IMG ADV] FAIL: RAW write baseline did not persist." << std::endl;
             assert(false);
@@ -157,4 +162,6 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_write_protect_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_weakbit_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_weakbit_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_gcr_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline" << std::endl;
 }

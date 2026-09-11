@@ -613,3 +613,49 @@ Advanced backend path now includes initial format-aware parser layers for `g64` 
 - `[IEC COPY E2E] PASS: advanced_nib_parser_baseline`
 
 Both are included in `copier_matrix.json` as advanced scenarios while preserving existing gates.
+
+## Hard GCR Fidelity Baseline (Next Step)
+
+Advanced format backends now include a stricter GCR decode/encode path with explicit quality/error classification.
+
+### New Core Structures (`advanced_image_backends.hpp`)
+
+- `advanced_image_detail::GcrGapQuality`
+  - values: `Poor`, `Marginal`, `Stable`
+- `advanced_image_detail::GcrErrorClass`
+  - values: `None`, `Soft`, `Hard`
+- `advanced_image_detail::GcrMetrics`
+  - fields:
+    - `invalidSymbols`
+    - `syncLossEvents`
+    - `gapQuality`
+    - `errorClass`
+
+### New GCR Functions (`advanced_image_backends.hpp`)
+
+- `advanced_image_detail::encodeNibbleToGcr(uint8_t nibble)`
+  - maps 4-bit nibble to 5-bit GCR symbol using a fixed table.
+
+- `advanced_image_detail::decodeGcrToNibble(uint8_t symbol, uint8_t &nibble)`
+  - reverse-maps 5-bit GCR symbol to nibble and reports invalid symbols.
+
+- `advanced_image_detail::classifyGcrErrors(GcrMetrics &metrics)`
+  - classifies aggregate decode health as `None`, `Soft`, or `Hard`.
+
+- `FluxMappedImageBackend::applyStrictGcrDecodePipeline(...)`
+  - computes sync and gap runs,
+  - decodes GCR symbols,
+  - counts invalid symbol events,
+  - applies error-class dependent markers into output block.
+
+- `FluxMappedImageBackend::applyStrictGcrEncodePipeline(...)`
+  - encodes input bytes to GCR-derived payload representation before write path.
+
+### Runtime and Matrix Hard Scenarios
+
+Advanced smoke now emits:
+
+- `[IEC COPY E2E] PASS: advanced_g64_gcr_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline`
+
+`copier_matrix.json` includes both hard scenarios while keeping prior gates active.

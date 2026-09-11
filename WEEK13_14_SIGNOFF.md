@@ -1210,6 +1210,33 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with parser baseline scenarios while preserving existing matrix gates.
 
+## Hard GCR Decode/Encode + Error Classification Baseline (Follow-up)
+
+- Added explicit GCR quality/error model primitives in `advanced_image_backends.hpp`:
+  - `GcrGapQuality` (`Poor`/`Marginal`/`Stable`),
+  - `GcrErrorClass` (`None`/`Soft`/`Hard`),
+  - `GcrMetrics` (`invalidSymbols`, `syncLossEvents`, `gapQuality`, `errorClass`).
+
+- Added stricter GCR helpers:
+  - `encodeNibbleToGcr(...)`,
+  - `decodeGcrToNibble(...)`,
+  - `classifyGcrErrors(...)`.
+
+- `FluxMappedImageBackend` read/write path now includes:
+  - `applyStrictGcrDecodePipeline(track, sector, block)`,
+  - `applyStrictGcrEncodePipeline(track, sector, block)`.
+
+- Decode pipeline behavior baseline:
+  - evaluates sync-run and gap-run quality,
+  - decodes GCR symbols and counts invalid symbols,
+  - classifies decode as none/soft/hard and stamps deterministic markers into output block.
+
+- Extended advanced smoke markers:
+  - `[IEC COPY E2E] PASS: advanced_g64_gcr_hard_baseline`
+  - `[IEC COPY E2E] PASS: advanced_nib_gcr_hard_baseline`
+
+- Extended `copier_matrix.json` with hard GCR baseline scenarios while preserving all previous gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
