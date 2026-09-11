@@ -737,3 +737,20 @@ Added hard stress checks focused on temporal jitter and short soak stability.
 - `[IEC COPY E2E] PASS: advanced_nib_relock_window_soak_hard_baseline`
 
 All are wired into `copier_matrix.json` as advanced hard scenarios.
+
+## Quasi-Closure Checklist (Phase 5)
+
+### New Document
+
+- `COPIER_SUPPORT_MATRIX.md`
+
+Purpose:
+
+- provide a release-oriented view of all copier scenarios with explicit status,
+- summarize current hard baseline gate coverage,
+- define criteria for near-closure and remaining tasks before full closure.
+
+Current status in the checklist:
+
+- all active matrix scenarios are currently marked `PASS`,
+- hard advanced scenarios are included in the same consolidated status view.

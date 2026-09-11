@@ -1289,6 +1289,16 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Extended `copier_matrix.json` with all four scenarios while preserving previous gates.
 
+## Phase 5 Quasi-Closure Checklist (Follow-up)
+
+- Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.
+- The checklist now captures:
+  - all active matrix scenario IDs with status,
+  - quasi-closure criteria,
+  - remaining work before final phase-5 closure.
+
+- This creates a stable handoff artifact for signoff/release review, aligned with current matrix gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
