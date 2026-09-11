@@ -1358,6 +1358,26 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `[ADV-DOS-RECOVERY] scenario=...`
   - `[ADV-DOS-RECOVERY] summary pass=X/Y ...`
 
+## Phase5 Scale-Up + Soak + Auto Checklist (Follow-up)
+
+- Expanded `advanced_real_corpus_manifest.json` to a broader real-title set across `d64/g64/nib/raw`.
+
+- Added `run_phase5_soak_gate.ps1`:
+  - repeated matrix execution,
+  - explicit flake-rate evaluation,
+  - fail when flake exceeds configured threshold.
+
+- Added auto checklist generation workflow:
+  - `run_generate_copier_support_matrix.ps1` builds `COPIER_SUPPORT_MATRIX.md` from matrix/report,
+  - `run_check_phase5_closure.ps1 -GenerateChecklist` regenerates checklist before closure checks.
+
+- CI workflows updated to include:
+  - advanced real corpus gate,
+  - advanced DOS recovery gate,
+  - soak multi-run gate,
+  - hard-threshold checker,
+  - closure gate with generated checklist.
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.

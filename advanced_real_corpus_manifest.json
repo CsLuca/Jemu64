@@ -1,7 +1,7 @@
 {
-  "manifest_version": 1,
-  "name": "advanced_real_corpus_phase5_bootstrap",
-  "description": "Phase5 advanced real corpus bootstrap list for g64/nib/raw with no-fallback contract.",
+  "manifest_version": 2,
+  "name": "advanced_real_corpus_phase5_expanded",
+  "description": "Expanded phase5 advanced real corpus list for g64/nib/raw with broader loader/protection coverage.",
   "global_oracle": {
     "require_no_host_fallback": true,
     "default_timing_window": {
@@ -10,6 +10,17 @@
     }
   },
   "titles": [
+    {
+      "id": "adv_d64_1541_disk_drive_tester",
+      "format": "d64",
+      "path": "testdata/real_corpus_draven_top10/1541_Disk_Drive_Tester_19xx_-.d64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
     {
       "id": "adv_g64_128_data_base",
       "format": "g64",
@@ -124,6 +135,39 @@
       "id": "adv_nib_3d_construction_kit",
       "format": "nib",
       "path": "testdata/real_corpus_draven_top10/3D_Construction_Kit/3dkit-disk-bcp.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_design_3d_s0",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/3D_graphics_drawing_board/design 3D_s0.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_g64_9",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/9.g64/9.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_9",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/9.nib/9.nib",
       "oracle": {
         "timing_window": {
           "max_halfcycles": 700000,

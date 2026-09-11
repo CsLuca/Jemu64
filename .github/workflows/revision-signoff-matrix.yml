@@ -53,9 +53,25 @@ jobs:
             -FastManifest8500 "${{ matrix.rev.manifest_fast }}" `
             -RevisionSlot "${{ matrix.rev.slot }}"
 
+      - name: Run advanced real corpus gate (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_advanced_real_corpus_gate.ps1 -Manifest advanced_real_corpus_manifest.json -Mode pure -DefaultMaxHalfCycles 700000 -ReportCsv advanced_real_corpus_runtime.csv
+
+      - name: Run advanced DOS recovery gate (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_advanced_dos_recovery_gate.ps1 -Manifest advanced_dos_recovery_manifest.json -Profile fast -ExternalManifest external_tests_manifest.json -ReportCsv advanced_dos_recovery_runtime.csv
+
+      - name: Run phase5 soak gate (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_phase5_soak_gate.ps1 -Manifest external_tests_manifest.json -Runs 6 -MaxFlakeRate 0.05 -ReportCsv phase5_soak_runtime.csv
+
+      - name: Check phase5 hard thresholds (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report copier_matrix_report.json
+
       - name: Check phase5 closure gate (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_check_phase5_closure.ps1
+        run: .\run_check_phase5_closure.ps1 -GenerateChecklist
 
       - name: Upload signoff artifacts (${{ matrix.rev.name }})
         if: always()
@@ -65,6 +81,9 @@ jobs:
           path: |
             copier_matrix_report.json
             copier_matrix_report.csv
+            advanced_real_corpus_runtime.csv
+            advanced_dos_recovery_runtime.csv
+            phase5_soak_runtime.csv
             COPIER_SUPPORT_MATRIX.md
             real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json

@@ -877,6 +877,51 @@ Artifact:
 
 These validate write-protect followed by read-path recovery parity stability.
 
+## Phase5 Scale-Up + Soak + Auto Checklist (Current)
+
+### Expanded Real Corpus
+
+- `advanced_real_corpus_manifest.json` now includes a broader set of titles/formats (`d64/g64/nib/raw`) for better loader/protection diversity.
+
+### New Soak Gate
+
+- `run_phase5_soak_gate.ps1`
+
+What it does:
+
+- runs `run_copier_matrix.ps1` repeatedly (`Runs`),
+- computes flake rate (`failRuns / Runs`),
+- fails if flake rate exceeds configured threshold (`MaxFlakeRate`).
+
+Output:
+
+- per-run marker: `[PHASE5-SOAK] run=...`
+- summary marker: `[PHASE5-SOAK] summary pass=... flake_rate=...`
+- artifact: `phase5_soak_runtime.csv`
+
+### Auto-Generated Support Matrix
+
+- `run_generate_copier_support_matrix.ps1` now owns `COPIER_SUPPORT_MATRIX.md` generation from:
+  - `copier_matrix.json`
+  - `copier_matrix_report.json`
+
+- `run_check_phase5_closure.ps1 -GenerateChecklist` now regenerates checklist before validating scenario coverage.
+
+### CI Integration
+
+Updated workflows now run:
+
+- advanced real corpus gate,
+- advanced DOS recovery gate,
+- phase5 soak gate,
+- phase5 hard thresholds gate,
+- phase5 closure gate with auto-checklist generation.
+
+Workflows:
+
+- `.github/workflows/revision-tolerance-check.yml`
+- `.github/workflows/revision-signoff-matrix.yml`
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
