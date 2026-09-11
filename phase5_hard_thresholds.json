@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "policy": "phase5_hard_thresholds",
+  "rules": {
+    "matrix": {
+      "min_pass_rate": 1.0,
+      "max_runtime_exit_code": 0,
+      "require_all_markers": true
+    },
+    "advanced": {
+      "min_advanced_scenarios": 20,
+      "min_advanced_pass_rate": 1.0,
+      "require_hard_scenario_pass": true
+    },
+    "drift": {
+      "max_relock_window_failures": 0,
+      "max_jitter_digest_static_rows": 0,
+      "max_error_map_missing_rows": 0
+    }
+  }
+}

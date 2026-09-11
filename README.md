@@ -768,6 +768,42 @@ Artifact:
 
 - `advanced_real_corpus_runtime.csv`
 
+## Hard Threshold Policy (Commit 2)
+
+### New Policy File
+
+- `phase5_hard_thresholds.json`
+
+Policy sections:
+
+- `rules.matrix`
+  - `min_pass_rate`
+  - `max_runtime_exit_code`
+  - `require_all_markers`
+- `rules.advanced`
+  - `min_advanced_scenarios`
+  - `min_advanced_pass_rate`
+  - `require_hard_scenario_pass`
+- `rules.drift`
+  - `max_relock_window_failures`
+  - `max_jitter_digest_static_rows`
+  - `max_error_map_missing_rows`
+
+### New Checker
+
+- `run_check_phase5_hard_thresholds.ps1`
+
+What it validates:
+
+- matrix global pass-rate and runtime exit policy,
+- advanced scenario count and pass-rate policy,
+- hard scenario mandatory pass,
+- drift/jitter/error-map subgroup failure caps.
+
+Pass marker:
+
+- `[PHASE5-HARD] PASS: ...`
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

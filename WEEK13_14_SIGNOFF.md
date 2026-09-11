@@ -1305,6 +1305,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `[ADV-REAL-CORPUS] title=...`
   - `[ADV-REAL-CORPUS] summary pass=X/Y ...`
 
+## Hard Threshold Policy + Checker (Commit 2)
+
+- Added `phase5_hard_thresholds.json` as phase5 numeric hard-policy contract.
+- Added `run_check_phase5_hard_thresholds.ps1` to enforce policy against:
+  - `copier_matrix.json`,
+  - `copier_matrix_report.json`.
+
+- Checker responsibilities:
+  - enforce matrix pass-rate and runtime exit constraints,
+  - enforce advanced scenario count and pass-rate constraints,
+  - enforce mandatory pass for hard scenarios,
+  - enforce subgroup caps for relock/jitter/error-map failures.
+
+- Runtime marker:
+  - `[PHASE5-HARD] PASS: ...`
+
 ## Phase 5 Quasi-Closure Checklist (Follow-up)
 
 - Added `COPIER_SUPPORT_MATRIX.md` to provide an explicit release-facing support status table.
