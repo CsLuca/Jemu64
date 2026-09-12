@@ -1468,6 +1468,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Scope: parity crystallization only; no emulator logic tuning in this commit.
 
+## Commit 1 - Physical Stack Scaffold and Runtime Profiles
+
+- Added scaffold headers under `drive1541_physical/`:
+  - `physical_profile.hpp`
+  - `drive_scheduler.hpp`
+  - `drive_cpu_domain.hpp`
+  - `drive_via_domain.hpp`
+  - `drive_dos_memory_map.hpp`
+  - `drive_iec_port.hpp`
+
+- Updated `drive_1541.hpp` with behavior-neutral wiring:
+  - profile alias (`PhysicalProfile`) with default `Level1Functional`,
+  - placeholder members for physical scheduler, CPU domain, VIA domain, DOS memory map, IEC port.
+
+- Scope: structural scaffold only; functional behavior unchanged.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

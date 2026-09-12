@@ -987,6 +987,22 @@ Release pin manifest:
 
 - `PHASE5_RELEASE_PIN.json` (formal freeze of manifests/gates/docs, behavior-neutral).
 
+## Commit 1: Physical Stack Scaffold and Runtime Profiles
+
+- Added initial non-functional scaffold under `drive1541_physical/`:
+  - `physical_profile.hpp`
+  - `drive_scheduler.hpp`
+  - `drive_cpu_domain.hpp`
+  - `drive_via_domain.hpp`
+  - `drive_dos_memory_map.hpp`
+  - `drive_iec_port.hpp`
+
+- Added minimal wiring in `drive_1541.hpp`:
+  - profile enum alias and default profile `Level1Functional`,
+  - placeholder physical-domain members for scheduler/CPU/VIA/memory-map/IEC port.
+
+- Scope: scaffold only. No behavior change in active functional path.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

@@ -19,12 +19,20 @@
 
 #include "advanced_image_backends.hpp"
 #include "d64_image_backend.hpp"
+#include "drive1541_physical/drive_cpu_domain.hpp"
+#include "drive1541_physical/drive_dos_memory_map.hpp"
+#include "drive1541_physical/drive_iec_port.hpp"
+#include "drive1541_physical/drive_scheduler.hpp"
+#include "drive1541_physical/drive_via_domain.hpp"
+#include "drive1541_physical/physical_profile.hpp"
 #include "drive_via6522.hpp"
 #include "image_backend.hpp"
 #include "iec_device.hpp"
 
 class Drive1541 : public IIecDevice {
 public:
+    using PhysicalProfile = drive1541_physical::PhysicalProfile;
+
     enum Revision : uint8_t {
         REV_1541 = 0,
         REV_1541C = 1,
@@ -51,6 +59,13 @@ public:
 
     Revision revision = REV_1541;
     RevisionProfile revisionProfile = makeRevisionProfile(REV_1541);
+    PhysicalProfile physicalProfile = PhysicalProfile::Level1Functional;
+
+    drive1541_physical::DriveScheduler physicalScheduler;
+    drive1541_physical::DriveCpuDomain physicalCpuDomain;
+    drive1541_physical::DriveViaDomain physicalViaDomain;
+    drive1541_physical::DriveDosMemoryMap physicalDosMemoryMap;
+    drive1541_physical::DriveIecPort physicalIecPort;
 
     void setRevision(Revision rev) {
         revision = rev;
