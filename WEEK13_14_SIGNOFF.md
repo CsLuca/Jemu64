@@ -1501,6 +1501,27 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Scope: config/runtime selection only; no behavior change to active functional execution path.
 
+## Commit 3 - DriveScheduler Autonomo (Stub Deterministico)
+
+- Updated `drive1541_physical/drive_scheduler.hpp` to provide autonomous scheduler core primitives:
+  - host/drive tick counters,
+  - fixed rational rate conversion (`setRateRatio`),
+  - deterministic event queue with stable tie-break for same timestamp.
+
+- Added scheduler event model:
+  - `timestamp`
+  - `eventType`
+  - `payloadId`
+  - internal monotonic sequence for deterministic ordering.
+
+- Added deterministic scheduler smoke test: `drive1541_scheduler_determinism_smoke.hpp`.
+  - verifies replay determinism (same run -> same event sequence),
+  - verifies same-timestamp stable ordering.
+
+- Integrated smoke in `runDriveIecSmokeSuite(...)` and minimal scheduler wiring in `drive_1541.hpp` (`reset` + `tickIecHalfCycle`).
+
+- Scope: timing-domain scaffold only; no change to external IEC/DOS semantics.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

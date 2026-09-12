@@ -342,6 +342,7 @@ public:
 
     void reset() {
         cycles = 0;
+        physicalScheduler.reset();
         pc = static_cast<uint16_t>(memory[0xFFFC] | (uint16_t(memory[0xFFFD]) << 8));
         iecListening = false;
         iecTalking = false;
@@ -505,6 +506,7 @@ public:
 
     void tickIecHalfCycle() override {
         cycles++;
+        physicalScheduler.tickHostCycles(1);
 
         via1.tick();
         via2.tick();

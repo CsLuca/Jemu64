@@ -1017,6 +1017,24 @@ Release pin manifest:
 
 - Default behavior remains unchanged (functional path) when profile env var is not set.
 
+## Commit 3: Autonomous Drive Scheduler Core (Deterministic Stub)
+
+- Extended `drive1541_physical/drive_scheduler.hpp` with deterministic scheduling primitives:
+  - host ticks + drive ticks counters,
+  - centralized fixed rational conversion (`setRateRatio(numerator, denominator)`),
+  - timestamped event queue (`timestamp`, `eventType`, `payloadId`) with deterministic sequence tie-break.
+
+- Added scheduler APIs:
+  - `scheduleAt(...)` / `schedule_at(...)`
+  - `runUntil(...)` / `run_until(...)`
+  - `now()`
+
+- Added smoke coverage in `drive1541_scheduler_determinism_smoke.hpp`:
+  - identical replay produces identical ordered event trace,
+  - equal-timestamp ordering remains stable and deterministic.
+
+- Wired scheduler host-time tick in `drive_1541.hpp` (`tickIecHalfCycle`) and reset path; no I/O semantic changes.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
