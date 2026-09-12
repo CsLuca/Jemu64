@@ -80,6 +80,28 @@ public:
         return revisionProfile;
     }
 
+    static PhysicalProfile parsePhysicalProfile(const std::string &profile) {
+        std::string v = profile;
+        for (char &c : v) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        if (v == "level2-cycle") {
+            return PhysicalProfile::Level2Cycle;
+        }
+        if (v == "level3-physical") {
+            return PhysicalProfile::Level3Physical;
+        }
+        return PhysicalProfile::Level1Functional;
+    }
+
+    void setPhysicalProfile(PhysicalProfile profile) {
+        physicalProfile = profile;
+    }
+
+    PhysicalProfile getPhysicalProfile() const {
+        return physicalProfile;
+    }
+
     enum class IecSerialState {
         Idle,
         Command,

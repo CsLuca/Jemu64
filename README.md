@@ -1003,6 +1003,20 @@ Release pin manifest:
 
 - Scope: scaffold only. No behavior change in active functional path.
 
+## Commit 2: Runtime Drive Profile Selection (Safe Default)
+
+- Added runtime profile parsing in `Drive1541`:
+  - `level1-functional` -> `Level1Functional`
+  - `level2-cycle` -> `Level2Cycle`
+  - `level3-physical` -> `Level3Physical`
+  - invalid/unknown values -> safe fallback `Level1Functional`
+
+- Added environment-driven selection during drive-slot initialization:
+  - `C64_DRIVE_PROFILE`
+  - fallback `KERNAL_DRIVE_PROFILE`
+
+- Default behavior remains unchanged (functional path) when profile env var is not set.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

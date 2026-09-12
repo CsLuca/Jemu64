@@ -1484,6 +1484,23 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Scope: structural scaffold only; functional behavior unchanged.
 
+## Commit 2 - Runtime Drive Profile Selection (Safe Default)
+
+- Added profile parsing API in `drive_1541.hpp`:
+  - `Drive1541::parsePhysicalProfile(...)`
+  - `Drive1541::setPhysicalProfile(...)`
+  - `Drive1541::getPhysicalProfile(...)`
+
+- Added runtime env wiring in `c64_11.cpp`:
+  - `configureDrivePhysicalProfileFromEnv(...)`
+  - selection keys: `C64_DRIVE_PROFILE`, fallback `KERNAL_DRIVE_PROFILE`
+
+- Profile contract:
+  - `level1-functional`, `level2-cycle`, `level3-physical`
+  - invalid/missing values are forced to `level1-functional`
+
+- Scope: config/runtime selection only; no behavior change to active functional execution path.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

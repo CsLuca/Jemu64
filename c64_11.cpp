@@ -5935,6 +5935,18 @@ static void configureDriveRevisionFromEnv(Drive1541 &drive) {
     drive.setRevision((v == "1541ii") ? Drive1541::REV_1541II : ((v == "1541c") ? Drive1541::REV_1541C : Drive1541::REV_1541));
 }
 
+static void configureDrivePhysicalProfileFromEnv(Drive1541 &drive) {
+    const char *driveProfile = std::getenv("C64_DRIVE_PROFILE");
+    if (driveProfile == nullptr) {
+        driveProfile = std::getenv("KERNAL_DRIVE_PROFILE");
+    }
+    if (driveProfile == nullptr) {
+        drive.setPhysicalProfile(Drive1541::PhysicalProfile::Level1Functional);
+        return;
+    }
+    drive.setPhysicalProfile(Drive1541::parsePhysicalProfile(driveProfile));
+}
+
 struct DriveSlotMountConfig {
     std::string path;
     std::string format;
@@ -6243,6 +6255,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
         const uint8_t deviceUnit = static_cast<uint8_t>(8 + i);
         slotDrive.iecDeviceAddress = deviceUnit;
         configureDriveRevisionFromEnv(slotDrive);
+        configureDrivePhysicalProfileFromEnv(slotDrive);
         if (!slotDrive.loadRom("roms/dos1541.rom")) {
             std::cerr << "[KERNAL IEC E2E] FAIL: cannot load roms/dos1541.rom" << std::endl;
             assert(false);
