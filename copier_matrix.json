@@ -791,6 +791,87 @@
         "Long-tail burst perturbation",
         "Real-pattern weakbit/bitcell stress"
       ]
+    },
+    {
+      "id": "advanced_g64_longtail_extreme_corpus_fixture",
+      "description": "Extreme long-tail corpus fixture gate for G64 parity envelope",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_longtail_extreme_corpus_fixture"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 0 long-tail extreme fixture",
+        "Behavior-neutral parity crystallization"
+      ]
+    },
+    {
+      "id": "advanced_nib_longtail_extreme_corpus_fixture",
+      "description": "Extreme long-tail corpus fixture gate for NIB parity envelope",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_longtail_extreme_corpus_fixture"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 0 long-tail extreme fixture",
+        "Behavior-neutral parity crystallization"
+      ]
+    },
+    {
+      "id": "advanced_raw_flux_extreme_corpus_fixture",
+      "description": "Extreme long-tail corpus fixture gate for RAW flux parity envelope",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "raw",
+      "target_format": "raw",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_raw_flux_extreme_corpus_fixture"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 0 long-tail extreme fixture",
+        "Behavior-neutral parity crystallization"
+      ]
     }
   ]
 }

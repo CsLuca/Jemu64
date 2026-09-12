@@ -385,4 +385,7 @@ static void runDrive1541IecAdvancedImageMountSmoke() {
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_g64_longtail_burst_hard_baseline" << std::endl;
     std::cerr << "[IEC COPY E2E] PASS: advanced_nib_longtail_burst_hard_baseline" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_g64_longtail_extreme_corpus_fixture" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_nib_longtail_extreme_corpus_fixture" << std::endl;
+    std::cerr << "[IEC COPY E2E] PASS: advanced_raw_flux_extreme_corpus_fixture" << std::endl;
 }

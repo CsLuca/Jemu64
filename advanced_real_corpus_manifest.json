@@ -234,6 +234,47 @@
           "min_done_hits": 1
         }
       }
+    },
+    {
+      "id": "adv_g64_longtail_extreme_fixture_9",
+      "format": "g64",
+      "path": "testdata/real_corpus_draven_top10/9.g64/9.g64",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_nib_longtail_extreme_fixture_9",
+      "format": "nib",
+      "path": "testdata/real_corpus_draven_top10/9.nib/9.nib",
+      "oracle": {
+        "timing_window": {
+          "max_halfcycles": 700000,
+          "min_done_hits": 1
+        }
+      }
+    },
+    {
+      "id": "adv_raw_copy_ii_pc_v1_extreme_flux_fixture",
+      "format": "raw",
+      "path": "testdata/real_corpus_draven_top10/kryoflux/Copy.II.PC.v1.0",
+      "oracle": {
+        "sample_floor": 160,
+        "expected_sample_count": 168,
+        "loader_timing_parity": {
+          "min_runs": 480,
+          "max_mismatches": 0
+        },
+        "sync_loss_recovery": {
+          "min_rows": 15
+        },
+        "weak_halftrack_observed": {
+          "min_rows": 25
+        }
+      }
     }
   ]
 }

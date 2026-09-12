@@ -12,6 +12,16 @@
       "id": "advanced_nib_dos_recovery_hard_baseline",
       "format": "nib",
       "expected_marker": "[IEC COPY E2E] PASS: advanced_nib_dos_recovery_hard_baseline"
+    },
+    {
+      "id": "advanced_g64_longtail_extreme_corpus_fixture",
+      "format": "g64",
+      "expected_marker": "[IEC COPY E2E] PASS: advanced_g64_longtail_extreme_corpus_fixture"
+    },
+    {
+      "id": "advanced_nib_longtail_extreme_corpus_fixture",
+      "format": "nib",
+      "expected_marker": "[IEC COPY E2E] PASS: advanced_nib_longtail_extreme_corpus_fixture"
     }
   ]
 }

@@ -1448,6 +1448,26 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - phase5 closure gate pass,
   - CI gate parity with artifact publication.
 
+## Commit 0 - Long-Tail Extreme Corpus and Parity Fixtures
+
+- Added behavior-neutral long-tail extreme fixture scenarios in `copier_matrix.json`:
+  - `advanced_g64_longtail_extreme_corpus_fixture`
+  - `advanced_nib_longtail_extreme_corpus_fixture`
+  - `advanced_raw_flux_extreme_corpus_fixture`
+
+- Added corresponding real-corpus fixture titles in `advanced_real_corpus_manifest.json`:
+  - `adv_g64_longtail_extreme_fixture_9`
+  - `adv_nib_longtail_extreme_fixture_9`
+  - `adv_raw_copy_ii_pc_v1_extreme_flux_fixture`
+
+- Extended `advanced_dos_recovery_manifest.json` with long-tail fixture marker checks:
+  - `advanced_g64_longtail_extreme_corpus_fixture`
+  - `advanced_nib_longtail_extreme_corpus_fixture`
+
+- Extended advanced image smoke marker emission in `drive_iec_advanced_image_mount_smoke.hpp` to include all new fixture PASS markers.
+
+- Scope: parity crystallization only; no emulator logic tuning in this commit.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

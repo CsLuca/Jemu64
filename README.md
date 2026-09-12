@@ -929,6 +929,10 @@ Workflows:
 - `advanced_real_corpus_manifest.json` now includes additional long-tail entries for:
   - repeated RAW recovery profile coverage,
   - loader-stress variants on `9.g64` / `9.nib`.
+  - explicit extreme-fixture entries that lock parity expectations without introducing behavior changes:
+    - `adv_g64_longtail_extreme_fixture_9`,
+    - `adv_nib_longtail_extreme_fixture_9`,
+    - `adv_raw_copy_ii_pc_v1_extreme_flux_fixture`.
 
 ### Physical Edge Refinement
 
@@ -952,6 +956,20 @@ Updated behavior:
 
 - `[IEC COPY E2E] PASS: advanced_g64_longtail_burst_hard_baseline`
 - `[IEC COPY E2E] PASS: advanced_nib_longtail_burst_hard_baseline`
+- `[IEC COPY E2E] PASS: advanced_g64_longtail_extreme_corpus_fixture`
+- `[IEC COPY E2E] PASS: advanced_nib_longtail_extreme_corpus_fixture`
+- `[IEC COPY E2E] PASS: advanced_raw_flux_extreme_corpus_fixture`
+
+### Commit 0: Long-Tail Extreme Corpus + Fixtures
+
+- Added behavior-neutral extreme fixture scenarios to `copier_matrix.json`:
+  - `advanced_g64_longtail_extreme_corpus_fixture`,
+  - `advanced_nib_longtail_extreme_corpus_fixture`,
+  - `advanced_raw_flux_extreme_corpus_fixture`.
+
+- Added matching parity fixture titles to `advanced_real_corpus_manifest.json` so long-tail envelope checks stay explicit and repeatable under gates.
+
+- Added expected marker coverage in `advanced_dos_recovery_manifest.json` for the new long-tail G64/NIB fixture scenarios.
 
 ## Phase5 Final Signoff
 
