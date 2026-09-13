@@ -1083,6 +1083,21 @@ Release pin manifest:
   - IO callback dispatch
   - unmapped deterministic default.
 
+## Commit 6: Drive CPU Domain Wiring via DOS Memory Map Bus
+
+- `drive1541_physical/drive_cpu_domain.hpp` now exposes concrete bus-callback wiring:
+  - `bind_bus(ReadFn, WriteFn)`
+  - `reset()` fetches reset vector through bus read callback
+  - `step_one_cycle()` fetches opcode through bus read callback and emits deterministic callback write for wiring validation
+  - `set_irq(...)` / `set_nmi(...)` are latched and keep deterministic PC cadence behavior.
+
+- `drive_1541.hpp` integration now binds CPU-domain bus to `physicalDosMemoryMap` callbacks through `bindPhysicalCpuDomain()` and initializes it in `reset()`.
+
+- Added coverage in `tests/drive1541_cpu_domain_tests.hpp`:
+  - reset vector fetch validation,
+  - write callback propagation,
+  - IRQ/NMI deterministic progression checks.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

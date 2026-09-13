@@ -373,6 +373,8 @@ public:
         bindPhysicalDosMemoryMap();
         physicalDosMemoryMap.set_rom(&memory[0xC000], 0x4000);
         physicalDosMemoryMap.seed_ram(&memory[0x0000], 0xC000);
+        bindPhysicalCpuDomain();
+        physicalCpuDomain.reset();
         pc = static_cast<uint16_t>(memory[0xFFFC] | (uint16_t(memory[0xFFFD]) << 8));
         iecListening = false;
         iecTalking = false;
@@ -532,6 +534,20 @@ public:
                 }
                 if ((ioAddr & 0xFFF0u) == 0x1C00u) {
                     via2.write(ioAddr, v);
+                }
+            }
+        );
+    }
+
+    void bindPhysicalCpuDomain() {
+        physicalCpuDomain.bind_bus(
+            [this](uint16_t addr) -> uint8_t {
+                return physicalDosMemoryMap.read(addr);
+            },
+            [this](uint16_t addr, uint8_t val) {
+                physicalDosMemoryMap.write(addr, val);
+                if (addr < 0xC000u) {
+                    memory[addr] = val;
                 }
             }
         );

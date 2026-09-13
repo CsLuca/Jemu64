@@ -6232,6 +6232,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_memory_map_tests.hpp"
 
+#include "tests/drive1541_cpu_domain_tests.hpp"
+
 static void runKernelSerialLoadDirectoryTrueE2E() {
     Bus bus;
     const bool systemRomsLoaded = bus.loadSystemRoms("roms");
@@ -8605,6 +8607,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541SchedulerDeterminismSmoke();
     runDrive1541PowerLifecycleSmoke();
     runDrive1541MemoryMapTests();
+    runDrive1541CpuDomainTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

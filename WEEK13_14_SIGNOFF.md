@@ -1566,6 +1566,22 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - IO callback path
   - out-of-map deterministic value.
 
+## Commit 6 - DriveCpuDomain Wiring Reale con Bus Callback
+
+- Extended `drive1541_physical/drive_cpu_domain.hpp` with concrete callback-driven CPU domain surface:
+  - `bind_bus(...)`, `reset()`, `step_one_cycle()`, `set_irq(...)`, `set_nmi(...)`
+  - reset vector fetch is bus-backed,
+  - step path is bus-backed and deterministic.
+
+- Integrated CPU-domain binding in `drive_1541.hpp`:
+  - new `bindPhysicalCpuDomain()` callback bridge to `physicalDosMemoryMap`
+  - CPU domain reset initialized as part of drive reset flow.
+
+- Added `tests/drive1541_cpu_domain_tests.hpp`:
+  - reset vector fetch assertion,
+  - callback write propagation assertion,
+  - IRQ/NMI deterministic cadence assertion.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
