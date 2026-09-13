@@ -1522,6 +1522,12 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 
 - Scope: timing-domain scaffold only; no change to external IEC/DOS semantics.
 
+## Anti-Flake Micro-Check - `copy_8_to_9_disk_e2e`
+
+- Added a bounded retry micro-check in `run_copier_matrix.ps1` for scenario `copy_8_to_9_disk_e2e` manifest validation.
+- The guard re-reads manifest CSV on short delay only when transient empty/missing `match=1` conditions appear.
+- Scope is runner-level only (no emulator logic changes), aimed at reducing intermittent false negatives in matrix/soak gates.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

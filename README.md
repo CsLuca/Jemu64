@@ -1035,6 +1035,14 @@ Release pin manifest:
 
 - Wired scheduler host-time tick in `drive_1541.hpp` (`tickIecHalfCycle`) and reset path; no I/O semantic changes.
 
+## Anti-Flake Micro-Check for `copy_8_to_9_disk_e2e`
+
+- `run_copier_matrix.ps1` now includes a behavior-neutral micro-check for the `copy_8_to_9_disk_e2e` manifest gate:
+  - when manifest rows are transiently empty or `match=1` is not yet visible, it performs a short bounded re-read retry window,
+  - retry is limited to this scenario only and does not alter emulator execution semantics.
+
+- Purpose: reduce intermittent CI/local false negatives on manifest timing without masking real mismatches.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

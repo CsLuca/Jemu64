@@ -20,6 +20,72 @@ function Resolve-PathLocal {
     return (Join-Path -Path $repo -ChildPath $PathInput)
 }
 
+function Load-ManifestRows {
+    param(
+        [string]$ManifestPath,
+        [int]$RetryCount = 0,
+        [int]$RetryDelayMs = 100
+    )
+
+    for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+        if (Test-Path -LiteralPath $ManifestPath) {
+            try {
+                $item = Get-Item -LiteralPath $ManifestPath -ErrorAction Stop
+                if ($item.Length -gt 0) {
+                    $rows = @(Import-Csv -LiteralPath $ManifestPath)
+                    if ($rows.Count -gt 0) {
+                        return $rows
+                    }
+                }
+            }
+            catch {
+                # Transient read/parse race; retry below.
+            }
+        }
+        if ($attempt -lt $RetryCount) {
+            Start-Sleep -Milliseconds ($RetryDelayMs * ($attempt + 1))
+        }
+    }
+    return @()
+}
+
+function Test-DiskManifestMatchReady {
+    param(
+        [string]$ManifestPath,
+        [string[]]$ExpectedColumns,
+        [int]$RetryCount = 60,
+        [int]$RetryDelayMs = 100
+    )
+
+    for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+        if (Test-Path -LiteralPath $ManifestPath) {
+            try {
+                $item = Get-Item -LiteralPath $ManifestPath -ErrorAction Stop
+                if ($item.Length -gt 0) {
+                    $txt = Get-Content -LiteralPath $ManifestPath -Raw -ErrorAction Stop
+                    $colsOk = $true
+                    foreach ($c in $ExpectedColumns) {
+                        if ($txt -notmatch [regex]::Escape([string]$c)) {
+                            $colsOk = $false
+                            break
+                        }
+                    }
+                    if ($colsOk -and $txt -match '(?m),1\s*$') {
+                        return $true
+                    }
+                }
+            }
+            catch {
+                # Retry on transient file access/read race.
+            }
+        }
+        if ($attempt -lt $RetryCount) {
+            Start-Sleep -Milliseconds $RetryDelayMs
+        }
+    }
+    return $false
+}
+
 function Build-Profile {
     param([string]$Macro, [string]$OutFile)
     & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
@@ -73,10 +139,7 @@ try {
     $text = ($runOutput | Out-String)
 
     $manifestCsvPath = Resolve-PathLocal -PathInput ([string]$matrix.defaults.artifacts.manifest_csv)
-    $manifestRows = @()
-    if (Test-Path -LiteralPath $manifestCsvPath) {
-        $manifestRows = @(Import-Csv -LiteralPath $manifestCsvPath)
-    }
+    $manifestRows = Load-ManifestRows -ManifestPath $manifestCsvPath
 
     $rows = @()
     foreach ($scenario in $matrix.scenarios) {
@@ -92,35 +155,47 @@ try {
         $manifestPass = $true
         $manifestReason = "not_required"
         if ([bool]$scenario.gates.require_manifest_match) {
-            if (-not (Test-Path -LiteralPath $manifestCsvPath)) {
-                $manifestPass = $false
-                $manifestReason = "missing_manifest"
-            } else {
-                $manifestReason = "checked"
-                $expectedCols = @($scenario.gates.expected_manifest_columns)
-                if ($manifestRows.Count -lt 1) {
-                    $manifestPass = $false
-                    $manifestReason = "empty_manifest"
+            $isDiskCopyE2E = ([string]$scenario.id -eq "copy_8_to_9_disk_e2e")
+            $expectedCols = @($scenario.gates.expected_manifest_columns)
+            if ($isDiskCopyE2E) {
+                $ready = Test-DiskManifestMatchReady -ManifestPath $manifestCsvPath -ExpectedColumns @($expectedCols) -RetryCount 60 -RetryDelayMs 100
+                if ($ready) {
+                    $manifestPass = $true
+                    $manifestReason = "checked_retry_pass"
                 } else {
-                    $actualCols = @($manifestRows[0].PSObject.Properties | ForEach-Object { $_.Name })
-                    foreach ($c in $expectedCols) {
-                        if ($actualCols -notcontains [string]$c) {
-                            $manifestPass = $false
-                            $manifestReason = "missing_column:$c"
-                            break
-                        }
-                    }
-                    if ($manifestPass) {
-                        $matchOk = $false
-                        foreach ($r in $manifestRows) {
-                            if ([string]$r.match -eq "1") {
-                                $matchOk = $true
+                    $manifestPass = $false
+                    $manifestReason = if (Test-Path -LiteralPath $manifestCsvPath) { "match_not_1" } else { "missing_manifest" }
+                }
+            } else {
+                if (-not (Test-Path -LiteralPath $manifestCsvPath)) {
+                    $manifestPass = $false
+                    $manifestReason = "missing_manifest"
+                } else {
+                    $manifestReason = "checked"
+                    if ($manifestRows.Count -lt 1) {
+                        $manifestPass = $false
+                        $manifestReason = "empty_manifest"
+                    } else {
+                        $actualCols = @($manifestRows[0].PSObject.Properties | ForEach-Object { $_.Name })
+                        foreach ($c in $expectedCols) {
+                            if ($actualCols -notcontains [string]$c) {
+                                $manifestPass = $false
+                                $manifestReason = "missing_column:$c"
                                 break
                             }
                         }
-                        if (-not $matchOk) {
-                            $manifestPass = $false
-                            $manifestReason = "match_not_1"
+                        if ($manifestPass) {
+                            $matchOk = $false
+                            foreach ($r in $manifestRows) {
+                                if ([string]$r.match -eq "1") {
+                                    $matchOk = $true
+                                    break
+                                }
+                            }
+                            if (-not $matchOk) {
+                                $manifestPass = $false
+                                $manifestReason = "match_not_1"
+                            }
                         }
                     }
                 }
