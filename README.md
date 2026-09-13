@@ -1064,6 +1064,25 @@ Release pin manifest:
   - IEC released lines while off,
   - deterministic repeated power-cycle digest.
 
+## Commit 5: Concrete 1541 DOS Memory Map (ROM/RAM/IO Decode)
+
+- `drive1541_physical/drive_dos_memory_map.hpp` now provides concrete decode behavior:
+  - RAM (`< $1800`) read/write
+  - IO windows (`$1800-$180F`, `$1C00-$1C0F`) via bound callbacks
+  - ROM (`>= $C000`) read-only
+  - unmapped regions return deterministic `0xFF`
+
+- `drive_1541.hpp` wiring now routes memory access through `physicalDosMemoryMap` while preserving current behavior:
+  - VIA read/write bound as IO callbacks
+  - ROM pointer bound to `memory[0xC000]`
+  - RAM seeded from base memory map on reset/load
+
+- Added dedicated coverage in `tests/drive1541_memory_map_tests.hpp`:
+  - RAM read/write
+  - ROM write protection
+  - IO callback dispatch
+  - unmapped deterministic default.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

@@ -1547,6 +1547,25 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - validates released IEC lines,
   - validates deterministic repeated power cycle behavior.
 
+## Commit 5 - DriveDosMemoryMap Concreta (ROM/RAM/IO)
+
+- Implemented concrete memory-map domain in `drive1541_physical/drive_dos_memory_map.hpp`:
+  - RAM decode (read/write)
+  - IO decode via callback binding
+  - ROM decode as read-only
+  - unmapped read fallback to deterministic `0xFF`.
+
+- Integrated memory map wiring into `drive_1541.hpp`:
+  - `read()` / `write()` now route through `physicalDosMemoryMap`
+  - IO callback dispatch bound to VIA1/VIA2 windows
+  - ROM pointer + RAM seed bound on ROM load/reset.
+
+- Added validation suite `tests/drive1541_memory_map_tests.hpp`:
+  - RAM roundtrip
+  - ROM write-ignore invariant
+  - IO callback path
+  - out-of-map deterministic value.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

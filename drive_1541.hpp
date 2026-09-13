@@ -359,6 +359,9 @@ public:
         }
 
         romLoaded = true;
+        bindPhysicalDosMemoryMap();
+        physicalDosMemoryMap.set_rom(&memory[0xC000], 0x4000);
+        physicalDosMemoryMap.seed_ram(&memory[0x0000], 0xC000);
 
         reset();
         return true;
@@ -367,6 +370,9 @@ public:
     void reset() {
         cycles = 0;
         physicalScheduler.reset();
+        bindPhysicalDosMemoryMap();
+        physicalDosMemoryMap.set_rom(&memory[0xC000], 0x4000);
+        physicalDosMemoryMap.seed_ram(&memory[0x0000], 0xC000);
         pc = static_cast<uint16_t>(memory[0xFFFC] | (uint16_t(memory[0xFFFD]) << 8));
         iecListening = false;
         iecTalking = false;
@@ -498,30 +504,37 @@ public:
     }
 
     uint8_t read(uint16_t addr) {
-        if ((addr & 0xFFF0) == 0x1800) {
-            return via1.read(addr);
-        }
-        if ((addr & 0xFFF0) == 0x1C00) {
-            return via2.read(addr);
-        }
-        return memory[addr];
+        return physicalDosMemoryMap.read(addr);
     }
 
     void write(uint16_t addr, uint8_t val) {
-        if ((addr & 0xFFF0) == 0x1800) {
-            via1.write(addr, val);
-            return;
+        physicalDosMemoryMap.write(addr, val);
+        if (addr < 0xC000) {
+            memory[addr] = val;
         }
-        if ((addr & 0xFFF0) == 0x1C00) {
-            via2.write(addr, val);
-            return;
-        }
+    }
 
-        // Keep ROM read-only in upper 16KB.
-        if (addr >= 0xC000) {
-            return;
-        }
-        memory[addr] = val;
+    void bindPhysicalDosMemoryMap() {
+        physicalDosMemoryMap.bind_io(
+            [this](uint16_t ioAddr) -> uint8_t {
+                if ((ioAddr & 0xFFF0u) == 0x1800u) {
+                    return via1.read(ioAddr);
+                }
+                if ((ioAddr & 0xFFF0u) == 0x1C00u) {
+                    return via2.read(ioAddr);
+                }
+                return static_cast<uint8_t>(0xFF);
+            },
+            [this](uint16_t ioAddr, uint8_t v) {
+                if ((ioAddr & 0xFFF0u) == 0x1800u) {
+                    via1.write(ioAddr, v);
+                    return;
+                }
+                if ((ioAddr & 0xFFF0u) == 0x1C00u) {
+                    via2.write(ioAddr, v);
+                }
+            }
+        );
     }
 
     void tick() {
