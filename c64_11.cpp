@@ -6228,6 +6228,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_scheduler_determinism.hpp"
 
+#include "tests/drive1541_power_lifecycle_smoke.hpp"
+
 static void runKernelSerialLoadDirectoryTrueE2E() {
     Bus bus;
     const bool systemRomsLoaded = bus.loadSystemRoms("roms");
@@ -8599,6 +8601,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541IecWildcardTypeModeFilterSmoke(cia2);
     runDrive1541IecWildcardNegatedModeFilterSmoke(cia2);
     runDrive1541SchedulerDeterminismSmoke();
+    runDrive1541PowerLifecycleSmoke();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

@@ -22,6 +22,7 @@
 #include "drive1541_physical/drive_cpu_domain.hpp"
 #include "drive1541_physical/drive_dos_memory_map.hpp"
 #include "drive1541_physical/drive_iec_port.hpp"
+#include "drive1541_physical/drive_power_controller.hpp"
 #include "drive1541_physical/drive_scheduler.hpp"
 #include "drive1541_physical/drive_via_domain.hpp"
 #include "drive1541_physical/physical_profile.hpp"
@@ -66,6 +67,29 @@ public:
     drive1541_physical::DriveViaDomain physicalViaDomain;
     drive1541_physical::DriveDosMemoryMap physicalDosMemoryMap;
     drive1541_physical::DriveIecPort physicalIecPort;
+    drive1541_physical::DrivePowerController powerController;
+
+    using PowerState = drive1541_physical::PowerState;
+
+    void powerOn(bool coldBoot) {
+        powerController.powerOn(coldBoot);
+    }
+
+    void powerOff() {
+        powerController.powerOff();
+    }
+
+    void powerReset() {
+        powerController.reset();
+    }
+
+    bool isPoweredOn() const {
+        return powerController.isOn();
+    }
+
+    PowerState getPowerState() const {
+        return powerController.state();
+    }
 
     void setRevision(Revision rev) {
         revision = rev;
@@ -505,6 +529,13 @@ public:
     }
 
     void tickIecHalfCycle() override {
+        powerController.tick(1);
+        if (!powerController.isOn()) {
+            iecDrivePullCLK = false;
+            iecDrivePullDATA = false;
+            return;
+        }
+
         cycles++;
         physicalScheduler.tickHostCycles(1);
 

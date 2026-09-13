@@ -1528,6 +1528,25 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - The guard re-reads manifest CSV on short delay only when transient empty/missing `match=1` conditions appear.
 - Scope is runner-level only (no emulator logic changes), aimed at reducing intermittent false negatives in matrix/soak gates.
 
+## Commit 4 - Power Lifecycle Per-Drive
+
+- Added `drive1541_physical/drive_power_controller.hpp` with explicit lifecycle states:
+  - `Off`, `SpinningUp`, `On`, `Resetting`, `SpinningDown`
+
+- Integrated power lifecycle wiring in `drive_1541.hpp`:
+  - methods: `powerOn(...)`, `powerOff()`, `powerReset()`, `isPoweredOn()`, `getPowerState()`
+  - `tickIecHalfCycle()` now advances power controller first and enforces off-state early-return semantics.
+
+- Off-state runtime guarantees now enforced:
+  - no CPU/VIA/scheduler progression while off,
+  - IEC drive pull lines explicitly released while off.
+
+- Added deterministic smoke coverage: `tests/drive1541_power_lifecycle_smoke.hpp`.
+  - validates power transition correctness,
+  - validates off-state no-advance counters,
+  - validates released IEC lines,
+  - validates deterministic repeated power cycle behavior.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

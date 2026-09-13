@@ -1043,6 +1043,27 @@ Release pin manifest:
 
 - Purpose: reduce intermittent CI/local false negatives on manifest timing without masking real mismatches.
 
+## Commit 4: Per-Drive Power Lifecycle State Machine
+
+- Added `drive1541_physical/drive_power_controller.hpp` with power states:
+  - `Off`, `SpinningUp`, `On`, `Resetting`, `SpinningDown`
+
+- Integrated power lifecycle into `drive_1541.hpp`:
+  - control methods: `powerOn(coldBoot)`, `powerOff()`, `powerReset()`
+  - state queries: `isPoweredOn()`, `getPowerState()`
+  - per-tick lifecycle progression via `powerController.tick(1)`.
+
+- Off-state behavior guard (behavioral contract):
+  - when powered off, drive processing loop returns early,
+  - IEC outputs are released (`getIecDrivePullCLK/DATA` both false),
+  - no CPU/VIA/scheduler advancement while off.
+
+- Added smoke coverage in `tests/drive1541_power_lifecycle_smoke.hpp`:
+  - on/off/reset transitions,
+  - off-state no-advance checks,
+  - IEC released lines while off,
+  - deterministic repeated power-cycle digest.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
