@@ -1098,6 +1098,30 @@ Release pin manifest:
   - write callback propagation,
   - IRQ/NMI deterministic progression checks.
 
+## Commit 7: Dual 6522 VIA Domain (Timer + IFR/IER + Composite IRQ)
+
+- Added concrete dual-VIA domain files:
+  - `drive1541_physical/drive_via_domain.hpp`
+  - `drive1541_physical/drive_via_domain.cpp`
+
+- `DriveViaDomain` now models two reusable `Via6522` instances (`via1` and `via2`) with base real behavior:
+  - register IO via `read_io(addr)` / `write_io(addr, val)` on `$1800/$1C00` windows,
+  - timer countdown + underflow for T1/T2,
+  - IFR/IER set/clear semantics,
+  - composite IRQ line via `irq_asserted()` (OR of VIA sources).
+
+- `drive_1541.hpp` wiring updated:
+  - DOS memory map IO callbacks now dispatch through `physicalViaDomain`,
+  - external bridge keeps existing `drive.via1` / `drive.via2` state visible,
+  - per-half-cycle VIA ticking is centralized in `physicalViaDomain.tick(1)`,
+  - CPU domain IRQ input is fed from `physicalViaDomain.irq_asserted()`.
+
+- Added dedicated coverage in `tests/drive1541_via_domain_tests.hpp`:
+  - IER enable + timer event => IFR bit set,
+  - IFR clear-by-write correctness,
+  - timer countdown/underflow base behavior,
+  - composite IRQ asserted when a single VIA interrupts.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

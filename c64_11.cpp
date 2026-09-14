@@ -6234,6 +6234,10 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_cpu_domain_tests.hpp"
 
+#include "tests/drive1541_via_domain_tests.hpp"
+
+#include "drive1541_physical/drive_via_domain.cpp"
+
 static void runKernelSerialLoadDirectoryTrueE2E() {
     Bus bus;
     const bool systemRomsLoaded = bus.loadSystemRoms("roms");
@@ -8608,6 +8612,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541PowerLifecycleSmoke();
     runDrive1541MemoryMapTests();
     runDrive1541CpuDomainTests();
+    runDrive1541ViaDomainTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();
@@ -13981,7 +13986,7 @@ static std::vector<std::string> buildWeek51ViaTimerIrqRowsForRevision(Drive1541:
     drive.setRevision(rev);
     drive.reset();
 
-    VIA6522 &via = drive.via1;
+    auto &via = drive.via1;
     via.write(0x0E, 0xC0); // enable T1 IRQ
     via.write(0x04, 0x04); // T1 low
     via.write(0x05, 0x00); // T1 high/start
@@ -14082,7 +14087,7 @@ static std::vector<std::string> buildWeek52ViaShiftRowsForRevision(Drive1541::Re
     drive.setRevision(rev);
     drive.reset();
 
-    VIA6522 &via = drive.via2;
+    auto &via = drive.via2;
     via.write(0x0E, 0x84); // enable SR IRQ
     via.write(0x0B, 0x1C); // shift mode enabled
     via.write(0x0A, 0xA5); // load SR and start shifting

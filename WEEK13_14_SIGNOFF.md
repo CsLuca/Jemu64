@@ -1582,6 +1582,33 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - callback write propagation assertion,
   - IRQ/NMI deterministic cadence assertion.
 
+## Commit 7 - DriveViaDomain Dual 6522 v1 Reale
+
+- Added concrete VIA domain implementation:
+  - `drive1541_physical/drive_via_domain.hpp`
+  - `drive1541_physical/drive_via_domain.cpp`
+
+- `DriveViaDomain` now contains two reusable `Via6522` instances and exposes:
+  - `read_io(addr)` / `write_io(addr,val)`
+  - `tick(cycles)`
+  - `irq_asserted()` with composite OR behavior.
+
+- Base behavior implemented for each VIA:
+  - timer1/timer2 countdown and underflow,
+  - IFR/IER set/clear semantics,
+  - IRQ assertion from `(IFR & IER & 0x7F) != 0`.
+
+- Wiring in `drive_1541.hpp` updated:
+  - DOS memory-map IO callbacks route through `physicalViaDomain`,
+  - `physicalViaDomain` is externally bound to existing `drive.via1`/`drive.via2` state,
+  - per-cycle VIA tick centralized and CPU IRQ fed from composite VIA IRQ.
+
+- Added `tests/drive1541_via_domain_tests.hpp`:
+  - IER + timer event -> IFR bit set,
+  - IFR clear via write,
+  - timer countdown/underflow base,
+  - composite IRQ true when one VIA interrupts.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

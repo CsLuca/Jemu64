@@ -26,7 +26,6 @@
 #include "drive1541_physical/drive_scheduler.hpp"
 #include "drive1541_physical/drive_via_domain.hpp"
 #include "drive1541_physical/physical_profile.hpp"
-#include "drive_via6522.hpp"
 #include "image_backend.hpp"
 #include "iec_device.hpp"
 
@@ -154,8 +153,8 @@ public:
     };
 
     std::array<uint8_t, 0x10000> memory = {0};
-    VIA6522 via1; // $1800-$180F
-    VIA6522 via2; // $1C00-$1C0F
+    drive1541_physical::DriveViaDomain::Via6522 via1; // $1800-$180F
+    drive1541_physical::DriveViaDomain::Via6522 via2; // $1C00-$1C0F
 
     bool romLoaded = false;
     uint16_t pc = 0;
@@ -370,6 +369,8 @@ public:
     void reset() {
         cycles = 0;
         physicalScheduler.reset();
+        physicalViaDomain.bind_external(&via1, &via2);
+        physicalViaDomain.reset();
         bindPhysicalDosMemoryMap();
         physicalDosMemoryMap.set_rom(&memory[0xC000], 0x4000);
         physicalDosMemoryMap.seed_ram(&memory[0x0000], 0xC000);
@@ -519,22 +520,10 @@ public:
     void bindPhysicalDosMemoryMap() {
         physicalDosMemoryMap.bind_io(
             [this](uint16_t ioAddr) -> uint8_t {
-                if ((ioAddr & 0xFFF0u) == 0x1800u) {
-                    return via1.read(ioAddr);
-                }
-                if ((ioAddr & 0xFFF0u) == 0x1C00u) {
-                    return via2.read(ioAddr);
-                }
-                return static_cast<uint8_t>(0xFF);
+                return physicalViaDomain.read_io(ioAddr);
             },
             [this](uint16_t ioAddr, uint8_t v) {
-                if ((ioAddr & 0xFFF0u) == 0x1800u) {
-                    via1.write(ioAddr, v);
-                    return;
-                }
-                if ((ioAddr & 0xFFF0u) == 0x1C00u) {
-                    via2.write(ioAddr, v);
-                }
+                physicalViaDomain.write_io(ioAddr, v);
             }
         );
     }
@@ -568,8 +557,8 @@ public:
         cycles++;
         physicalScheduler.tickHostCycles(1);
 
-        via1.tick();
-        via2.tick();
+        physicalViaDomain.tick(1);
+        physicalCpuDomain.set_irq(physicalViaDomain.irq_asserted());
 
         processQueuedIecRxBurst();
 
