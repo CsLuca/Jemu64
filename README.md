@@ -1122,6 +1122,31 @@ Release pin manifest:
   - timer countdown/underflow base behavior,
   - composite IRQ asserted when a single VIA interrupts.
 
+## Commit 8: Physical GCR Codec + Sync Mark Support (Level3 Hook)
+
+- Added physical-stack codec files:
+  - `drive1541_physical/gcr_codec.hpp`
+  - `drive1541_physical/gcr_codec.cpp`
+
+- Implemented `jemu::drive1541::GcrCodec` API:
+  - `encode_4to5(const uint8_t*, size_t)`
+  - `decode_5to4(const uint8_t*, size_t)`
+  - `is_sync_mark(uint8_t)`
+
+- Decode result surface (`GcrDecodeResult`) now reports:
+  - `ok` decode state,
+  - `sync_found` detection state,
+  - decoded byte payload.
+
+- Added optional Level3-only integration hook in `advanced_image_backends.hpp`:
+  - strict GCR decode/encode pipeline can delegate to physical codec only when drive profile resolves to `level3-physical`,
+  - default Level1/Level2 behavior remains unchanged.
+
+- Added coverage in `tests/drive1541_gcr_codec_tests.hpp`:
+  - known-block roundtrip encode/decode,
+  - sync-mark stream detection,
+  - invalid symbol path with `ok=false`.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

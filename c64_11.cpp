@@ -6236,7 +6236,10 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_via_domain_tests.hpp"
 
+#include "tests/drive1541_gcr_codec_tests.hpp"
+
 #include "drive1541_physical/drive_via_domain.cpp"
+#include "drive1541_physical/gcr_codec.cpp"
 
 static void runKernelSerialLoadDirectoryTrueE2E() {
     Bus bus;
@@ -8613,6 +8616,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541MemoryMapTests();
     runDrive1541CpuDomainTests();
     runDrive1541ViaDomainTests();
+    runDrive1541GcrCodecTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

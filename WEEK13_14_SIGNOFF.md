@@ -1609,6 +1609,32 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - timer countdown/underflow base,
   - composite IRQ true when one VIA interrupts.
 
+## Commit 8 - GCR Codec + Sync Marks (Physical Path v1)
+
+- Added new physical GCR codec units:
+  - `drive1541_physical/gcr_codec.hpp`
+  - `drive1541_physical/gcr_codec.cpp`
+
+- Codec surface introduced under `jemu::drive1541`:
+  - `GcrCodec::encode_4to5(...)`
+  - `GcrCodec::decode_5to4(...)`
+  - `GcrCodec::is_sync_mark(...)`
+  - `GcrDecodeResult { ok, sync_found, data }`.
+
+- Implemented base behavior:
+  - 4-bit to 5-bit symbol encoding using 1541 mapping,
+  - decode with validation + hard fail (`ok=false`) on invalid symbol stream,
+  - sync-mark detection (`0xFF`) without global product path switch.
+
+- Optional hook integrated in `advanced_image_backends.hpp`:
+  - strict GCR pipeline delegates to physical codec only for `level3-physical` runtime profile,
+  - lower profiles keep previous decode/encode behavior.
+
+- Added `tests/drive1541_gcr_codec_tests.hpp`:
+  - roundtrip known data,
+  - sync-mark detection in mixed stream,
+  - invalid nibble/symbol rejection path.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

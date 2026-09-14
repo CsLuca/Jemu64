@@ -2,12 +2,16 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
+#include <cstdlib>
 #include <cstdint>
+#include <cstddef>
 #include <fstream>
 #include <random>
 #include <string>
 #include <vector>
 
+#include "drive1541_physical/gcr_codec.hpp"
 #include "image_backend.hpp"
 
 namespace advanced_image_detail {
@@ -96,6 +100,21 @@ static inline uint8_t encodeNibbleToGcr(uint8_t nibble) {
         0x0D, 0x1D, 0x1E, 0x15
     };
     return map[nibble & 0x0F];
+}
+
+static inline bool isPhysicalLevel3ProfileEnabled() {
+    const char *profile = std::getenv("C64_DRIVE_PROFILE");
+    if (profile == nullptr || profile[0] == '\0') {
+        profile = std::getenv("KERNAL_DRIVE_PROFILE");
+    }
+    if (profile == nullptr) {
+        return false;
+    }
+    std::string v(profile);
+    std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return v == "level3-physical";
 }
 
 static inline bool decodeGcrToNibble(uint8_t symbol, uint8_t &nibble) {
@@ -324,6 +343,8 @@ protected:
                                       uint8_t sector,
                                       std::array<uint8_t, 256> &buffer) const {
         advanced_image_detail::GcrMetrics metrics;
+        const bool usePhysicalCodec = advanced_image_detail::isPhysicalLevel3ProfileEnabled();
+        drive1541_physical::GcrCodec physicalCodec;
 
         uint32_t maxSyncRun = 0;
         uint32_t currentSyncRun = 0;
@@ -365,17 +386,28 @@ protected:
         for (size_t i = 0; i < decoded.size(); ++i) {
             const uint8_t symHi = static_cast<uint8_t>(buffer[(i * 2u) % buffer.size()] & 0x1F);
             const uint8_t symLo = static_cast<uint8_t>(buffer[(i * 2u + 1u) % buffer.size()] & 0x1F);
-            uint8_t hi = 0;
-            uint8_t lo = 0;
-            if (!advanced_image_detail::decodeGcrToNibble(symHi, hi)) {
-                metrics.invalidSymbols++;
-                hi = 0;
+            if (usePhysicalCodec) {
+                const uint8_t symbols[2] = {symHi, symLo};
+                const drive1541_physical::GcrDecodeResult r = physicalCodec.decode_5to4(symbols, 2);
+                if (r.ok && !r.data.empty()) {
+                    decoded[i] = r.data[0];
+                } else {
+                    metrics.invalidSymbols++;
+                    decoded[i] = 0;
+                }
+            } else {
+                uint8_t hi = 0;
+                uint8_t lo = 0;
+                if (!advanced_image_detail::decodeGcrToNibble(symHi, hi)) {
+                    metrics.invalidSymbols++;
+                    hi = 0;
+                }
+                if (!advanced_image_detail::decodeGcrToNibble(symLo, lo)) {
+                    metrics.invalidSymbols++;
+                    lo = 0;
+                }
+                decoded[i] = static_cast<uint8_t>((hi << 4) | lo);
             }
-            if (!advanced_image_detail::decodeGcrToNibble(symLo, lo)) {
-                metrics.invalidSymbols++;
-                lo = 0;
-            }
-            decoded[i] = static_cast<uint8_t>((hi << 4) | lo);
         }
 
         advanced_image_detail::classifyGcrErrors(metrics);
@@ -411,13 +443,26 @@ protected:
     void applyStrictGcrEncodePipeline(uint8_t track,
                                       uint8_t sector,
                                       std::array<uint8_t, 256> &buffer) const {
+        const bool usePhysicalCodec = advanced_image_detail::isPhysicalLevel3ProfileEnabled();
+        drive1541_physical::GcrCodec physicalCodec;
         std::array<uint8_t, 256> encoded = {};
         for (size_t i = 0; i < buffer.size(); ++i) {
             const uint8_t byte = buffer[i];
-            const uint8_t hi = static_cast<uint8_t>((byte >> 4) & 0x0F);
-            const uint8_t lo = static_cast<uint8_t>(byte & 0x0F);
-            const uint8_t gcrHi = advanced_image_detail::encodeNibbleToGcr(hi);
-            const uint8_t gcrLo = advanced_image_detail::encodeNibbleToGcr(lo);
+            uint8_t gcrHi = 0;
+            uint8_t gcrLo = 0;
+            if (usePhysicalCodec) {
+                const std::vector<uint8_t> symbols = physicalCodec.encode_4to5(&byte, 1);
+                if (symbols.size() == 2) {
+                    gcrHi = static_cast<uint8_t>(symbols[0] & 0x1F);
+                    gcrLo = static_cast<uint8_t>(symbols[1] & 0x1F);
+                }
+            }
+            if (gcrHi == 0 && gcrLo == 0) {
+                const uint8_t hi = static_cast<uint8_t>((byte >> 4) & 0x0F);
+                const uint8_t lo = static_cast<uint8_t>(byte & 0x0F);
+                gcrHi = advanced_image_detail::encodeNibbleToGcr(hi);
+                gcrLo = advanced_image_detail::encodeNibbleToGcr(lo);
+            }
             encoded[i] = static_cast<uint8_t>((gcrHi << 3) ^ gcrLo ^ static_cast<uint8_t>((track + sector) & 0x1F));
         }
         buffer = encoded;
