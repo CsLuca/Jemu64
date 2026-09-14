@@ -17,13 +17,19 @@ param(
     [switch]$Quiet
 )
 
+$ErrorActionPreference = 'Stop'
+
+$repo = $PSScriptRoot
+$lockHelpersPath = Join-Path -Path $repo -ChildPath 'tools\runner_lock_hardening.ps1'
+. $lockHelpersPath
+
 $msysUcrt = 'C:\msys64\ucrt64\bin'
 $msysUsr = 'C:\msys64\usr\bin'
 if ((Test-Path -LiteralPath $msysUcrt) -and (Test-Path -LiteralPath $msysUsr)) {
     $env:PATH = "$msysUcrt;$msysUsr;" + $env:PATH
 }
 
-$exe = Join-Path $PSScriptRoot 'c64_11.exe'
+$exe = Join-Path $repo 'c64_11.exe'
 if (-not (Test-Path -LiteralPath $exe)) {
     throw "Missing executable: $exe"
 }
@@ -96,8 +102,9 @@ try {
     $failedRun = 0
 
     for ($run = 1; $run -le $Repeat; $run++) {
-        $output = & $exe 2>&1 | ForEach-Object { "$_" }
-        $exitCode = $LASTEXITCODE
+        $result = Invoke-BinaryWithLockRetry -ExePath $exe -RetryCount 3
+        $output = @($result[0])
+        $exitCode = [int]$result[1]
         $lastExit = $exitCode
 
         if (-not $Quiet) {

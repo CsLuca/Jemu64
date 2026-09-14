@@ -1310,8 +1310,13 @@ Release pin manifest:
   - `run_copier_matrix.ps1`
   - `run_signoff_week13_14.ps1`
   - `run_advanced_dos_recovery_gate.ps1`
+  - `run_advanced_real_corpus_gate.ps1`
+  - `run_real_golden_gate.ps1`
+  - `run_kernel_iec_e2e.ps1`
+  - `run_phase5_soak_gate.ps1`
   - `run_prepare_pla_snapshot.ps1`
   - `run_prepare_edge_references.ps1`
+  - `run_timing_gold.ps1`
   - `run_vic_reference_capture.ps1`
 
 - Behavior goal preserved:

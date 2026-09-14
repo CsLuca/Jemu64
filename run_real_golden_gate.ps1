@@ -9,6 +9,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
+$lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+. $lockHelpersPath
 
 function Resolve-RepoPath {
     param([string]$InputPath)
@@ -37,23 +39,31 @@ function Invoke-KernelRunner {
     $savedEap = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        if ($RunMode -eq 'compat') {
-            $output = @(
-                & $RunnerPath -Mode $RunMode -MaxHalfCycles $MaxHalfCycles -Repeat 1 -Quiet `
-                    -EnableCompatClockAssist -EnableCompatRamSinkInject -EnableCompatRamSinkBulk `
-                    -EnableReplayCiaLog -EnableDd00Trace -EnableDriveAutoTalkDir -EnableDriveAutoDirOnTalk0 `
-                    -EnableDriveForceTalkOnDd0d8 -IecPolarity '0,0,0,0,0,0,1,0,1,1' 2>&1 | ForEach-Object { "$_" }
-            )
-        } else {
-            $output = @(
-                & $RunnerPath -Mode $RunMode -MaxHalfCycles $MaxHalfCycles -Repeat 1 -Quiet 2>&1 | ForEach-Object { "$_" }
-            )
+        $output = @()
+        $script:kernelRunnerOutput = @()
+        $ok = Invoke-WithRetry -RetryCount 2 -RetryDelayMs 400 -Action {
+            if ($RunMode -eq 'compat') {
+                $script:kernelRunnerOutput = @(
+                    & $RunnerPath -Mode $RunMode -MaxHalfCycles $MaxHalfCycles -Repeat 1 -Quiet `
+                        -EnableCompatClockAssist -EnableCompatRamSinkInject -EnableCompatRamSinkBulk `
+                        -EnableReplayCiaLog -EnableDd00Trace -EnableDriveAutoTalkDir -EnableDriveAutoDirOnTalk0 `
+                        -EnableDriveForceTalkOnDd0d8 -IecPolarity '0,0,0,0,0,0,1,0,1,1' 2>&1 | ForEach-Object { "$_" }
+                )
+            } else {
+                $script:kernelRunnerOutput = @(
+                    & $RunnerPath -Mode $RunMode -MaxHalfCycles $MaxHalfCycles -Repeat 1 -Quiet 2>&1 | ForEach-Object { "$_" }
+                )
+            }
+            if ($LASTEXITCODE -ne 0) {
+                $global:LASTEXITCODE = $LASTEXITCODE
+            }
         }
+        $output = @($script:kernelRunnerOutput)
+        $exitCode = if ($ok) { 0 } else { if ($LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 } }
     }
     finally {
         $ErrorActionPreference = $savedEap
     }
-    $exitCode = $LASTEXITCODE
     $text = ($output | Out-String)
 
     return [pscustomobject]@{
