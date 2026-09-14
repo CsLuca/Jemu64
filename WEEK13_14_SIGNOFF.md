@@ -1685,6 +1685,33 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - motor-on advance + wrap range,
   - step in/out boundary enforcement.
 
+## Commit 11 - FluxTrackModel (Transizioni Flux + Weak Bits)
+
+- Added flux-track model files:
+  - `drive1541_physical/flux_track_model.hpp`
+  - `drive1541_physical/flux_track_model.cpp`
+
+- Introduced `jemu::drive1541::FluxTrackModel` with API:
+  - `clear()`
+  - `set_transitions(...)`
+  - `set_weak_regions(...)`
+  - `advance(ticks, absolute_tick)`.
+
+- Implemented behavior:
+  - transition-driven edge timing with accumulator/cursor,
+  - coherent track-end wrap,
+  - deterministic weak-region perturbation based on absolute tick.
+
+- Optional level3 integration in `advanced_image_backends.hpp`:
+  - per-track/sector flux state initialized lazily,
+  - flux edge now contributes to physical bitcell perturbation path,
+  - non-level3 profiles preserve existing path.
+
+- Added `tests/drive1541_flux_track_tests.hpp`:
+  - deterministic transition sequence validation,
+  - weak-region deterministic behavior validation,
+  - coherent wrap validation.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

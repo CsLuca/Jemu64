@@ -14,6 +14,7 @@
 #include "drive1541_physical/gcr_codec.hpp"
 #include "drive1541_physical/bitcell_timing_model.hpp"
 #include "drive1541_physical/mechanics_model.hpp"
+#include "drive1541_physical/flux_track_model.hpp"
 #include "image_backend.hpp"
 
 namespace advanced_image_detail {
@@ -224,6 +225,9 @@ private:
     mutable std::array<uint8_t, 36u * 21u> bitcellTimingInit = {};
     mutable std::array<drive1541_physical::MechanicsModel, 36u * 21u> mechanicsModel = {};
     mutable std::array<uint8_t, 36u * 21u> mechanicsInit = {};
+    mutable std::array<drive1541_physical::FluxTrackModel, 36u * 21u> fluxTrackModel = {};
+    mutable std::array<uint8_t, 36u * 21u> fluxTrackInit = {};
+    mutable std::array<uint32_t, 36u * 21u> fluxAbsTick = {};
 
 protected:
     const std::string &path() const {
@@ -335,7 +339,25 @@ protected:
                 }
                 mm.tick(ticks);
                 const uint8_t angleTag = static_cast<uint8_t>(static_cast<uint32_t>(mm.spindle_angle_norm() * 32.0) & 0x1Fu);
-                const uint8_t jitterTag = static_cast<uint8_t>((ticks + angleTag) & 0x1Fu);
+                auto &fm = fluxTrackModel[idx];
+                if (fluxTrackInit[idx] == 0u) {
+                    std::vector<drive1541_physical::FluxTransition> transitions;
+                    transitions.push_back({6u + static_cast<uint32_t>(zone)});
+                    transitions.push_back({8u + static_cast<uint32_t>(zone)});
+                    transitions.push_back({7u + static_cast<uint32_t>((track + sector) & 0x03u)});
+                    fm.set_transitions(std::move(transitions));
+                    std::vector<drive1541_physical::WeakRegion> weakRegions;
+                    weakRegions.push_back({64u, 96u});
+                    weakRegions.push_back({192u, 224u});
+                    fm.set_weak_regions(std::move(weakRegions));
+                    fluxAbsTick[idx] = 0u;
+                    fluxTrackInit[idx] = 1u;
+                }
+
+                fluxAbsTick[idx] = static_cast<uint32_t>(fluxAbsTick[idx] + ticks);
+                const bool fluxEdge = fm.advance(ticks, fluxAbsTick[idx]);
+
+                const uint8_t jitterTag = static_cast<uint8_t>((ticks + angleTag + (fluxEdge ? 1u : 0u)) & 0x1Fu);
                 buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | jitterTag));
             } else {
                 buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));

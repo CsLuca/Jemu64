@@ -1201,6 +1201,33 @@ Release pin manifest:
   - motor-on angle advance + wrap,
   - step in/out clamp bounds.
 
+## Commit 11: Flux Track Model (Transitions + Weak-Bit Regions)
+
+- Added physical flux-track files:
+  - `drive1541_physical/flux_track_model.hpp`
+  - `drive1541_physical/flux_track_model.cpp`
+
+- Implemented `jemu::drive1541::FluxTrackModel` surface:
+  - `clear()`
+  - `set_transitions(std::vector<FluxTransition>)`
+  - `set_weak_regions(std::vector<WeakRegion>)`
+  - `advance(ticks, absolute_tick)`.
+
+- Model behavior:
+  - track represented as edge timing deltas (`delta_ticks`) with internal accumulator/cursor,
+  - coherent wrap when end of transition vector is reached,
+  - weak regions apply deterministic output perturbation (absolute-tick based, CI-stable).
+
+- Optional level3 integration in `advanced_image_backends.hpp`:
+  - per-track/sector `FluxTrackModel` state initialized lazily,
+  - flux edge contributes into physical bitcell perturbation path,
+  - lower profiles keep previous behavior unchanged.
+
+- Added coverage in `tests/drive1541_flux_track_tests.hpp`:
+  - deterministic transition sequence,
+  - deterministic weak-region modulation,
+  - coherent end-of-track wrap behavior.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document
