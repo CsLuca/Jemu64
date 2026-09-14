@@ -7,11 +7,15 @@ $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
+$lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+. $lockHelpersPath
 $strictExe = Join-Path $repo "c64_11_strict_pla_ref.exe"
 
+$env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
+
 if ($RebuildStrict -or -not (Test-Path -LiteralPath $strictExe)) {
-    & $gxx -std=c++17 -O2 "-DRUN_PROFILE=RUN_PROFILE_STRICT" (Join-Path $repo "c64_11.cpp") -o $strictExe
-    if ($LASTEXITCODE -ne 0) {
+    $buildCode = Build-Profile-Retry -Macro "RUN_PROFILE_STRICT" -OutFile ([System.IO.Path]::GetFileName($strictExe)) -CompilerPath $gxx -RepoPath $repo -SourceFile "c64_11.cpp" -RetryCount 4
+    if ($buildCode -ne 0) {
         throw "Strict build failed"
     }
 }
@@ -25,8 +29,8 @@ try {
     [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "1", "Process")
     [Environment]::SetEnvironmentVariable("VIC_EXPORT_PLA_SPEC", "1", "Process")
 
-    & $strictExe
-    if ($LASTEXITCODE -ne 0) {
+    $run = Invoke-BinaryWithLockRetry -ExePath $strictExe -RetryCount 3
+    if ([int]$run[1] -ne 0) {
         throw "Strict run failed while exporting PLA snapshot"
     }
 }

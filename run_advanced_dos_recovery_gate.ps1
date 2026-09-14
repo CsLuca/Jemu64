@@ -9,6 +9,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
+$lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+. $lockHelpersPath
 
 function Resolve-LocalPath {
     param([string]$PathInput)
@@ -33,10 +35,16 @@ if ($null -eq $manifestObj -or $null -eq $manifestObj.scenarios -or $manifestObj
 $savedEap = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 try {
-    $runOutput = @(
-        & "$repo\run_copier_matrix.ps1" -Profile $Profile -Manifest $externalPath 2>&1 | ForEach-Object { "$_" }
-    )
-    $runExitCode = $LASTEXITCODE
+    $runOutput = @()
+    $ok = Invoke-WithRetry -RetryCount 2 -RetryDelayMs 400 -Action {
+        $script:runOutput = @(
+            & "$repo\run_copier_matrix.ps1" -Profile $Profile -Manifest $externalPath 2>&1 | ForEach-Object { "$_" }
+        )
+        if ($LASTEXITCODE -ne 0) {
+            $global:LASTEXITCODE = $LASTEXITCODE
+        }
+    }
+    $runExitCode = if ($ok) { 0 } else { if ($LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 } }
 }
 finally {
     $ErrorActionPreference = $savedEap

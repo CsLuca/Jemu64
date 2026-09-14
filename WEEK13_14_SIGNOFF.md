@@ -1796,6 +1796,10 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
 - Refactored scripts to dot-source shared module:
   - `run_copier_matrix.ps1`
   - `run_signoff_week13_14.ps1`
+  - `run_advanced_dos_recovery_gate.ps1`
+  - `run_prepare_pla_snapshot.ps1`
+  - `run_prepare_edge_references.ps1`
+  - `run_vic_reference_capture.ps1`
 
 - Post-consolidation checks:
   - signoff PASS (`EXIT=0`),

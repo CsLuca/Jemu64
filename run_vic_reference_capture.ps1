@@ -5,28 +5,34 @@ param(
     [switch]$Quiet
 )
 
+$ErrorActionPreference = 'Stop'
+
+$repo = $PSScriptRoot
+$lockHelpersPath = Join-Path -Path $repo -ChildPath 'tools\runner_lock_hardening.ps1'
+. $lockHelpersPath
+
 $msysUcrt = 'C:\msys64\ucrt64\bin'
 $msysUsr = 'C:\msys64\usr\bin'
 if ((Test-Path -LiteralPath $msysUcrt) -and (Test-Path -LiteralPath $msysUsr)) {
     $env:PATH = "$msysUcrt;$msysUsr;" + $env:PATH
 }
 
-$src = Join-Path $PSScriptRoot 'c64_11.cpp'
+$src = Join-Path $repo 'c64_11.cpp'
 if (-not (Test-Path -LiteralPath $src)) {
     throw "Missing source: $src"
 }
 
 $runProfileMacro = if ($Profile -eq 'strict') { 'RUN_PROFILE_STRICT' } else { 'RUN_PROFILE_FULL' }
-$exe = Join-Path $PSScriptRoot ("c64_11_vicref_{0}.exe" -f $Profile)
+$exe = Join-Path $repo ("c64_11_vicref_{0}.exe" -f $Profile)
 
 if (-not $NoBuild) {
     $gpp = 'C:\msys64\ucrt64\bin\g++.exe'
     if (-not (Test-Path -LiteralPath $gpp)) {
         throw "Missing compiler: $gpp"
     }
-    & $gpp -std=c++17 -O2 ("-DRUN_PROFILE={0}" -f $runProfileMacro) $src -o $exe
-    if ($LASTEXITCODE -ne 0) {
-        throw "Build failed (exit=$LASTEXITCODE)."
+    $buildCode = Build-Profile-Retry -Macro $runProfileMacro -OutFile ([System.IO.Path]::GetFileName($exe)) -CompilerPath $gpp -RepoPath $repo -SourceFile 'c64_11.cpp' -RetryCount 4
+    if ($buildCode -ne 0) {
+        throw "Build failed (exit=$buildCode)."
     }
 }
 
@@ -45,8 +51,9 @@ try {
     Set-EnvVar -Name 'EXTERNAL_TEST_MANIFEST' -Value 'external_tests_timing_gold.json'
     Set-EnvVar -Name 'KERNAL_TEST_ONLY_PURE_CMD_GUARD' -Value '1'
 
-    $output = & $exe 2>&1 | ForEach-Object { "$_" }
-    $exitCode = $LASTEXITCODE
+    $run = Invoke-BinaryWithLockRetry -ExePath $exe -RetryCount 3
+    $output = @($run[0])
+    $exitCode = [int]$run[1]
 
     if (-not $Quiet) {
         foreach ($line in $output) {

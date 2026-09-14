@@ -1309,6 +1309,10 @@ Release pin manifest:
 - Refactored runners to import shared module (removed duplication):
   - `run_copier_matrix.ps1`
   - `run_signoff_week13_14.ps1`
+  - `run_advanced_dos_recovery_gate.ps1`
+  - `run_prepare_pla_snapshot.ps1`
+  - `run_prepare_edge_references.ps1`
+  - `run_vic_reference_capture.ps1`
 
 - Behavior goal preserved:
   - identical functional semantics,
