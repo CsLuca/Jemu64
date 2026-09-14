@@ -25,6 +25,10 @@
 #include "drive1541_physical/drive_power_controller.hpp"
 #include "drive1541_physical/drive_scheduler.hpp"
 #include "drive1541_physical/drive_via_domain.hpp"
+#include "drive1541_physical/bitcell_timing_model.hpp"
+#include "drive1541_physical/flux_track_model.hpp"
+#include "drive1541_physical/gcr_codec.hpp"
+#include "drive1541_physical/mechanics_model.hpp"
 #include "drive1541_physical/physical_profile.hpp"
 #include "image_backend.hpp"
 #include "iec_device.hpp"
@@ -67,6 +71,21 @@ public:
     drive1541_physical::DriveDosMemoryMap physicalDosMemoryMap;
     drive1541_physical::DriveIecPort physicalIecPort;
     drive1541_physical::DrivePowerController powerController;
+
+    drive1541_physical::MechanicsModel physicalMechanicsModel;
+    drive1541_physical::BitcellTimingModel physicalBitcellTimingModel;
+    drive1541_physical::FluxTrackModel physicalFluxTrackModel;
+    drive1541_physical::GcrCodec physicalGcrCodec;
+
+    bool physicalPipelineInitialized = false;
+    uint32_t physicalPipelineAbsTick = 0;
+    uint64_t physicalPipelineRuns = 0;
+    uint32_t physicalPipelineLastCellTicks = 0;
+    bool physicalPipelineLastFluxEdge = false;
+    uint8_t physicalPipelineLastByte = 0;
+    uint8_t physicalPipelineLastBit = 0;
+    uint16_t physicalPipelineLastHalfTrack = 36;
+    double physicalPipelineLastAngleNorm = 0.0;
 
     using PowerState = drive1541_physical::PowerState;
 
@@ -504,6 +523,16 @@ public:
         for (size_t i = 0; i < iecCatalog.size(); ++i) {
             iecCatalog[i] = VirtualCatalogEntry{};
         }
+
+        physicalPipelineInitialized = false;
+        physicalPipelineAbsTick = 0;
+        physicalPipelineRuns = 0;
+        physicalPipelineLastCellTicks = 0;
+        physicalPipelineLastFluxEdge = false;
+        physicalPipelineLastByte = 0;
+        physicalPipelineLastBit = 0;
+        physicalPipelineLastHalfTrack = 36;
+        physicalPipelineLastAngleNorm = 0.0;
     }
 
     uint8_t read(uint16_t addr) {
@@ -1931,6 +1960,7 @@ public:
             ImageIoError err = ImageIoError::None;
             if (mountedImageBackend->readBlock(track, sector, iecBlockBuffer, err)) {
                 loadedFromImage = true;
+                runPhysicalLevel3ReadPipeline(track, sector);
             }
         }
 
@@ -1945,6 +1975,91 @@ public:
         iecBlockBufferSector = sector;
         iecDiskMap[0] = track;
         iecDiskMap[1] = sector;
+    }
+
+    uint8_t physicalZoneFromTrack(uint8_t track) const {
+        if (track <= 17) return 0;
+        if (track <= 24) return 1;
+        if (track <= 30) return 2;
+        return 3;
+    }
+
+    void initializePhysicalLevel3Pipeline(uint8_t track, uint8_t sector) {
+        if (physicalPipelineInitialized) {
+            return;
+        }
+
+        const uint32_t seed = static_cast<uint32_t>((uint32_t(iecDeviceAddress) << 16) |
+                                                     (uint32_t(track) << 8) |
+                                                     uint32_t(sector));
+        physicalMechanicsModel.reset();
+        physicalMechanicsModel.set_motor_on(true);
+        physicalBitcellTimingModel.reset(seed == 0 ? 0x1541u : seed);
+
+        std::vector<drive1541_physical::FluxTransition> transitions;
+        transitions.push_back({7u});
+        transitions.push_back({9u});
+        transitions.push_back({8u});
+        physicalFluxTrackModel.set_transitions(std::move(transitions));
+
+        std::vector<drive1541_physical::WeakRegion> weakRegions;
+        weakRegions.push_back({96u, 128u});
+        weakRegions.push_back({224u, 256u});
+        physicalFluxTrackModel.set_weak_regions(std::move(weakRegions));
+
+        physicalPipelineAbsTick = static_cast<uint32_t>(physicalScheduler.now() & 0xFFFFFFFFu);
+        physicalPipelineInitialized = true;
+    }
+
+    void runPhysicalLevel3ReadPipeline(uint8_t track, uint8_t sector) {
+        if (physicalProfile != PhysicalProfile::Level3Physical) {
+            return;
+        }
+        if (!mountedImageBackend || iecBlockBuffer.empty()) {
+            return;
+        }
+
+        initializePhysicalLevel3Pipeline(track, sector);
+
+        const uint8_t zone = physicalZoneFromTrack(track);
+        physicalBitcellTimingModel.set_zone(zone);
+
+        const uint64_t now = physicalScheduler.now();
+        if (now > physicalPipelineAbsTick) {
+            const uint64_t elapsed = now - static_cast<uint64_t>(physicalPipelineAbsTick);
+            physicalMechanicsModel.tick(elapsed > 0xFFFFFFFFu ? 0xFFFFFFFFu : static_cast<uint32_t>(elapsed));
+            physicalPipelineAbsTick = static_cast<uint32_t>(now & 0xFFFFFFFFu);
+        }
+
+        const uint16_t targetHalf = static_cast<uint16_t>(2u + static_cast<uint16_t>(track - 1u) * 2u);
+        while (physicalMechanicsModel.half_track() < targetHalf) {
+            physicalMechanicsModel.step_in();
+        }
+        while (physicalMechanicsModel.half_track() > targetHalf) {
+            physicalMechanicsModel.step_out();
+        }
+
+        const uint32_t cellTicks = physicalBitcellTimingModel.next_cell_ticks();
+        physicalPipelineAbsTick = static_cast<uint32_t>(physicalPipelineAbsTick + cellTicks);
+        const bool fluxEdge = physicalFluxTrackModel.advance(cellTicks, physicalPipelineAbsTick);
+
+        const size_t bytesToSample = std::min<size_t>(8, iecBlockBuffer.size());
+        const std::vector<uint8_t> encoded = physicalGcrCodec.encode_4to5(iecBlockBuffer.data(), bytesToSample);
+        const drive1541_physical::GcrDecodeResult decoded =
+            physicalGcrCodec.decode_5to4(encoded.data(), encoded.size());
+
+        uint8_t byteSample = iecBlockBuffer[0];
+        if (decoded.ok && !decoded.data.empty()) {
+            byteSample = decoded.data[0];
+        }
+
+        physicalPipelineRuns++;
+        physicalPipelineLastCellTicks = cellTicks;
+        physicalPipelineLastFluxEdge = fluxEdge;
+        physicalPipelineLastByte = byteSample;
+        physicalPipelineLastBit = static_cast<uint8_t>((byteSample >> (physicalPipelineAbsTick & 0x07u)) & 0x01u);
+        physicalPipelineLastHalfTrack = physicalMechanicsModel.half_track();
+        physicalPipelineLastAngleNorm = physicalMechanicsModel.spindle_angle_norm();
     }
 
     void flushVirtualBlock(uint8_t track, uint8_t sector) {

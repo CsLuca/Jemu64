@@ -1228,6 +1228,34 @@ Release pin manifest:
   - deterministic weak-region modulation,
   - coherent end-of-track wrap behavior.
 
+## Commit 12: End-to-End Level3 Physical Read Pipeline Wiring
+
+- Wired first complete level3 physical read path in `drive_1541.hpp`:
+  - scheduler time source (`physicalScheduler.now()`),
+  - mechanics update (spindle/head),
+  - bitcell timing step,
+  - flux edge generation,
+  - GCR encode/decode sample path producing bitstream sample,
+  - pipeline telemetry latched for smoke verification.
+
+- Added level3-only physical pipeline state in `Drive1541`:
+  - `physicalMechanicsModel`, `physicalBitcellTimingModel`, `physicalFluxTrackModel`, `physicalGcrCodec`,
+  - initialization/lifecycle fields (`physicalPipelineInitialized`, `physicalPipelineRuns`, etc.).
+
+- Runtime flow integration:
+  - mounted image read (`loadVirtualBlock`) now triggers `runPhysicalLevel3ReadPipeline(track, sector)` only when level3 profile is active,
+  - level1/level2 behavior remains unchanged.
+
+- Added smoke suite `tests/drive1541_physical_pipeline_smoke_tests.hpp`:
+  - g64/nib/raw mount+read in level3,
+  - level3 pipeline execution assertions,
+  - level1 vs level3 base-case parity assertion on RAW path.
+
+- Updated test harness wiring in `c64_11.cpp` with new smoke run hook.
+
+- Known runtime note:
+  - `run_signoff_week13_14.ps1` remains intermittently unstable in this environment (`EXIT=-1073740791`), while matrix/corpus/dos/soak/thresholds/closure gates are green.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

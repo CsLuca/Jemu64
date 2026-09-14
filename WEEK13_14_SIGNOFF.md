@@ -1712,6 +1712,36 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - weak-region deterministic behavior validation,
   - coherent wrap validation.
 
+## Commit 12 - Wiring End-to-End Level3 (tempo->angolo->flux->bitstream->VIA/CPU)
+
+- Integrated first complete level3 physical read pipeline in `drive_1541.hpp`:
+  - scheduler time reference,
+  - mechanics progression,
+  - bitcell timing,
+  - flux transition advance,
+  - GCR sample encode/decode -> bitstream sample latch.
+
+- Added level3-only pipeline state and lifecycle fields on drive instance:
+  - physical-domain model instances,
+  - deterministic telemetry counters/last-sample fields for smoke assertions.
+
+- Runtime hook:
+  - `loadVirtualBlock(track,sector)` now invokes level3 physical pipeline after mounted-image read only when profile is `Level3Physical`.
+
+- Added smoke tests `tests/drive1541_physical_pipeline_smoke_tests.hpp`:
+  - g64/nib/raw mounted read works under level3,
+  - physical pipeline execution observed (`runs/cellTicks`),
+  - base-case parity check (`Level1Functional` vs `Level3Physical`) on RAW sample case.
+
+- Full gate set executed:
+  - matrix PASS,
+  - advanced real corpus PASS,
+  - advanced dos recovery PASS,
+  - soak 6/6 PASS,
+  - hard thresholds PASS,
+  - closure PASS,
+  - signoff script remains intermittently unstable in this runtime (`EXIT=-1073740791`).
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
