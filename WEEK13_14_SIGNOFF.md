@@ -1760,6 +1760,28 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - signoff now exits cleanly (`EXIT=0`) in the same environment,
   - matrix/corpus/dos/soak/thresholds/closure remain PASS.
 
+## Runner Lock Hygiene - Build/Run Retry Stabilization
+
+- Hardened `run_copier_matrix.ps1`:
+  - added best-effort process cleanup helper for signoff executables,
+  - added bounded build retry wrapper around profile compilation,
+  - added bounded run retry path for transient file-lock failures,
+  - added exception-safe handling inside matrix run loop.
+
+- Hardened `run_signoff_week13_14.ps1`:
+  - added executable cleanup helper,
+  - build path now retries on transient lock contention,
+  - binary launch path now retries on lock-related errors,
+  - fast path (`-SkipFastExternal`) now uses retry-aware launch.
+
+- Verification after hygiene hardening:
+  - copier matrix PASS,
+  - advanced real corpus PASS,
+  - advanced dos recovery PASS,
+  - soak 6/6 and 12/12 PASS,
+  - thresholds/closure PASS,
+  - signoff PASS (`EXIT=0`).
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

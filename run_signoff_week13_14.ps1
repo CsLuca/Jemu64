@@ -24,6 +24,72 @@ $ErrorActionPreference = "Stop"
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 
+function Stop-ExeIfRunning {
+    param([string]$ExeName)
+    try {
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($ExeName)
+        $procs = @(Get-Process -Name $base -ErrorAction SilentlyContinue)
+        foreach ($p in $procs) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # Best-effort only.
+    }
+}
+
+function Build-Profile-Retry {
+    param(
+        [string]$Macro,
+        [string]$OutFile,
+        [int]$RetryCount = 4
+    )
+
+    for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+        Stop-ExeIfRunning -ExeName $OutFile
+        & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
+        if ($LASTEXITCODE -eq 0) {
+            return 0
+        }
+        if ($attempt -lt $RetryCount) {
+            Start-Sleep -Milliseconds (250 * ($attempt + 1))
+        }
+    }
+    return $LASTEXITCODE
+}
+
+function Invoke-BinaryWithLockRetry {
+    param(
+        [string]$ExePath,
+        [int]$RetryCount = 3
+    )
+
+    $savedEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+            $output = @(& $ExePath 2>&1 | ForEach-Object { "$_" })
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+                return ,@($output, $exitCode)
+            }
+            $txt = ($output | Out-String)
+            if ($txt -match "Impossibile accedere al file|Permission denied|utilizzato da un altro processo") {
+                Stop-ExeIfRunning -ExeName ([System.IO.Path]::GetFileName($ExePath))
+                if ($attempt -lt $RetryCount) {
+                    Start-Sleep -Milliseconds (200 * ($attempt + 1))
+                    continue
+                }
+            }
+            return ,@($output, $exitCode)
+        }
+    }
+    finally {
+        $ErrorActionPreference = $savedEap
+    }
+    return ,@(@(), 1)
+}
+
 function Invoke-Step {
     param(
         [string]$Name,
@@ -71,7 +137,10 @@ function Build-Profile {
         [string]$OutFile
     )
 
-    & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
+    $code = Build-Profile-Retry -Macro $Macro -OutFile $OutFile
+    if ($code -ne 0) {
+        $global:LASTEXITCODE = $code
+    }
 }
 
 function Run-Binary {
@@ -136,8 +205,9 @@ function Run-Binary {
                 [Environment]::SetEnvironmentVariable($k, [string]$ExtraEnv[$k], "Process")
             }
         }
-        $output = @(& $ExePath 2>&1 | ForEach-Object { "$_" })
-        $exitCode = $LASTEXITCODE
+        $run = Invoke-BinaryWithLockRetry -ExePath $ExePath -RetryCount 3
+        $output = @($run[0])
+        $exitCode = [int]$run[1]
 
         if ($exitCode -ne 0) {
             return ,@($false, $output, $exitCode)
@@ -613,8 +683,11 @@ try {
             try {
                 [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $null, "Process")
                 [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "1", "Process")
-                & "$repo\c64_11_fast_signoff.exe"
-                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                $run = Invoke-BinaryWithLockRetry -ExePath "$repo\c64_11_fast_signoff.exe" -RetryCount 3
+                $outLocal = @($run[0])
+                $codeLocal = [int]$run[1]
+                foreach ($line in $outLocal) { $line }
+                if ($codeLocal -ne 0) { exit $codeLocal }
             }
             finally {
                 [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $savedManifest, "Process")

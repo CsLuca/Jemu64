@@ -1274,6 +1274,26 @@ Release pin manifest:
   - `run_signoff_week13_14.ps1` now completes with `EXIT=0` in this environment,
   - mandatory and extended gates remain green.
 
+## Runner Hygiene Hardening: Executable Lock/Retry Robustness
+
+- Hardened runner scripts against intermittent Windows executable lock races (`Permission denied` / file in use):
+  - `run_copier_matrix.ps1`
+  - `run_signoff_week13_14.ps1`
+
+- Added best-effort process cleanup and retry logic:
+  - stop stale signoff processes before build/run,
+  - bounded build retry for output executable lock conflicts,
+  - bounded run retry for transient file-lock failures,
+  - safer handling of runner invocation exceptions in matrix path.
+
+- Scope:
+  - no emulator core behavior changes,
+  - runner-level resilience only (CI/local stability improvement).
+
+- Post-change validation:
+  - matrix/corpus/dos/soak/thresholds/closure/signoff all green in this environment,
+  - soak flake rate remains within threshold (`0.0000` in repeated runs).
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

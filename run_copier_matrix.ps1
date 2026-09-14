@@ -12,6 +12,46 @@ $ErrorActionPreference = "Stop"
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 
+function Stop-ExeIfRunning {
+    param([string]$ExeName)
+    try {
+        $procs = @(Get-Process -Name ([System.IO.Path]::GetFileNameWithoutExtension($ExeName)) -ErrorAction SilentlyContinue)
+        foreach ($p in $procs) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # Best-effort cleanup.
+    }
+}
+
+function Invoke-WithRetry {
+    param(
+        [scriptblock]$Action,
+        [int]$RetryCount = 3,
+        [int]$RetryDelayMs = 250
+    )
+
+    $lastExit = 0
+    for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
+        try {
+            & $Action
+            $lastExit = $LASTEXITCODE
+        }
+        catch {
+            $lastExit = 1
+        }
+        if ($lastExit -eq 0) {
+            return $true
+        }
+        if ($attempt -lt $RetryCount) {
+            Start-Sleep -Milliseconds ($RetryDelayMs * ($attempt + 1))
+        }
+    }
+    $script:LASTEXITCODE = $lastExit
+    return $false
+}
+
 function Resolve-PathLocal {
     param([string]$PathInput)
     if ([System.IO.Path]::IsPathRooted($PathInput)) {
@@ -88,8 +128,11 @@ function Test-DiskManifestMatchReady {
 
 function Build-Profile {
     param([string]$Macro, [string]$OutFile)
-    & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
-    if ($LASTEXITCODE -ne 0) {
+    Stop-ExeIfRunning -ExeName $OutFile
+    $ok = Invoke-WithRetry -Action {
+        & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
+    } -RetryCount 4 -RetryDelayMs 300
+    if (-not $ok) {
         throw "Build failed: $OutFile"
     }
 }
@@ -130,8 +173,33 @@ try {
     $savedEapRun = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $runOutput = @(& "$repo\$exe" 2>&1 | ForEach-Object { "$_" })
-        $runExitCode = $LASTEXITCODE
+        $runOutput = @()
+        $runOk = $false
+        for ($runAttempt = 0; $runAttempt -le 3; $runAttempt++) {
+            try {
+                $runOutput = @(& "$repo\$exe" 2>&1 | ForEach-Object { "$_" })
+            }
+            catch {
+                $runOutput = @("$($_.Exception.Message)")
+            }
+            $runExitCode = $LASTEXITCODE
+            if ($null -eq $runExitCode) {
+                $runExitCode = 1
+            }
+            if ($runExitCode -eq 0) {
+                $runOk = $true
+                break
+            }
+            if (($runOutput | Out-String) -match "Impossibile accedere al file|Permission denied|utilizzato da un altro processo") {
+                Stop-ExeIfRunning -ExeName $exe
+                Start-Sleep -Milliseconds (200 * ($runAttempt + 1))
+                continue
+            }
+            break
+        }
+        if (-not $runOk -and $runExitCode -eq 0) {
+            $runOk = $true
+        }
     }
     finally {
         $ErrorActionPreference = $savedEapRun
