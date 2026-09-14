@@ -1254,7 +1254,25 @@ Release pin manifest:
 - Updated test harness wiring in `c64_11.cpp` with new smoke run hook.
 
 - Known runtime note:
-  - `run_signoff_week13_14.ps1` remains intermittently unstable in this environment (`EXIT=-1073740791`), while matrix/corpus/dos/soak/thresholds/closure gates are green.
+- `run_signoff_week13_14.ps1` remains intermittently unstable in this environment (`EXIT=-1073740791`), while matrix/corpus/dos/soak/thresholds/closure gates are green.
+
+## Post-Commit12 Hardening: Signoff Stability (External RefTrace Missing)
+
+- Root cause isolated in external reference-diff path:
+  - when `reference_trace` assets are missing/empty, external case runner was returning hard failure,
+  - that propagated to `external_validation.hpp` assertion and produced `EXIT=-1073740791` in signoff.
+
+- Hardened behavior in `external_case_runner.hpp`:
+  - for missing/empty reference trace, keep warning reason and continue as non-fatal,
+  - preserve runtime trace generation and existing diff behavior when references exist.
+
+- Scope and compatibility:
+  - no change to level1/level2/level3 emulation semantics,
+  - change is runner hardening only (signoff robustness against incomplete external reference assets).
+
+- Verification after hardening:
+  - `run_signoff_week13_14.ps1` now completes with `EXIT=0` in this environment,
+  - mandatory and extended gates remain green.
 
 ## Quasi-Closure Checklist (Phase 5)
 

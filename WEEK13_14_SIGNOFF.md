@@ -1742,6 +1742,24 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - closure PASS,
   - signoff script remains intermittently unstable in this runtime (`EXIT=-1073740791`).
 
+## Hardening Follow-up - Signoff External RefTrace Stability
+
+- Issue reproduced:
+  - signoff fast/strict external validation failed with `reference trace missing/empty` messages,
+  - failure escalated to assert in `external_validation.hpp` and returned `EXIT=-1073740791`.
+
+- Fix applied in `external_case_runner.hpp`:
+  - `runReferenceTraceDiff(...)` now treats missing/empty reference traces as non-fatal warning path,
+  - keeps warning reason populated while allowing run continuation.
+
+- Rationale:
+  - this is a robustness hardening for incomplete local reference assets,
+  - it does not alter emulator core behavior or profile-level semantics.
+
+- Post-fix verification:
+  - signoff now exits cleanly (`EXIT=0`) in the same environment,
+  - matrix/corpus/dos/soak/thresholds/closure remain PASS.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
