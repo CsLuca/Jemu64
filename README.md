@@ -1147,6 +1147,32 @@ Release pin manifest:
   - sync-mark stream detection,
   - invalid symbol path with `ok=false`.
 
+## Commit 9: Bitcell Timing Model (Zone Speed + Deterministic Jitter)
+
+- Added new physical timing model units:
+  - `drive1541_physical/bitcell_timing_model.hpp`
+  - `drive1541_physical/bitcell_timing_model.cpp`
+
+- Implemented `jemu::drive1541::BitcellTimingModel` API:
+  - `reset(seed)`
+  - `set_zone(zone)`
+  - `next_cell_ticks()`
+
+- Timing model behavior:
+  - zone-aware base cell durations (`zone 0..3` => increasing base ticks),
+  - deterministic bounded jitter (`[-1,+1]`) via xorshift32,
+  - CI-stable deterministic sequence for same seed/zone.
+
+- Integrated Level3-only hook in `advanced_image_backends.hpp`:
+  - in sync/bitcell path, Level3 profile uses per-track/sector `BitcellTimingModel` instance,
+  - emitted jitter tag feeds existing bitcell marker perturbation,
+  - Level1/Level2 path remains behavior-compatible.
+
+- Added coverage in `tests/drive1541_bitcell_timing_tests.hpp`:
+  - different zones produce different base timings,
+  - jitter stays in expected bounds,
+  - same seed reproduces identical sequence.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "drive1541_physical/gcr_codec.hpp"
+#include "drive1541_physical/bitcell_timing_model.hpp"
 #include "image_backend.hpp"
 
 namespace advanced_image_detail {
@@ -218,6 +219,8 @@ private:
     mutable std::array<uint8_t, 36u * 21u> weakWindowPhase = {};
     mutable std::array<uint8_t, 36u * 21u> weakWindowSpanState = {};
     mutable std::array<uint8_t, 36u * 21u> bitcellSlipState = {};
+    mutable std::array<drive1541_physical::BitcellTimingModel, 36u * 21u> bitcellTimingModel = {};
+    mutable std::array<uint8_t, 36u * 21u> bitcellTimingInit = {};
 
 protected:
     const std::string &path() const {
@@ -302,9 +305,23 @@ protected:
             buffer[syncPos] = static_cast<uint8_t>(buffer[syncPos] ^ 0xFFu);
             const size_t bitcellPos = std::min<size_t>(6u, buffer.size() - 1);
             const uint8_t zone = advanced_image_detail::zoneFromTrack(track);
-            buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));
-
             const size_t idx = modelIndex(track, sector);
+
+            if (advanced_image_detail::isPhysicalLevel3ProfileEnabled()) {
+                auto &tm = bitcellTimingModel[idx];
+                if (bitcellTimingInit[idx] == 0u) {
+                    const uint32_t seed = static_cast<uint32_t>((uint32_t(track) << 16) | (uint32_t(sector) << 8) | 0x41u);
+                    tm.reset(seed);
+                    bitcellTimingInit[idx] = 1u;
+                }
+                tm.set_zone(zone);
+                const uint32_t ticks = tm.next_cell_ticks();
+                const uint8_t jitterTag = static_cast<uint8_t>(ticks & 0x1Fu);
+                buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | jitterTag));
+            } else {
+                buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));
+            }
+
             uint8_t &slip = bitcellSlipState[idx];
             slip = static_cast<uint8_t>((slip + 1u + zone) & 0x07u);
             if ((slip % 3u) == 0u) {

@@ -1635,6 +1635,31 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - sync-mark detection in mixed stream,
   - invalid nibble/symbol rejection path.
 
+## Commit 9 - BitcellTimingModel (Zone Speed + Jitter Deterministico)
+
+- Added physical timing model files:
+  - `drive1541_physical/bitcell_timing_model.hpp`
+  - `drive1541_physical/bitcell_timing_model.cpp`
+
+- Introduced `jemu::drive1541::BitcellTimingModel` with API:
+  - `reset(seed)`
+  - `set_zone(zone)`
+  - `next_cell_ticks()`.
+
+- Implemented behavior:
+  - per-zone base bitcell durations (`0..3`),
+  - bounded deterministic jitter via xorshift32,
+  - repeatable sequences for equal seed/zone (CI determinism).
+
+- Level3-only integration in `advanced_image_backends.hpp`:
+  - sync/bitcell perturbation now can consume `BitcellTimingModel` output when profile is `level3-physical`,
+  - lower profiles keep existing code path unchanged.
+
+- Added `tests/drive1541_bitcell_timing_tests.hpp`:
+  - zone base differentiation,
+  - jitter bounds validation,
+  - same-seed deterministic sequence validation.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
