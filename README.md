@@ -1294,6 +1294,27 @@ Release pin manifest:
   - matrix/corpus/dos/soak/thresholds/closure/signoff all green in this environment,
   - soak flake rate remains within threshold (`0.0000` in repeated runs).
 
+## Consolidation: Shared Lock-Retry Helper Module
+
+- Added shared helper script:
+  - `tools/runner_lock_hardening.ps1`
+
+- Centralized utilities:
+  - `Test-LockErrorText(...)`
+  - `Stop-ExeIfRunning(...)`
+  - `Invoke-WithRetry(...)`
+  - `Build-Profile-Retry(...)`
+  - `Invoke-BinaryWithLockRetry(...)`
+
+- Refactored runners to import shared module (removed duplication):
+  - `run_copier_matrix.ps1`
+  - `run_signoff_week13_14.ps1`
+
+- Behavior goal preserved:
+  - identical functional semantics,
+  - less duplicated logic, easier maintenance,
+  - same lock-race hardening guarantees across runners.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

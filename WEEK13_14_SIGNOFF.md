@@ -1782,6 +1782,26 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - thresholds/closure PASS,
   - signoff PASS (`EXIT=0`).
 
+## Consolidation - Shared Runner Lock Hardening Module
+
+- Added `tools/runner_lock_hardening.ps1` to centralize lock-race helpers used by runners.
+
+- Exposed shared helper functions:
+  - `Test-LockErrorText(...)`
+  - `Stop-ExeIfRunning(...)`
+  - `Invoke-WithRetry(...)`
+  - `Build-Profile-Retry(...)`
+  - `Invoke-BinaryWithLockRetry(...)`
+
+- Refactored scripts to dot-source shared module:
+  - `run_copier_matrix.ps1`
+  - `run_signoff_week13_14.ps1`
+
+- Post-consolidation checks:
+  - signoff PASS (`EXIT=0`),
+  - matrix/corpus/dos/soak/thresholds/closure PASS,
+  - no functional emulation-path behavior change introduced.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

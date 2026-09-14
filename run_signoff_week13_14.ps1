@@ -23,72 +23,8 @@ $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
-
-function Stop-ExeIfRunning {
-    param([string]$ExeName)
-    try {
-        $base = [System.IO.Path]::GetFileNameWithoutExtension($ExeName)
-        $procs = @(Get-Process -Name $base -ErrorAction SilentlyContinue)
-        foreach ($p in $procs) {
-            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-        }
-    }
-    catch {
-        # Best-effort only.
-    }
-}
-
-function Build-Profile-Retry {
-    param(
-        [string]$Macro,
-        [string]$OutFile,
-        [int]$RetryCount = 4
-    )
-
-    for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
-        Stop-ExeIfRunning -ExeName $OutFile
-        & $gxx -std=c++17 -O2 "-DRUN_PROFILE=$Macro" "$repo\c64_11.cpp" -o "$repo\$OutFile"
-        if ($LASTEXITCODE -eq 0) {
-            return 0
-        }
-        if ($attempt -lt $RetryCount) {
-            Start-Sleep -Milliseconds (250 * ($attempt + 1))
-        }
-    }
-    return $LASTEXITCODE
-}
-
-function Invoke-BinaryWithLockRetry {
-    param(
-        [string]$ExePath,
-        [int]$RetryCount = 3
-    )
-
-    $savedEap = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    try {
-        for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
-            $output = @(& $ExePath 2>&1 | ForEach-Object { "$_" })
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -eq 0) {
-                return ,@($output, $exitCode)
-            }
-            $txt = ($output | Out-String)
-            if ($txt -match "Impossibile accedere al file|Permission denied|utilizzato da un altro processo") {
-                Stop-ExeIfRunning -ExeName ([System.IO.Path]::GetFileName($ExePath))
-                if ($attempt -lt $RetryCount) {
-                    Start-Sleep -Milliseconds (200 * ($attempt + 1))
-                    continue
-                }
-            }
-            return ,@($output, $exitCode)
-        }
-    }
-    finally {
-        $ErrorActionPreference = $savedEap
-    }
-    return ,@(@(), 1)
-}
+$lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+. $lockHelpersPath
 
 function Invoke-Step {
     param(
@@ -137,7 +73,7 @@ function Build-Profile {
         [string]$OutFile
     )
 
-    $code = Build-Profile-Retry -Macro $Macro -OutFile $OutFile
+    $code = Build-Profile-Retry -Macro $Macro -OutFile $OutFile -CompilerPath $gxx -RepoPath $repo -SourceFile "c64_11.cpp" -RetryCount 4
     if ($code -ne 0) {
         $global:LASTEXITCODE = $code
     }
