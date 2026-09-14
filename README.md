@@ -1173,6 +1173,34 @@ Release pin manifest:
   - jitter stays in expected bounds,
   - same seed reproduces identical sequence.
 
+## Commit 10: Mechanics Model (Spindle + Head + Half-Track)
+
+- Added mechanical-domain files:
+  - `drive1541_physical/mechanics_model.hpp`
+  - `drive1541_physical/mechanics_model.cpp`
+
+- Implemented `jemu::drive1541::MechanicsModel` API:
+  - `reset()`
+  - `set_motor_on(bool)`
+  - `tick(uint64_t drive_cycles)`
+  - `step_in()` / `step_out()`
+  - `half_track()`
+  - `spindle_angle_norm()`.
+
+- Mechanics behavior:
+  - spindle angle advances only when motor is ON,
+  - normalized wrap kept in `[0,1)`,
+  - head stepping clamped to half-track limits (`2..84`).
+
+- Optional level3 hook integrated in `advanced_image_backends.hpp`:
+  - per-track/sector mechanics state participates in physical bitcell perturbation path,
+  - no global switch and no behavior change for non-level3 profiles.
+
+- Added coverage in `tests/drive1541_mechanics_tests.hpp`:
+  - motor-off no-angle-advance,
+  - motor-on angle advance + wrap,
+  - step in/out clamp bounds.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

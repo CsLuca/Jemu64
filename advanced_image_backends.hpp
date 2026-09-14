@@ -13,6 +13,7 @@
 
 #include "drive1541_physical/gcr_codec.hpp"
 #include "drive1541_physical/bitcell_timing_model.hpp"
+#include "drive1541_physical/mechanics_model.hpp"
 #include "image_backend.hpp"
 
 namespace advanced_image_detail {
@@ -221,6 +222,8 @@ private:
     mutable std::array<uint8_t, 36u * 21u> bitcellSlipState = {};
     mutable std::array<drive1541_physical::BitcellTimingModel, 36u * 21u> bitcellTimingModel = {};
     mutable std::array<uint8_t, 36u * 21u> bitcellTimingInit = {};
+    mutable std::array<drive1541_physical::MechanicsModel, 36u * 21u> mechanicsModel = {};
+    mutable std::array<uint8_t, 36u * 21u> mechanicsInit = {};
 
 protected:
     const std::string &path() const {
@@ -316,7 +319,23 @@ protected:
                 }
                 tm.set_zone(zone);
                 const uint32_t ticks = tm.next_cell_ticks();
-                const uint8_t jitterTag = static_cast<uint8_t>(ticks & 0x1Fu);
+
+                auto &mm = mechanicsModel[idx];
+                if (mechanicsInit[idx] == 0u) {
+                    mm.reset();
+                    mm.set_motor_on(true);
+                    const uint16_t targetHalf = static_cast<uint16_t>(2u + static_cast<uint16_t>(track - 1u) * 2u);
+                    while (mm.half_track() < targetHalf) {
+                        mm.step_in();
+                    }
+                    while (mm.half_track() > targetHalf) {
+                        mm.step_out();
+                    }
+                    mechanicsInit[idx] = 1u;
+                }
+                mm.tick(ticks);
+                const uint8_t angleTag = static_cast<uint8_t>(static_cast<uint32_t>(mm.spindle_angle_norm() * 32.0) & 0x1Fu);
+                const uint8_t jitterTag = static_cast<uint8_t>((ticks + angleTag) & 0x1Fu);
                 buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | jitterTag));
             } else {
                 buffer[bitcellPos] = static_cast<uint8_t>(buffer[bitcellPos] ^ static_cast<uint8_t>((zone << 5) | ((track + sector) & 0x1Fu)));

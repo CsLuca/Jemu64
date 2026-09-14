@@ -1660,6 +1660,31 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - jitter bounds validation,
   - same-seed deterministic sequence validation.
 
+## Commit 10 - MechanicsModel (Spindle/Head/Half-Track)
+
+- Added mechanics domain files:
+  - `drive1541_physical/mechanics_model.hpp`
+  - `drive1541_physical/mechanics_model.cpp`
+
+- Introduced `jemu::drive1541::MechanicsModel` with surface:
+  - `reset()`, `set_motor_on(...)`, `tick(...)`
+  - `step_in()`, `step_out()`
+  - `half_track()`, `spindle_angle_norm()`.
+
+- Implemented base mechanics behavior:
+  - spindle progression only with motor on,
+  - normalized spindle angle wrap in `[0,1)`,
+  - half-track limits clamped to `2..84`.
+
+- Optional level3 integration in `advanced_image_backends.hpp`:
+  - per-track/sector mechanics state now contributes to physical bitcell perturbation path,
+  - non-level3 profiles preserve prior behavior.
+
+- Added `tests/drive1541_mechanics_tests.hpp`:
+  - motor-off no-advance,
+  - motor-on advance + wrap range,
+  - step in/out boundary enforcement.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`
