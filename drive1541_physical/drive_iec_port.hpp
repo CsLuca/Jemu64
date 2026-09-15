@@ -46,11 +46,16 @@ public:
         out_ = lines;
     }
 
-    void applyReady(std::uint64_t nowTs, bool allowDriveOutput) {
-        applyEvents(inputEdges_.pop_ready(nowTs), in_);
+    std::size_t applyReady(std::uint64_t nowTs, bool allowDriveOutput) {
+        const std::vector<IecEdgeEvent> inEvents = inputEdges_.pop_ready(nowTs);
+        applyEvents(inEvents, in_);
+        std::size_t applied = inEvents.size();
         if (allowDriveOutput) {
-            applyEvents(outputEdges_.pop_ready(nowTs), out_);
+            const std::vector<IecEdgeEvent> outEvents = outputEdges_.pop_ready(nowTs);
+            applyEvents(outEvents, out_);
+            applied += outEvents.size();
         }
+        return applied;
     }
 
     IecLines busDriveOutput() const noexcept {

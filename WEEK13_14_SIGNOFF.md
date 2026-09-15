@@ -1856,6 +1856,27 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - same trace deterministic digest across runs,
   - drive-off output gating.
 
+## Commit 15 - LED Signals from Physical State and IEC Activity
+
+- Added `drive1541_physical/drive_signal_model.hpp` for derived signal state.
+
+- Signal semantics now derive from physical/runtime state:
+  - `motor_on`: from power lifecycle (`PowerState`),
+  - `activity`: from flux read/write pulses and DOS busy windows,
+  - `error`: from non-`00` status path with transient hold,
+  - `iec_load`: from edge-density window over timestamped IEC traffic.
+
+- Integrated in `drive_1541.hpp`:
+  - model tick/update in `tickIecHalfCycle()`,
+  - LED-like exported fields updated from model output,
+  - accessor `getDriveSignalState()` added for adapter/UI consumers.
+
+- Added `tests/drive1541_signal_model_tests.hpp`:
+  - LEDs off with power off,
+  - activity pulse during I/O,
+  - error latch on fault status,
+  - IEC-load activation on dense edge bursts.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

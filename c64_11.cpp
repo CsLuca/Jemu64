@@ -6250,6 +6250,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_iec_edge_queue_tests.hpp"
 
+#include "tests/drive1541_signal_model_tests.hpp"
+
 #include "drive1541_physical/drive_via_domain.cpp"
 #include "drive1541_physical/gcr_codec.cpp"
 #include "drive1541_physical/bitcell_timing_model.cpp"
@@ -8638,6 +8640,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541PhysicalPipelineSmokeTests();
     runDrive1541BackendLayeringTests();
     runDrive1541IecEdgeQueueTests();
+    runDrive1541SignalModelTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

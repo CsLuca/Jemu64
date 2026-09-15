@@ -28,6 +28,7 @@
 #include "drive1541_physical/drive_iec_port.hpp"
 #include "drive1541_physical/drive_power_controller.hpp"
 #include "drive1541_physical/drive_scheduler.hpp"
+#include "drive1541_physical/drive_signal_model.hpp"
 #include "drive1541_physical/drive_via_domain.hpp"
 #include "drive1541_physical/bitcell_timing_model.hpp"
 #include "drive1541_physical/flux_track_model.hpp"
@@ -75,6 +76,7 @@ public:
     drive1541_physical::DriveDosMemoryMap physicalDosMemoryMap;
     drive1541_physical::DriveIecPort physicalIecPort;
     drive1541_physical::DrivePowerController powerController;
+    drive1541_physical::DriveSignalModel signalModel;
 
     drive1541_physical::MechanicsModel physicalMechanicsModel;
     drive1541_physical::BitcellTimingModel physicalBitcellTimingModel;
@@ -90,6 +92,10 @@ public:
     uint8_t physicalPipelineLastBit = 0;
     uint16_t physicalPipelineLastHalfTrack = 36;
     double physicalPipelineLastAngleNorm = 0.0;
+    bool driveLedMotorOn = false;
+    bool driveLedActivity = false;
+    bool driveLedError = false;
+    bool driveLedIecLoad = false;
 
     using PowerState = drive1541_physical::PowerState;
 
@@ -107,6 +113,10 @@ public:
 
     bool isPoweredOn() const {
         return powerController.isOn();
+    }
+
+    drive1541_physical::DriveSignalState getDriveSignalState() const {
+        return signalModel.state();
     }
 
     PowerState getPowerState() const {
@@ -438,6 +448,7 @@ public:
         cycles = 0;
         physicalScheduler.reset();
         physicalIecPort.reset();
+        signalModel.reset();
         physicalViaDomain.bind_external(&via1, &via2);
         physicalViaDomain.reset();
         bindPhysicalDosMemoryMap();
@@ -474,6 +485,10 @@ public:
         iecAtnFallingSeen = 0;
         iecClockRisingSeen = 0;
         iecClockRisingAtnLow = 0;
+        driveLedMotorOn = false;
+        driveLedActivity = false;
+        driveLedError = false;
+        driveLedIecLoad = false;
 
         iecPrevCLK = true;
         iecPrevATN = true;
@@ -632,6 +647,7 @@ public:
         const bool hostDataBefore = iecDATA;
         powerController.tick(1);
         const bool isPoweredOn = powerController.isOn();
+        signalModel.begin_tick(powerController.state());
         if (wasPoweredOn && !isPoweredOn) {
             physicalIecPort.dropPendingDriveEdges();
             physicalIecPort.setDriveOutput({true, true, true});
@@ -639,7 +655,8 @@ public:
 
         const uint64_t nowAfterPowerTick = physicalScheduler.now();
         physicalIecPort.queueHostLines(nowAfterPowerTick, {hostAtnBefore, hostClkBefore, hostDataBefore});
-        physicalIecPort.applyReady(nowAfterPowerTick, isPoweredOn);
+        const std::size_t preAppliedEdges = physicalIecPort.applyReady(nowAfterPowerTick, isPoweredOn);
+        signalModel.note_iec_edges(preAppliedEdges);
         {
             const drive1541_physical::IecLines hostIn = physicalIecPort.busInput();
             iecATN = hostIn.atn;
@@ -650,6 +667,11 @@ public:
         if (!isPoweredOn) {
             iecDrivePullCLK = false;
             iecDrivePullDATA = false;
+            const drive1541_physical::DriveSignalState sig = signalModel.state();
+            driveLedMotorOn = sig.motor_on;
+            driveLedActivity = sig.activity;
+            driveLedError = sig.error;
+            driveLedIecLoad = sig.iec_load;
             return;
         }
 
@@ -660,6 +682,9 @@ public:
         physicalCpuDomain.set_irq(physicalViaDomain.irq_asserted());
 
         processQueuedIecRxBurst();
+        if (pendingIecRx() > 0 || pendingIecTx() > 0) {
+            signalModel.note_dos_busy();
+        }
 
         stepIecSerial();
 
@@ -693,7 +718,15 @@ public:
         };
         const uint64_t now = physicalScheduler.now();
         physicalIecPort.queueDriveLines(now, driveOut);
-        physicalIecPort.applyReady(now, true);
+        const std::size_t postAppliedEdges = physicalIecPort.applyReady(now, true);
+        signalModel.note_iec_edges(postAppliedEdges);
+
+        signalModel.note_status_line(iecStatusLine.c_str());
+        const drive1541_physical::DriveSignalState sig = signalModel.state();
+        driveLedMotorOn = sig.motor_on;
+        driveLedActivity = sig.activity;
+        driveLedError = sig.error;
+        driveLedIecLoad = sig.iec_load;
 
         stepDriveCpuCycleAccurate();
     }
@@ -2056,6 +2089,7 @@ public:
             ImageIoError err = ImageIoError::None;
             if (mountedImageBackend->readBlock(track, sector, iecBlockBuffer, err)) {
                 loadedFromImage = true;
+                signalModel.note_flux_read();
                 if (advanced_image_detail::isFluxCapableFormat(mountedImageFormat)) {
                     runPhysicalLevel3ReadPipeline(track, sector);
                 }
@@ -2180,6 +2214,7 @@ public:
                 return;
             }
             flushedToImage = true;
+            signalModel.note_flux_write();
         }
 
         if (!flushedToImage) {
@@ -2190,6 +2225,7 @@ public:
         }
         iecDiskMap[0] = track;
         iecDiskMap[1] = sector;
+        signalModel.note_status_line(iecStatusLine.c_str());
     }
 
     void dispatchExecuteStub(uint16_t addr) {

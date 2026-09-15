@@ -1365,6 +1365,30 @@ Release pin manifest:
   - deterministic replay (`same trace -> same digest`),
   - drive-off output gating semantics.
 
+## Commit 15: LED/Signals Derived from Physical Drive State
+
+- Added physical signal model:
+  - `drive1541_physical/drive_signal_model.hpp`
+
+- Signal derivation now follows runtime physical semantics:
+  - `motor_on` from `PowerState` lifecycle,
+  - `activity` from flux read/write and DOS busy windows,
+  - `error` from real status-line path (`!= 00,...`) with hold smoothing,
+  - `iec_load` from IEC edge density over a temporal window.
+
+- Integrated in `Drive1541`:
+  - `drive_1541.hpp` now owns `signalModel`, updates it each half-cycle,
+  - LED-like fields (`driveLedMotorOn`, `driveLedActivity`, `driveLedError`, `driveLedIecLoad`) are derived from model state,
+  - added accessor `getDriveSignalState()` for adapters/UI polling.
+
+- Added deterministic tests:
+  - `tests/drive1541_signal_model_tests.hpp`
+  - validates:
+    - LEDs off when power off,
+    - activity pulse during I/O,
+    - error LED on fault injection,
+    - IEC load on dense edge windows.
+
 - Behavior goal preserved:
   - identical functional semantics,
   - less duplicated logic, easier maintenance,
