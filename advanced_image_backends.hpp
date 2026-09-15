@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "drive1541_physical/i_flux_image_backend.hpp"
+#include "drive1541_physical/physical_profile.hpp"
 #include "drive1541_physical/gcr_codec.hpp"
 #include "drive1541_physical/bitcell_timing_model.hpp"
 #include "drive1541_physical/mechanics_model.hpp"
@@ -120,6 +122,15 @@ static inline bool isPhysicalLevel3ProfileEnabled() {
     return v == "level3-physical";
 }
 
+static inline bool isFluxCapableFormat(const std::string &format) {
+    return format == "g64" || format == "nib" || format == "raw";
+}
+
+static inline bool shouldUseFluxLayer(const std::string &format,
+                                      drive1541_physical::PhysicalProfile profile) {
+    return profile == drive1541_physical::PhysicalProfile::Level3Physical && isFluxCapableFormat(format);
+}
+
 static inline bool decodeGcrToNibble(uint8_t symbol, uint8_t &nibble) {
     static const uint8_t rev[32] = {
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
@@ -147,7 +158,7 @@ static inline void classifyGcrErrors(GcrMetrics &metrics) {
 
 } // namespace advanced_image_detail
 
-class FluxMappedImageBackend : public IImageBackend {
+class FluxMappedImageBackend : public IFluxImageBackend {
 public:
     FluxMappedImageBackend(const std::string &path,
                            const std::string &format,

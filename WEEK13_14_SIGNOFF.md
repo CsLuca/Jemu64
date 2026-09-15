@@ -1811,6 +1811,28 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - matrix/corpus/dos/soak/thresholds/closure PASS,
   - no functional emulation-path behavior change introduced.
 
+## Commit 13 - IFluxImageBackend + Layered Image Backend Routing
+
+- Added flux interface layer:
+  - `drive1541_physical/i_flux_image_backend.hpp`
+
+- Added flux backend wrappers:
+  - `drive1541_physical/flux_image_backend_g64.hpp`
+  - `drive1541_physical/flux_image_backend_nib.hpp`
+  - `drive1541_physical/flux_image_backend_raw.hpp`
+
+- Updated routing in `Drive1541` (`drive_1541.hpp`):
+  - split mounted backend state into logical and flux layers,
+  - apply profile-aware routing with deterministic fallback,
+  - `d64` remains on logical `IImageBackend` path,
+  - `g64`/`nib`/`raw` use flux layer only under `level3-physical`.
+
+- Added tests for layering guarantees:
+  - `tests/drive1541_backend_layering_tests.hpp`
+  - dispatch by profile/extension,
+  - mount/read smoke for `g64`/`nib`/`raw`,
+  - no-regression for `d64` routing and read path.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

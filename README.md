@@ -1319,6 +1319,29 @@ Release pin manifest:
   - `run_timing_gold.ps1`
   - `run_vic_reference_capture.ps1`
 
+## Commit 13: IFluxImageBackend + Layered Backend Routing
+
+- Introduced flux-layer interface for profile-aware backend separation:
+  - `drive1541_physical/i_flux_image_backend.hpp`
+
+- Added flux backend wrappers:
+  - `drive1541_physical/flux_image_backend_g64.hpp`
+  - `drive1541_physical/flux_image_backend_nib.hpp`
+  - `drive1541_physical/flux_image_backend_raw.hpp`
+
+- Routing changes in `Drive1541` (`drive_1541.hpp`):
+  - mounted backend split into logical layer (`mountedImageLogicalBackend`) and optional flux layer (`mountedFluxImageBackend`),
+  - profile-aware selection now uses layered routing,
+  - `d64` always stays on `IImageBackend` path (level1-compatible),
+  - `g64`/`nib`/`raw` route to flux backend only when profile is `level3-physical`,
+  - safe fallback to logical backend when flux backend is absent/not ready.
+
+- Added dispatch/smoke/no-regression test suite:
+  - `tests/drive1541_backend_layering_tests.hpp`
+  - validates extension/profile dispatch,
+  - mount/read smoke for `g64`/`nib`/`raw`,
+  - `d64` no-regression routing/read guard.
+
 - Behavior goal preserved:
   - identical functional semantics,
   - less duplicated logic, easier maintenance,

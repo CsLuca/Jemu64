@@ -19,6 +19,10 @@
 
 #include "advanced_image_backends.hpp"
 #include "d64_image_backend.hpp"
+#include "drive1541_physical/i_flux_image_backend.hpp"
+#include "drive1541_physical/flux_image_backend_g64.hpp"
+#include "drive1541_physical/flux_image_backend_nib.hpp"
+#include "drive1541_physical/flux_image_backend_raw.hpp"
 #include "drive1541_physical/drive_cpu_domain.hpp"
 #include "drive1541_physical/drive_dos_memory_map.hpp"
 #include "drive1541_physical/drive_iec_port.hpp"
@@ -138,6 +142,7 @@ public:
 
     void setPhysicalProfile(PhysicalProfile profile) {
         physicalProfile = profile;
+        applyMountedBackendRouting();
     }
 
     PhysicalProfile getPhysicalProfile() const {
@@ -307,6 +312,52 @@ public:
     bool mountedImageConfigured = false;
     bool mountedImageExists = false;
     std::shared_ptr<IImageBackend> mountedImageBackend;
+    std::shared_ptr<IImageBackend> mountedImageLogicalBackend;
+    std::shared_ptr<IFluxImageBackend> mountedFluxImageBackend;
+
+    std::shared_ptr<IImageBackend> createLogicalBackendForMountedImage() const {
+        if (mountedImageFormat == "d64") {
+            return std::make_shared<D64ImageBackend>(mountedImagePath);
+        }
+        if (mountedImageFormat == "g64") {
+            return std::make_shared<G64ImageBackend>(mountedImagePath);
+        }
+        if (mountedImageFormat == "nib") {
+            return std::make_shared<NIBImageBackend>(mountedImagePath);
+        }
+        if (mountedImageFormat == "raw") {
+            return std::make_shared<RAWImageBackend>(mountedImagePath);
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<IFluxImageBackend> createFluxBackendForMountedImage() const {
+        if (mountedImageFormat == "g64") {
+            return std::make_shared<G64FluxImageBackend>(mountedImagePath);
+        }
+        if (mountedImageFormat == "nib") {
+            return std::make_shared<NIBFluxImageBackend>(mountedImagePath);
+        }
+        if (mountedImageFormat == "raw") {
+            return std::make_shared<RAWFluxImageBackend>(mountedImagePath);
+        }
+        return nullptr;
+    }
+
+    void applyMountedBackendRouting() {
+        mountedImageBackend = mountedImageLogicalBackend;
+        if (!mountedImageBackend) {
+            return;
+        }
+
+        if (!advanced_image_detail::shouldUseFluxLayer(mountedImageFormat, physicalProfile)) {
+            return;
+        }
+
+        if (mountedFluxImageBackend && mountedFluxImageBackend->isReady()) {
+            mountedImageBackend = mountedFluxImageBackend;
+        }
+    }
 
     void configureMountedImage(const std::string &path, const std::string &format, bool exists) {
         mountedImageConfigured = !path.empty();
@@ -314,18 +365,16 @@ public:
         mountedImageFormat = format;
         mountedImageExists = exists;
         mountedImageBackend.reset();
+        mountedImageLogicalBackend.reset();
+        mountedFluxImageBackend.reset();
         if (!mountedImageConfigured || !mountedImageExists) {
             return;
         }
-        if (mountedImageFormat == "d64") {
-            mountedImageBackend = std::make_shared<D64ImageBackend>(mountedImagePath);
-        } else if (mountedImageFormat == "g64") {
-            mountedImageBackend = std::make_shared<G64ImageBackend>(mountedImagePath);
-        } else if (mountedImageFormat == "nib") {
-            mountedImageBackend = std::make_shared<NIBImageBackend>(mountedImagePath);
-        } else if (mountedImageFormat == "raw") {
-            mountedImageBackend = std::make_shared<RAWImageBackend>(mountedImagePath);
+        mountedImageLogicalBackend = createLogicalBackendForMountedImage();
+        if (advanced_image_detail::isFluxCapableFormat(mountedImageFormat)) {
+            mountedFluxImageBackend = createFluxBackendForMountedImage();
         }
+        applyMountedBackendRouting();
     }
 
     // Drive CPU scaffold state (placeholder for real core)
@@ -1639,8 +1688,20 @@ public:
         return mountedImageBackend != nullptr && mountedImageBackend->isReady();
     }
 
+    bool isMountedFluxBackendActiveFor(const std::string &format) const {
+        return mountedFluxImageBackend != nullptr &&
+               std::string(mountedFluxImageBackend->formatName()) == format &&
+               mountedFluxImageBackend->isReady();
+    }
+
     bool isMountedImageBackendActiveFor(const std::string &format) const {
         return mountedImageBackend != nullptr && std::string(mountedImageBackend->formatName()) == format && mountedImageBackend->isReady();
+    }
+
+    bool isMountedBackendRoutedToFlux() const {
+        return mountedImageBackend != nullptr &&
+               mountedFluxImageBackend != nullptr &&
+               mountedImageBackend.get() == static_cast<IImageBackend *>(mountedFluxImageBackend.get());
     }
 
     uint16_t blockAllocIndex(uint8_t track, uint8_t sector) const {
@@ -1960,7 +2021,9 @@ public:
             ImageIoError err = ImageIoError::None;
             if (mountedImageBackend->readBlock(track, sector, iecBlockBuffer, err)) {
                 loadedFromImage = true;
-                runPhysicalLevel3ReadPipeline(track, sector);
+                if (advanced_image_detail::isFluxCapableFormat(mountedImageFormat)) {
+                    runPhysicalLevel3ReadPipeline(track, sector);
+                }
             }
         }
 
