@@ -437,6 +437,7 @@ public:
     void reset() {
         cycles = 0;
         physicalScheduler.reset();
+        physicalIecPort.reset();
         physicalViaDomain.bind_external(&via1, &via2);
         physicalViaDomain.reset();
         bindPhysicalDosMemoryMap();
@@ -625,8 +626,28 @@ public:
     }
 
     void tickIecHalfCycle() override {
+        const bool wasPoweredOn = powerController.isOn();
+        const bool hostAtnBefore = iecATN;
+        const bool hostClkBefore = iecCLK;
+        const bool hostDataBefore = iecDATA;
         powerController.tick(1);
-        if (!powerController.isOn()) {
+        const bool isPoweredOn = powerController.isOn();
+        if (wasPoweredOn && !isPoweredOn) {
+            physicalIecPort.dropPendingDriveEdges();
+            physicalIecPort.setDriveOutput({true, true, true});
+        }
+
+        const uint64_t nowAfterPowerTick = physicalScheduler.now();
+        physicalIecPort.queueHostLines(nowAfterPowerTick, {hostAtnBefore, hostClkBefore, hostDataBefore});
+        physicalIecPort.applyReady(nowAfterPowerTick, isPoweredOn);
+        {
+            const drive1541_physical::IecLines hostIn = physicalIecPort.busInput();
+            iecATN = hostIn.atn;
+            iecCLK = hostIn.clk;
+            iecDATA = hostIn.data;
+        }
+
+        if (!isPoweredOn) {
             iecDrivePullCLK = false;
             iecDrivePullDATA = false;
             return;
@@ -664,6 +685,15 @@ public:
 
         iecDrivePullCLK = viaPullCLK;
         iecDrivePullDATA = (viaPullDATA || iecSerialPullDATA || iecAtnAckPullDATA || iecRxByteAckPullDATA);
+
+        const drive1541_physical::IecLines driveOut = {
+            true,
+            !iecDrivePullCLK,
+            !iecDrivePullDATA
+        };
+        const uint64_t now = physicalScheduler.now();
+        physicalIecPort.queueDriveLines(now, driveOut);
+        physicalIecPort.applyReady(now, true);
 
         stepDriveCpuCycleAccurate();
     }
@@ -922,9 +952,14 @@ public:
     }
 
     void setIecLines(bool atnHigh, bool clkHigh, bool dataHigh) override {
-        iecATN = atnHigh;
-        iecCLK = clkHigh;
-        iecDATA = dataHigh;
+        const uint64_t now = physicalScheduler.now();
+        const drive1541_physical::IecLines hostLines{atnHigh, clkHigh, dataHigh};
+        physicalIecPort.queueHostLines(now, hostLines);
+        physicalIecPort.applyReady(now, powerController.isOn());
+        const drive1541_physical::IecLines applied = physicalIecPort.busInput();
+        iecATN = applied.atn;
+        iecCLK = applied.clk;
+        iecDATA = applied.data;
     }
 
     bool getIecDrivePullCLK() const override {

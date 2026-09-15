@@ -1833,6 +1833,29 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - mount/read smoke for `g64`/`nib`/`raw`,
   - no-regression for `d64` routing and read path.
 
+## Commit 14 - IEC Edge Queue Timestamped (C64 <-> 1541)
+
+- Added queue/event model:
+  - `drive1541_physical/iec_edge_queue.hpp`
+  - `IecEdgeEvent { ts, line, level, source }`
+  - stable deterministic ordering with explicit tie-break.
+
+- Integrated queue into IEC domain bridge:
+  - `drive1541_physical/drive_iec_port.hpp`
+  - host and drive edges are queued and consumed only when `scheduler.now() >= ts`.
+
+- Drive integration:
+  - `drive_1541.hpp`
+  - `setIecLines(...)` now enqueues host edges with current scheduler timestamp,
+  - `tickIecHalfCycle(...)` applies ready host edges and publishes drive output edges,
+  - drive-off state suppresses drive-edge bus driving.
+
+- Added deterministic coverage:
+  - `tests/drive1541_iec_edge_queue_tests.hpp`
+  - stable ordering,
+  - same trace deterministic digest across runs,
+  - drive-off output gating.
+
 ## Revision Tolerance Policy
 
 - Added policy file: `reference/edge/revision_tolerance_policy.json`

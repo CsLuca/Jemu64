@@ -1342,6 +1342,29 @@ Release pin manifest:
   - mount/read smoke for `g64`/`nib`/`raw`,
   - `d64` no-regression routing/read guard.
 
+## Commit 14: Timestamped IEC Edge Queue (Host <-> Drive)
+
+- Added timestamped edge-event queue:
+  - `drive1541_physical/iec_edge_queue.hpp`
+  - event shape: `IecEdgeEvent { ts, line, level, source }`
+  - stable deterministic ordering with tie-break on line/source/sequence.
+
+- Integrated queue in IEC port layer:
+  - `drive1541_physical/drive_iec_port.hpp`
+  - host and drive edge streams are queued and applied only when `now >= ts`.
+
+- Integrated routing in drive runtime:
+  - `drive_1541.hpp`
+  - host lines are queued through `setIecLines(...)` and re-applied in `tickIecHalfCycle(...)`,
+  - drive outputs are published as timestamped edges,
+  - drive-off behavior blocks queued drive output edges from driving bus lines.
+
+- Added IEC edge queue tests:
+  - `tests/drive1541_iec_edge_queue_tests.hpp`
+  - verifies stable ordering,
+  - deterministic replay (`same trace -> same digest`),
+  - drive-off output gating semantics.
+
 - Behavior goal preserved:
   - identical functional semantics,
   - less duplicated logic, easier maintenance,
