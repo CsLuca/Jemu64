@@ -16,9 +16,18 @@ if ($buildCode -ne 0) {
     throw "Build failed"
 }
 
-$env:EXTERNAL_TEST_MANIFEST = $Manifest
+$savedManifest = [Environment]::GetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", "Process")
+$savedGuard = [Environment]::GetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "Process")
+[Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $Manifest, "Process")
+[Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "1", "Process")
 
-$run = Invoke-BinaryWithLockRetry -ExePath (Join-Path $repo "c64_11_strict.exe") -RetryCount 3
-if ([int]$run[1] -ne 0) {
-    exit ([int]$run[1])
+try {
+    $run = Invoke-BinaryWithLockRetry -ExePath (Join-Path $repo "c64_11_strict.exe") -RetryCount 3
+    if ([int]$run[1] -ne 0) {
+        exit ([int]$run[1])
+    }
+}
+finally {
+    [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $savedManifest, "Process")
+    [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", $savedGuard, "Process")
 }
