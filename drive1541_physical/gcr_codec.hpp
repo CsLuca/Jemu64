@@ -9,6 +9,9 @@ namespace jemu::drive1541 {
 struct GcrDecodeResult {
     bool ok{false};
     bool sync_found{false};
+    bool relock_applied{false};
+    std::uint32_t sync_loss_events{0};
+    std::uint32_t invalid_symbol_events{0};
     std::vector<std::uint8_t> data{};
 };
 

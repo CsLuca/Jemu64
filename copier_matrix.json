@@ -872,6 +872,60 @@
         "Commit 0 long-tail extreme fixture",
         "Behavior-neutral parity crystallization"
       ]
+    },
+    {
+      "id": "advanced_g64_sync_relock_window_longtail_target",
+      "description": "Level3 long-tail target for noisy sync-loss and relock-window behavior on G64",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "g64",
+      "target_format": "g64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_g64_longtail_extreme_corpus_fixture"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 17 level3 long-tail hardening target",
+        "sync-loss/relock window tolerance"
+      ]
+    },
+    {
+      "id": "advanced_nib_weak_jitter_gap_longtail_target",
+      "description": "Level3 long-tail target for weak/jitter/gap anomaly handling on NIB",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 9,
+      "source_format": "nib",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_nib_longtail_extreme_corpus_fixture"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 17 level3 long-tail hardening target",
+        "weak-bit deterministic policy + dirty-gap tolerance"
+      ]
     }
   ]
 }

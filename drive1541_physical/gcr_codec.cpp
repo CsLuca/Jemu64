@@ -46,36 +46,67 @@ GcrDecodeResult GcrCodec::decode_5to4(const std::uint8_t *src, std::size_t n) co
     }
 
     result.sync_found = false;
+    bool havePendingSymbol = false;
+    std::uint8_t pendingSymbol = 0;
+    std::uint8_t relockWindow = 0;
+
     for (std::size_t i = 0; i < n; ++i) {
-        if (is_sync_mark(src[i])) {
+        const std::uint8_t sym = src[i];
+        if (is_sync_mark(sym)) {
             result.sync_found = true;
+            result.sync_loss_events = static_cast<std::uint32_t>(result.sync_loss_events + 1u);
+            havePendingSymbol = false;
+            relockWindow = 2u;
             continue;
         }
 
-        if ((i + 1u) >= n) {
-            result.ok = false;
-            result.data.clear();
-            return result;
+        if (!havePendingSymbol) {
+            pendingSymbol = sym;
+            havePendingSymbol = true;
+            continue;
         }
 
-        if (is_sync_mark(src[i + 1u])) {
-            result.ok = false;
-            result.data.clear();
-            return result;
-        }
-
-        const std::uint8_t symHi = static_cast<std::uint8_t>(src[i] & 0x1Fu);
-        const std::uint8_t symLo = static_cast<std::uint8_t>(src[i + 1u] & 0x1Fu);
+        const std::uint8_t symHi = static_cast<std::uint8_t>(pendingSymbol & 0x1Fu);
+        const std::uint8_t symLo = static_cast<std::uint8_t>(sym & 0x1Fu);
         const std::uint8_t hi = kGcrToNibble[symHi];
         const std::uint8_t lo = kGcrToNibble[symLo];
         if (hi == 0xFFu || lo == 0xFFu) {
+            result.invalid_symbol_events = static_cast<std::uint32_t>(result.invalid_symbol_events + 1u);
+            if (relockWindow > 0u) {
+                result.relock_applied = true;
+                relockWindow = static_cast<std::uint8_t>(relockWindow - 1u);
+                if (hi == 0xFFu && lo == 0xFFu) {
+                    result.data.push_back(0x55u);
+                } else if (hi == 0xFFu) {
+                    result.data.push_back(static_cast<std::uint8_t>((0u << 4) | lo));
+                } else {
+                    result.data.push_back(static_cast<std::uint8_t>((hi << 4) | 0u));
+                }
+                havePendingSymbol = false;
+                continue;
+            }
             result.ok = false;
             result.data.clear();
             return result;
         }
 
         result.data.push_back(static_cast<std::uint8_t>((hi << 4) | lo));
-        i += 1u;
+        havePendingSymbol = false;
+        if (relockWindow > 0u) {
+            relockWindow = static_cast<std::uint8_t>(relockWindow - 1u);
+        }
+    }
+
+    if (havePendingSymbol) {
+        result.invalid_symbol_events = static_cast<std::uint32_t>(result.invalid_symbol_events + 1u);
+        if (relockWindow > 0u) {
+            result.relock_applied = true;
+            result.data.push_back(static_cast<std::uint8_t>((pendingSymbol & 0x0Fu) << 4));
+        } else {
+            result.ok = false;
+            result.data.clear();
+            return result;
+        }
     }
 
     result.ok = true;

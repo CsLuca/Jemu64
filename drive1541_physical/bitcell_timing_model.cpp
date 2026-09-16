@@ -5,6 +5,7 @@ namespace jemu::drive1541 {
 void BitcellTimingModel::reset(std::uint32_t seed) noexcept {
     rng_ = (seed == 0u) ? 0x1541u : seed;
     zone_ = 0;
+    relockState_ = 0;
 }
 
 void BitcellTimingModel::set_zone(std::uint8_t zone) noexcept {
@@ -15,6 +16,23 @@ std::uint32_t BitcellTimingModel::next_cell_ticks() noexcept {
     const std::uint32_t base = base_ticks_for_zone_(zone_);
     const std::int32_t jitter = bounded_jitter_();
     std::int32_t ticks = static_cast<std::int32_t>(base) + jitter;
+
+    if ((rng_ & 0x1Fu) == 0x04u) {
+        if (relockState_ < 6u) {
+            relockState_ = static_cast<std::uint8_t>(relockState_ + 1u);
+        }
+    } else if (relockState_ > 0u) {
+        relockState_ = static_cast<std::uint8_t>(relockState_ - 1u);
+    }
+
+    if (relockState_ >= 3u) {
+        ticks += 1;
+    }
+
+    if ((rng_ & 0xFFu) == 0x5Au) {
+        ticks += 1;
+    }
+
     if (ticks < 1) {
         ticks = 1;
     }
@@ -42,9 +60,21 @@ std::int32_t BitcellTimingModel::bounded_jitter_() noexcept {
     x ^= (x << 5);
     rng_ = x;
 
-    // bounded jitter in [-1, +1]
-    const std::int32_t bucket = static_cast<std::int32_t>(x % 3u);
-    return bucket - 1;
+    // bounded jitter with deterministic long-tail buckets in [-2, +2]
+    const std::uint32_t bucket = (x ^ (x >> 11)) & 0x0Fu;
+    if (bucket <= 1u) {
+        return -2;
+    }
+    if (bucket <= 5u) {
+        return -1;
+    }
+    if (bucket <= 10u) {
+        return 0;
+    }
+    if (bucket <= 14u) {
+        return 1;
+    }
+    return 2;
 }
 
 } // namespace jemu::drive1541

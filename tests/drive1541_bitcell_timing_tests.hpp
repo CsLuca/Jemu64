@@ -27,10 +27,11 @@ static void runDrive1541BitcellTimingTests() {
         BitcellTimingModel m;
         m.reset(0x2244u);
         m.set_zone(2);
-        constexpr std::uint32_t kBaseZone2 = 15u;
+        constexpr std::uint32_t kMinZone2 = 13u;
+        constexpr std::uint32_t kMaxZone2 = 17u;
         for (int i = 0; i < 512; ++i) {
             const std::uint32_t ticks = m.next_cell_ticks();
-            if (ticks < (kBaseZone2 - 1u) || ticks > (kBaseZone2 + 1u)) {
+            if (ticks < kMinZone2 || ticks > kMaxZone2) {
                 std::cerr << "[1541 BITCELL] FAIL: jitter out of expected bound" << std::endl;
                 assert(false);
             }

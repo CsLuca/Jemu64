@@ -13,6 +13,7 @@ public:
 private:
     std::uint8_t zone_{0};
     std::uint32_t rng_{0x1541u};
+    std::uint8_t relockState_{0};
 
     std::uint32_t base_ticks_for_zone_(std::uint8_t z) const noexcept;
     std::int32_t bounded_jitter_() noexcept;

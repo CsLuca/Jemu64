@@ -37,6 +37,10 @@ static void runDrive1541GcrCodecTests() {
             std::cerr << "[1541 GCR CODEC] FAIL: sync mark detection mismatch" << std::endl;
             assert(false);
         }
+        if (decoded.sync_loss_events < 1u) {
+            std::cerr << "[1541 GCR CODEC] FAIL: sync loss event counter not updated" << std::endl;
+            assert(false);
+        }
     }
 
     {
