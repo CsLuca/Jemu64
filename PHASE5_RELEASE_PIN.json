@@ -1,8 +1,9 @@
 {
-  "release_pin_version": 1,
-  "release_name": "phase5_final_ready",
+  "release_pin_version": 2,
+  "release_name": "phase5_physical_stack_milestone_freeze",
   "scope": "1541_phase5_release_pinning",
   "behavior_change": false,
+  "milestone": "commit20_release_freeze",
   "frozen_inputs": {
     "copier_matrix": "copier_matrix.json",
     "phase5_hard_thresholds": "phase5_hard_thresholds.json",
@@ -11,7 +12,9 @@
   },
   "frozen_docs": {
     "phase5_final_signoff": "PHASE5_FINAL_SIGNOFF.md",
-    "copier_support_matrix": "COPIER_SUPPORT_MATRIX.md"
+    "copier_support_matrix": "COPIER_SUPPORT_MATRIX.md",
+    "week13_14_signoff": "WEEK13_14_SIGNOFF.md",
+    "readme": "README.md"
   },
   "frozen_gates": [
     "run_signoff_week13_14.ps1",
@@ -21,5 +24,24 @@
     "run_phase5_soak_gate.ps1",
     "run_check_phase5_hard_thresholds.ps1",
     "run_check_phase5_closure.ps1"
+  ],
+  "promotion_criteria": {
+    "level2": {
+      "matrix_pass_rate": 1.0,
+      "baseline_pass_rate": 1.0,
+      "advanced_pass_rate": 1.0,
+      "timing_core_pass_rate": 1.0
+    },
+    "level3": {
+      "advanced_real_corpus_pass_rate": 1.0,
+      "advanced_dos_recovery_pass_rate": 1.0,
+      "soak_max_flake_rate": 0.05,
+      "soak_default_runs": 12
+    }
+  },
+  "known_limitations": [
+    "Strict/timing/VIC gates may show intermittent process exits in this environment; rerun policy is allowed when strict markers remain stable.",
+    "Copier matrix execution is lock-serialized to avoid shared artifact races; parallel jobs should still use run-scoped output directories.",
+    "Coverage is focused on represented corpus/protection classes and does not claim full unknown-copy-protection parity."
   ]
 }

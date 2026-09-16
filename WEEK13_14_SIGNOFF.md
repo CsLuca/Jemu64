@@ -1911,3 +1911,28 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - `.github/workflows/revision-signoff-matrix.yml`
   - `.github/workflows/revision-tolerance-check.yml`
   - both workflows now feed full report paths to phase5 hard-threshold checker and upload promotion/comparative artifacts.
+
+## Commit 20 - Release Freeze: Promotion Criteria + Final Pin
+
+- Milestone freeze finalized with release pin update:
+  - `PHASE5_RELEASE_PIN.json` -> `release_pin_version=2`
+  - frozen promotion criteria for Level2/Level3 captured in pin and final signoff docs.
+
+- Final docs freeze updates:
+  - `PHASE5_FINAL_SIGNOFF.md` appended with official level feature table,
+  - `README.md` appended with level criteria, runtime controls, and known limitations,
+  - `COPIER_SUPPORT_MATRIX.md` regenerated from latest closure gate output.
+
+- Known limitations explicitly frozen:
+  - strict/timing/VIC intermittent process exits may still appear in this environment (`-1073740791` class),
+  - copier matrix remains lock-serialized for shared-runtime safety,
+  - parity guarantee is bounded to declared matrix/corpus fixtures.
+
+- Full mandatory gate contract for Commit 20 executed and required green:
+  - `run_copier_matrix.ps1`
+  - `run_advanced_real_corpus_gate.ps1`
+  - `run_advanced_dos_recovery_gate.ps1`
+  - `run_phase5_soak_gate.ps1 -Runs 12 -MaxFlakeRate 0.05`
+  - `run_check_phase5_hard_thresholds.ps1`
+  - `run_check_phase5_closure.ps1 -GenerateChecklist`
+  - `run_signoff_week13_14.ps1`

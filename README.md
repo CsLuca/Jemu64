@@ -998,6 +998,29 @@ Release pin manifest:
 
 - `PHASE5_RELEASE_PIN.json` (formal freeze of manifests/gates/docs, behavior-neutral).
 
+## Commit 20: Release Freeze (Physical Stack Milestone)
+
+### Official Promotion Levels
+
+| Level | Required Scope | Fixed Criteria |
+|---|---|---|
+| Level1 | baseline matrix correctness | matrix pass rate `= 1.0` |
+| Level2 | Level1 + parity + timing core | baseline/advanced pass rates `= 1.0`, timing core pass rate `= 1.0` |
+| Level3 | Level2 + corpus + DOS recovery + soak reliability | corpus pass `= 1.0`, DOS recovery pass `= 1.0`, flake rate `<= 0.05` |
+
+### Runtime Controls (Frozen)
+
+- Use run-scoped artifacts for orchestration:
+  - `-OutputDir artifacts\\runs\\<run-id>`
+  - optional `-ReportPrefix <name>` for matrix reports.
+- `run_copier_matrix.ps1` is lock-serialized for shared-runtime safety.
+- Release soak recommendation for milestone freeze: `run_phase5_soak_gate.ps1 -Runs 12 -MaxFlakeRate 0.05`.
+
+### Known Limitations
+
+- Strict/timing/VIC runs may intermittently exit in this environment (`-1073740791` class failure); strict-marker rerun policy remains valid.
+- Full custom copy-protection parity beyond declared matrix/corpus fixtures is not claimed by this milestone.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

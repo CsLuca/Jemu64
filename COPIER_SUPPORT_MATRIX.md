@@ -6,7 +6,7 @@ Auto-generated from runtime report + matrix contract.
 
 - Matrix source: `copier_matrix.json`
 - Runtime report: `copier_matrix_report.json`
-- Summary: `PASS 32/32`
+- Summary: `PASS 36/36`
 
 ## Scenario Status
 
@@ -44,6 +44,10 @@ Auto-generated from runtime report + matrix contract.
 | advanced_g64_longtail_extreme_corpus_fixture | advanced | file_copy | g64->g64 | PASS |
 | advanced_nib_longtail_extreme_corpus_fixture | advanced | file_copy | nib->nib | PASS |
 | advanced_raw_flux_extreme_corpus_fixture | advanced | file_copy | raw->raw | PASS |
+| advanced_g64_sync_relock_window_longtail_target | advanced | file_copy | g64->g64 | PASS |
+| advanced_nib_weak_jitter_gap_longtail_target | advanced | file_copy | nib->nib | PASS |
+| advanced_multidrive_independence_8_9_10_11 | advanced | file_copy | d64->d64 | PASS |
+| advanced_multidrive_timing_divergence_8_9_10_11 | advanced | file_copy | g64->nib | PASS |
 
 ## Quasi-Closure Criteria (Phase 5)
 

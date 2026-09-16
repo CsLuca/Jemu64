@@ -44,6 +44,7 @@ jobs:
       - name: Run signoff matrix (${{ matrix.rev.name }})
         shell: powershell
         run: |
+          $outDir = "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
           .\run_signoff_week13_14.ps1 `
             -Manifest "${{ matrix.rev.manifest_strict }}" `
             -FastManifest "${{ matrix.rev.manifest_fast }}" `
@@ -51,27 +52,28 @@ jobs:
             -Manifest8500 "${{ matrix.rev.manifest_strict }}" `
             -FastManifest6510 "${{ matrix.rev.manifest_fast }}" `
             -FastManifest8500 "${{ matrix.rev.manifest_fast }}" `
-            -RevisionSlot "${{ matrix.rev.slot }}"
+            -RevisionSlot "${{ matrix.rev.slot }}" `
+            -OutputDir $outDir
 
       - name: Run advanced real corpus gate (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_advanced_real_corpus_gate.ps1 -Manifest advanced_real_corpus_manifest.json -Mode pure -DefaultMaxHalfCycles 700000 -ReportCsv advanced_real_corpus_runtime.csv
+        run: .\run_advanced_real_corpus_gate.ps1 -Manifest advanced_real_corpus_manifest.json -Mode pure -DefaultMaxHalfCycles 700000 -ReportCsv advanced_real_corpus_runtime.csv -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
 
       - name: Run advanced DOS recovery gate (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_advanced_dos_recovery_gate.ps1 -Manifest advanced_dos_recovery_manifest.json -Profile fast -ExternalManifest external_tests_manifest.json -ReportCsv advanced_dos_recovery_runtime.csv
+        run: .\run_advanced_dos_recovery_gate.ps1 -Manifest advanced_dos_recovery_manifest.json -Profile fast -ExternalManifest external_tests_manifest.json -ReportCsv advanced_dos_recovery_runtime.csv -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
 
       - name: Run phase5 soak gate (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_phase5_soak_gate.ps1 -Manifest external_tests_manifest.json -Runs 6 -MaxFlakeRate 0.05 -ReportCsv phase5_soak_runtime.csv
+        run: .\run_phase5_soak_gate.ps1 -Manifest external_tests_manifest.json -Runs 12 -MaxFlakeRate 0.05 -ReportCsv phase5_soak_runtime.csv -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
 
       - name: Check phase5 hard thresholds (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report copier_matrix_report.json -AdvancedRealCorpusReport advanced_real_corpus_runtime.csv -AdvancedDosRecoveryReport advanced_dos_recovery_runtime.csv -SoakReport phase5_soak_runtime.csv -RevisionMetrics reference/edge/revision_tolerance_metrics.json -PromotionReportJson reference/edge/level1_vs_level2_vs_level3.json -PromotionReportCsv reference/edge/level1_vs_level2_vs_level3.csv
+        run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/copier_matrix_signoff_report.json" -AdvancedRealCorpusReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_real_corpus_runtime.csv" -AdvancedDosRecoveryReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_dos_recovery_runtime.csv" -SoakReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/phase5_soak_runtime.csv" -RevisionMetrics reference/edge/revision_tolerance_metrics.json -PromotionReportJson reference/edge/level1_vs_level2_vs_level3.json -PromotionReportCsv reference/edge/level1_vs_level2_vs_level3.csv
 
       - name: Check phase5 closure gate (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_check_phase5_closure.ps1 -GenerateChecklist
+        run: .\run_check_phase5_closure.ps1 -ReportPath "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/copier_matrix_signoff_report.json" -ChecklistPath "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/COPIER_SUPPORT_MATRIX.md" -GenerateChecklist
 
       - name: Upload signoff artifacts (${{ matrix.rev.name }})
         if: always()
@@ -79,13 +81,13 @@ jobs:
         with:
           name: revision-signoff-${{ matrix.rev.name }}
           path: |
-            copier_matrix_report.json
-            copier_matrix_report.csv
-            advanced_real_corpus_runtime.csv
-            advanced_dos_recovery_runtime.csv
-            phase5_soak_runtime.csv
-            COPIER_SUPPORT_MATRIX.md
-            real_golden_gate_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/copier_matrix_signoff_report.json
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/copier_matrix_signoff_report.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_real_corpus_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_dos_recovery_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/phase5_soak_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/COPIER_SUPPORT_MATRIX.md
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json
             reference/edge/level_promotion_signoff.json
             reference/edge/level_promotion_signoff.csv
