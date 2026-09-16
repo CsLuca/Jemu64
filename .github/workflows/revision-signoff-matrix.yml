@@ -67,7 +67,7 @@ jobs:
 
       - name: Check phase5 hard thresholds (${{ matrix.rev.name }})
         shell: powershell
-        run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report copier_matrix_report.json
+        run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report copier_matrix_report.json -AdvancedRealCorpusReport advanced_real_corpus_runtime.csv -AdvancedDosRecoveryReport advanced_dos_recovery_runtime.csv -SoakReport phase5_soak_runtime.csv -RevisionMetrics reference/edge/revision_tolerance_metrics.json -PromotionReportJson reference/edge/level1_vs_level2_vs_level3.json -PromotionReportCsv reference/edge/level1_vs_level2_vs_level3.csv
 
       - name: Check phase5 closure gate (${{ matrix.rev.name }})
         shell: powershell
@@ -87,3 +87,7 @@ jobs:
             COPIER_SUPPORT_MATRIX.md
             real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json
+            reference/edge/level_promotion_signoff.json
+            reference/edge/level_promotion_signoff.csv
+            reference/edge/level1_vs_level2_vs_level3.json
+            reference/edge/level1_vs_level2_vs_level3.csv

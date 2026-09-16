@@ -1,0 +1,27 @@
+{
+    "promotion":  {
+                      "generated_at_utc":  "2026-09-16T00:20:07.8735122Z",
+                      "levels":  {
+                                     "level1":  {
+                                                    "pass":  true,
+                                                    "pass_rate":  1
+                                                },
+                                     "level2":  {
+                                                    "pass":  true,
+                                                    "parity_matrix_pass_rate":  1,
+                                                    "baseline_pass_rate":  1,
+                                                    "advanced_pass_rate":  1,
+                                                    "timing_core_pass_rate":  1
+                                                },
+                                     "level3":  {
+                                                    "pass":  true,
+                                                    "corpus_pass_rate":  1,
+                                                    "dos_recovery_pass_rate":  1,
+                                                    "soak_pass_rate":  1,
+                                                    "flake_rate":  0,
+                                                    "flake_budget":  0.05
+                                                }
+                                 },
+                      "promoted_level":  "level3"
+                  }
+}

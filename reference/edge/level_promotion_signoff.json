@@ -1,0 +1,19 @@
+{
+    "promotion":  {
+                      "generated_at_utc":  "2026-09-16T00:20:07.8797306Z",
+                      "levels":  {
+                                     "level1":  {
+                                                    "pass":  true,
+                                                    "matrix_pass_rate":  1
+                                                },
+                                     "level2":  {
+                                                    "pass":  true,
+                                                    "parity_matrix_pass_rate":  1,
+                                                    "baseline_matrix_pass_rate":  1,
+                                                    "advanced_matrix_pass_rate":  1,
+                                                    "timing_core_pass_rate":  1
+                                                }
+                                 },
+                      "promoted_level":  "level2"
+                  }
+}

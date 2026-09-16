@@ -1,0 +1,3 @@
+"level","pass","matrix_pass_rate","timing_core_pass_rate","notes"
+"level1","1","1","","mandatory baseline"
+"level2","1","1","1","parity matrix + timing core"

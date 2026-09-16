@@ -1394,6 +1394,33 @@ Release pin manifest:
   - less duplicated logic, easier maintenance,
   - same lock-race hardening guarantees across runners.
 
+## Commit 16: CI Multi-Level Promotion Gates + Comparative Artifacts
+
+- Added formal promotion policy in CI/signoff scripts for drive profiles:
+  - Level1 (`level1-functional`): mandatory green baseline gate.
+  - Level2 (`level2-cycle`): Level1 + parity matrix + timing-core checks.
+  - Level3 (`level3-physical`): Level2 + advanced corpus + hard DOS recovery + soak + flake budget.
+
+- Updated signoff script:
+  - `run_signoff_week13_14.ps1`
+  - now emits promotion snapshot artifacts:
+    - `reference/edge/level_promotion_signoff.json`
+    - `reference/edge/level_promotion_signoff.csv`
+  - includes resolved promoted level in signoff summary output.
+
+- Updated phase5 hard-threshold checker:
+  - `run_check_phase5_hard_thresholds.ps1`
+  - now enforces cross-level promotion requirements and writes comparative artifacts:
+    - `reference/edge/level1_vs_level2_vs_level3.json`
+    - `reference/edge/level1_vs_level2_vs_level3.csv`
+  - comparative report fields include pass-rate/timing-core/flake metrics.
+
+- Updated CI workflows:
+  - `.github/workflows/revision-signoff-matrix.yml`
+  - `.github/workflows/revision-tolerance-check.yml`
+  - both workflows pass required report paths into phase5 hard-threshold checker,
+  - both workflows upload level-promotion/comparative artifacts.
+
 ## Quasi-Closure Checklist (Phase 5)
 
 ### New Document

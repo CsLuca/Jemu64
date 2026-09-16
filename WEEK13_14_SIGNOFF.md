@@ -1885,3 +1885,29 @@ The project is considered "Subcycle Exact Completo" when all of the following ho
   - executes `tools/check_revision_tolerance.py` and enforces min/max bands for software-level revision metrics.
 - Added manual CI workflow: `.github/workflows/revision-tolerance-check.yml`
   - runs full signoff, generates metrics, then enforces tolerance policy gate.
+
+## Commit 16 - CI Promotion Rules per Level + Comparative Reports
+
+- Formalized promotion policy for runtime profiles:
+  - Level1: always mandatory green (baseline matrix pass).
+  - Level2: Level1 + parity matrix + timing-core checks.
+  - Level3: Level2 + advanced real corpus + hard DOS recovery + soak + flake budget (`<= 0.05`).
+
+- Updated `run_signoff_week13_14.ps1`:
+  - emits signoff promotion snapshot artifacts:
+    - `reference/edge/level_promotion_signoff.json`
+    - `reference/edge/level_promotion_signoff.csv`
+  - records promoted level in signoff output and exports `level1_promoted`/`level2_promoted` in revision metrics.
+
+- Updated `run_check_phase5_hard_thresholds.ps1`:
+  - consumes matrix/corpus/dos/soak/tolerance metrics for level policy evaluation,
+  - enforces Level1->Level2->Level3 promotion rules,
+  - emits comparative artifacts:
+    - `reference/edge/level1_vs_level2_vs_level3.json`
+    - `reference/edge/level1_vs_level2_vs_level3.csv`
+  - includes comparative metrics (`pass rate`, `timing core`, `flake`).
+
+- Updated CI workflows:
+  - `.github/workflows/revision-signoff-matrix.yml`
+  - `.github/workflows/revision-tolerance-check.yml`
+  - both workflows now feed full report paths to phase5 hard-threshold checker and upload promotion/comparative artifacts.

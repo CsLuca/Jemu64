@@ -16,7 +16,9 @@ param(
     [ValidateSet("fast", "strict")]
     [string]$CopierMatrixProfile = "fast",
     [string]$CopierMatrixReportJson = "copier_matrix_report.json",
-    [string]$CopierMatrixReportCsv = "copier_matrix_report.csv"
+    [string]$CopierMatrixReportCsv = "copier_matrix_report.csv",
+    [string]$PromotionSnapshotJson = "reference\\edge\\level_promotion_signoff.json",
+    [string]$PromotionSnapshotCsv = "reference\\edge\\level_promotion_signoff.csv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -240,6 +242,92 @@ function Resolve-PathOrThrow {
         throw "Missing ${Label}: $path"
     }
     return $path
+}
+
+function Get-CopierMatrixStats {
+    param([string]$ReportPath)
+
+    $obj = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
+    $rows = @($obj.scenarios)
+    if ($rows.Count -lt 1) {
+        throw "Invalid copier matrix report: $ReportPath"
+    }
+    $passRows = @($rows | Where-Object { [int]$_.overall_pass -eq 1 })
+    $baselineRows = @($rows | Where-Object { [string]$_.level -eq "baseline" })
+    $advancedRows = @($rows | Where-Object { [string]$_.level -eq "advanced" })
+    $baselinePass = @($baselineRows | Where-Object { [int]$_.overall_pass -eq 1 })
+    $advancedPass = @($advancedRows | Where-Object { [int]$_.overall_pass -eq 1 })
+
+    return [ordered]@{
+        total = $rows.Count
+        pass = $passRows.Count
+        pass_rate = [double]$passRows.Count / [double]$rows.Count
+        baseline_total = $baselineRows.Count
+        baseline_pass = $baselinePass.Count
+        baseline_pass_rate = $(if ($baselineRows.Count -gt 0) { [double]$baselinePass.Count / [double]$baselineRows.Count } else { 0.0 })
+        advanced_total = $advancedRows.Count
+        advanced_pass = $advancedPass.Count
+        advanced_pass_rate = $(if ($advancedRows.Count -gt 0) { [double]$advancedPass.Count / [double]$advancedRows.Count } else { 0.0 })
+    }
+}
+
+function Get-TimingCoreStats {
+    param([string]$StrictText)
+
+    $checks = @(
+        @{ id = "week45_time"; pass = ($StrictText -match "\[WEEK45 TIME\] PASS") },
+        @{ id = "week46_iec"; pass = ($StrictText -match "\[WEEK46-IEC\]\[HARDREF\] PASS") },
+        @{ id = "week47_host"; pass = ($StrictText -match "\[WEEK47-HOST\]\[HARDREF\] PASS") },
+        @{ id = "week48_core"; pass = ($StrictText -match "\[WEEK48-CORE\]\[HARDREF\] PASS") },
+        @{ id = "week49_cpu"; pass = ($StrictText -match "\[WEEK49-CPU\]\[HARDREF\] PASS") },
+        @{ id = "week50_opcode"; pass = ($StrictText -match "\[WEEK50-CPU\]\[HARDREF\] PASS") }
+    )
+    $passCount = @($checks | Where-Object { $_.pass }).Count
+    return [ordered]@{
+        pass = $passCount
+        total = $checks.Count
+        pass_rate = [double]$passCount / [double]$checks.Count
+    }
+}
+
+function Write-SignoffPromotionSnapshot {
+    param(
+        [hashtable]$CopierStats,
+        [hashtable]$TimingStats,
+        [string]$JsonPath,
+        [string]$CsvPath
+    )
+
+    $level1Pass = $CopierStats.pass_rate -ge 1.0
+    $level2Pass = $level1Pass -and ($CopierStats.baseline_pass_rate -ge 1.0) -and ($CopierStats.advanced_pass_rate -ge 1.0) -and ($TimingStats.pass_rate -ge 1.0)
+
+    $obj = [ordered]@{
+        generated_at_utc = [DateTime]::UtcNow.ToString("o")
+        levels = [ordered]@{
+            level1 = [ordered]@{
+                pass = $level1Pass
+                matrix_pass_rate = $CopierStats.pass_rate
+            }
+            level2 = [ordered]@{
+                pass = $level2Pass
+                parity_matrix_pass_rate = $CopierStats.pass_rate
+                baseline_matrix_pass_rate = $CopierStats.baseline_pass_rate
+                advanced_matrix_pass_rate = $CopierStats.advanced_pass_rate
+                timing_core_pass_rate = $TimingStats.pass_rate
+            }
+        }
+        promoted_level = $(if ($level2Pass) { "level2" } elseif ($level1Pass) { "level1" } else { "none" })
+    }
+
+    (@{ promotion = $obj } | ConvertTo-Json -Depth 6) | Set-Content -LiteralPath $JsonPath -Encoding ASCII
+
+    $csvRows = @(
+        [pscustomobject]@{ level = "level1"; pass = [int]$level1Pass; matrix_pass_rate = $CopierStats.pass_rate; timing_core_pass_rate = ""; notes = "mandatory baseline" },
+        [pscustomobject]@{ level = "level2"; pass = [int]$level2Pass; matrix_pass_rate = $CopierStats.pass_rate; timing_core_pass_rate = $TimingStats.pass_rate; notes = "parity matrix + timing core" }
+    )
+    ($csvRows | ConvertTo-Csv -NoTypeInformation) | Set-Content -LiteralPath $CsvPath -Encoding ASCII
+
+    return $obj
 }
 
 function Test-RealGoldenManifest {
@@ -734,6 +822,21 @@ try {
         }
     }
 
+    $copierReportResolved = Resolve-PathOrThrow -PathInput $CopierMatrixReportJson -Label 'copier matrix json report'
+    $copierStats = Get-CopierMatrixStats -ReportPath $copierReportResolved
+    $strictTextForPromotion = ""
+    if ($null -ne $script:__runStrict -and $script:__runStrict.Count -ge 2) {
+        $strictTextForPromotion = ($script:__runStrict[1] | Out-String)
+    }
+    $timingStats = Get-TimingCoreStats -StrictText $strictTextForPromotion
+    $promotionJsonPath = Join-Path -Path $repo -ChildPath $PromotionSnapshotJson
+    $promotionCsvPath = Join-Path -Path $repo -ChildPath $PromotionSnapshotCsv
+    $promotionDir = Split-Path -Path $promotionJsonPath -Parent
+    if (-not (Test-Path -LiteralPath $promotionDir)) {
+        New-Item -ItemType Directory -Path $promotionDir | Out-Null
+    }
+    $promotion = Write-SignoffPromotionSnapshot -CopierStats $copierStats -TimingStats $timingStats -JsonPath $promotionJsonPath -CsvPath $promotionCsvPath
+
     "[SIGNOFF] ----------------------------------------"
     "[SIGNOFF] Week13-14 status: PASS"
     "[SIGNOFF] strict/full/fast: green"
@@ -790,8 +893,11 @@ try {
     "[SIGNOFF] fast 6510 manifest: $(Resolve-ManifestPath -ManifestInput $FastManifest6510 -FallbackManifestInput $Manifest)"
     "[SIGNOFF] fast 8500 manifest: $(Resolve-ManifestPath -ManifestInput $FastManifest8500 -FallbackManifestInput $Manifest)"
     "[SIGNOFF] copier matrix manifest: $copierMatrixManifestInput"
-    "[SIGNOFF] copier matrix report json: $(Resolve-PathOrThrow -PathInput $CopierMatrixReportJson -Label 'copier matrix json report')"
+    "[SIGNOFF] copier matrix report json: $copierReportResolved"
     "[SIGNOFF] copier matrix report csv: $(Resolve-PathOrThrow -PathInput $CopierMatrixReportCsv -Label 'copier matrix csv report')"
+    "[SIGNOFF] level promotion (L1/L2) json: $promotionJsonPath"
+    "[SIGNOFF] level promotion (L1/L2) csv: $promotionCsvPath"
+    "[SIGNOFF] promoted level from signoff core: $($promotion.promoted_level)"
     $week18Ref = Join-Path -Path $repo -ChildPath "reference\edge\week18_openbus_revision_trace.csv"
     if (Test-Path -LiteralPath $week18Ref) {
         $rows = @(Get-Content -LiteralPath $week18Ref)
@@ -1702,6 +1808,8 @@ try {
     Update-MetricsFromEdgeReferences -Metrics $metrics -RepoPath $repo
 
     $metricsPath = Join-Path -Path $repo -ChildPath "reference\edge\revision_tolerance_metrics.json"
+    $metrics.level1_promoted = $(if ($promotion.levels.level1.pass) { 1 } else { 0 })
+    $metrics.level2_promoted = $(if ($promotion.levels.level2.pass) { 1 } else { 0 })
     (@{ metrics = $metrics } | ConvertTo-Json -Depth 5) | Set-Content -LiteralPath $metricsPath -Encoding ASCII
     "[SIGNOFF] tolerance metrics: $metricsPath"
     "[SIGNOFF] ----------------------------------------"
