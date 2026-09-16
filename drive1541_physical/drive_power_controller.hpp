@@ -53,6 +53,14 @@ public:
         return coldBoot_;
     }
 
+    bool isTransitioning() const noexcept {
+        return state_ == PowerState::SpinningUp || state_ == PowerState::SpinningDown || state_ == PowerState::Resetting;
+    }
+
+    bool isDriveOutputAllowed() const noexcept {
+        return state_ == PowerState::On;
+    }
+
 private:
     void advanceState() noexcept {
         if (state_ == PowerState::SpinningUp || state_ == PowerState::Resetting) {

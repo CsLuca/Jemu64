@@ -647,15 +647,16 @@ public:
         const bool hostDataBefore = iecDATA;
         powerController.tick(1);
         const bool isPoweredOn = powerController.isOn();
+        const bool allowDriveOutput = powerController.isDriveOutputAllowed();
         signalModel.begin_tick(powerController.state());
-        if (wasPoweredOn && !isPoweredOn) {
+        if (wasPoweredOn && !allowDriveOutput) {
             physicalIecPort.dropPendingDriveEdges();
             physicalIecPort.setDriveOutput({true, true, true});
         }
 
         const uint64_t nowAfterPowerTick = physicalScheduler.now();
         physicalIecPort.queueHostLines(nowAfterPowerTick, {hostAtnBefore, hostClkBefore, hostDataBefore});
-        const std::size_t preAppliedEdges = physicalIecPort.applyReady(nowAfterPowerTick, isPoweredOn);
+        const std::size_t preAppliedEdges = physicalIecPort.applyReady(nowAfterPowerTick, allowDriveOutput);
         signalModel.note_iec_edges(preAppliedEdges);
         {
             const drive1541_physical::IecLines hostIn = physicalIecPort.busInput();
@@ -664,7 +665,7 @@ public:
             iecDATA = hostIn.data;
         }
 
-        if (!isPoweredOn) {
+        if (!allowDriveOutput) {
             iecDrivePullCLK = false;
             iecDrivePullDATA = false;
             const drive1541_physical::DriveSignalState sig = signalModel.state();
@@ -718,7 +719,7 @@ public:
         };
         const uint64_t now = physicalScheduler.now();
         physicalIecPort.queueDriveLines(now, driveOut);
-        const std::size_t postAppliedEdges = physicalIecPort.applyReady(now, true);
+        const std::size_t postAppliedEdges = physicalIecPort.applyReady(now, allowDriveOutput);
         signalModel.note_iec_edges(postAppliedEdges);
 
         signalModel.note_status_line(iecStatusLine.c_str());
@@ -988,7 +989,7 @@ public:
         const uint64_t now = physicalScheduler.now();
         const drive1541_physical::IecLines hostLines{atnHigh, clkHigh, dataHigh};
         physicalIecPort.queueHostLines(now, hostLines);
-        physicalIecPort.applyReady(now, powerController.isOn());
+        physicalIecPort.applyReady(now, powerController.isDriveOutputAllowed());
         const drive1541_physical::IecLines applied = physicalIecPort.busInput();
         iecATN = applied.atn;
         iecCLK = applied.clk;
