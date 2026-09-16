@@ -3,7 +3,8 @@ param(
     [ValidateSet("fast", "strict")]
     [string]$Profile = "fast",
     [string]$ExternalManifest = "external_tests_manifest.json",
-    [string]$ReportCsv = "advanced_dos_recovery_runtime.csv"
+    [string]$ReportCsv = "advanced_dos_recovery_runtime.csv",
+    [string]$OutputDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +25,19 @@ $manifestPath = Resolve-LocalPath -PathInput $Manifest
 $externalPath = Resolve-LocalPath -PathInput $ExternalManifest
 $reportPath = Resolve-LocalPath -PathInput $ReportCsv
 
+$outputDirFull = ""
+$copierReportPrefix = "copier_matrix"
+if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
+    if (-not (Test-Path -LiteralPath $outputDirFull)) {
+        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+    }
+    $copierReportPrefix = "copier_matrix_dos_recovery"
+    if (-not [System.IO.Path]::IsPathRooted($ReportCsv)) {
+        $reportPath = Join-Path -Path $outputDirFull -ChildPath $ReportCsv
+    }
+}
+
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing manifest: $manifestPath" }
 if (-not (Test-Path -LiteralPath $externalPath)) { throw "Missing external manifest: $externalPath" }
 
@@ -38,7 +52,7 @@ try {
     $runOutput = @()
     $ok = Invoke-WithRetry -RetryCount 2 -RetryDelayMs 400 -Action {
         $script:runOutput = @(
-            & "$repo\run_copier_matrix.ps1" -Profile $Profile -Manifest $externalPath 2>&1 | ForEach-Object { "$_" }
+            & "$repo\run_copier_matrix.ps1" -Profile $Profile -Manifest $externalPath -OutputDir $outputDirFull -ReportPrefix $copierReportPrefix 2>&1 | ForEach-Object { "$_" }
         )
         if ($LASTEXITCODE -ne 0) {
             $global:LASTEXITCODE = $LASTEXITCODE
@@ -58,6 +72,9 @@ if ($runExitCode -ne 0) {
 }
 
 $reportJsonPath = Join-Path -Path $repo -ChildPath "copier_matrix_report.json"
+if (-not [string]::IsNullOrWhiteSpace($outputDirFull)) {
+    $reportJsonPath = Join-Path -Path $outputDirFull -ChildPath "$($copierReportPrefix)_report.json"
+}
 if (-not (Test-Path -LiteralPath $reportJsonPath)) {
     throw "Missing copier matrix report: $reportJsonPath"
 }

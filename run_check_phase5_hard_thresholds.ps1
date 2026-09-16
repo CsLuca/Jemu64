@@ -9,7 +9,8 @@ param(
     [string]$PromotionReportJson = "reference\\edge\\level1_vs_level2_vs_level3.json",
     [string]$PromotionReportCsv = "reference\\edge\\level1_vs_level2_vs_level3.csv",
     [string]$SignoffPromotionJson = "reference\\edge\\level_promotion_signoff.json",
-    [string]$SignoffPromotionCsv = "reference\\edge\\level_promotion_signoff.csv"
+    [string]$SignoffPromotionCsv = "reference\\edge\\level_promotion_signoff.csv",
+    [string]$OutputDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +36,26 @@ $promotionJsonPath = Resolve-LocalPath -PathInput $PromotionReportJson
 $promotionCsvPath = Resolve-LocalPath -PathInput $PromotionReportCsv
 $signoffPromotionJsonPath = Resolve-LocalPath -PathInput $SignoffPromotionJson
 $signoffPromotionCsvPath = Resolve-LocalPath -PathInput $SignoffPromotionCsv
+
+if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
+    if (-not (Test-Path -LiteralPath $outputDirFull)) {
+        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($Report)) {
+        $reportPath = Join-Path -Path $outputDirFull -ChildPath $Report
+    }
+    if (-not [System.IO.Path]::IsPathRooted($AdvancedRealCorpusReport)) {
+        $advancedCorpusPath = Join-Path -Path $outputDirFull -ChildPath $AdvancedRealCorpusReport
+    }
+    if (-not [System.IO.Path]::IsPathRooted($AdvancedDosRecoveryReport)) {
+        $advancedDosPath = Join-Path -Path $outputDirFull -ChildPath $AdvancedDosRecoveryReport
+    }
+    if (-not [System.IO.Path]::IsPathRooted($SoakReport)) {
+        $soakPath = Join-Path -Path $outputDirFull -ChildPath $SoakReport
+    }
+}
 
 if (-not (Test-Path -LiteralPath $thresholdPath)) { throw "Missing thresholds file: $thresholdPath" }
 if (-not (Test-Path -LiteralPath $matrixPath)) { throw "Missing matrix file: $matrixPath" }

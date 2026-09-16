@@ -60,8 +60,8 @@ function Build-Profile-Retry {
         [int]$RetryCount = 4
     )
 
-    $sourcePath = Join-Path -Path $RepoPath -ChildPath $SourceFile
-    $outPath = Join-Path -Path $RepoPath -ChildPath $OutFile
+    $sourcePath = if ([System.IO.Path]::IsPathRooted($SourceFile)) { $SourceFile } else { Join-Path -Path $RepoPath -ChildPath $SourceFile }
+    $outPath = if ([System.IO.Path]::IsPathRooted($OutFile)) { $OutFile } else { Join-Path -Path $RepoPath -ChildPath $OutFile }
 
     for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
         Stop-ExeIfRunning -ExeName $OutFile

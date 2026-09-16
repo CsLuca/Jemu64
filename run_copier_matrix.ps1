@@ -4,7 +4,9 @@ param(
     [string]$Profile = "fast",
     [string]$Manifest = "external_tests_manifest.json",
     [string]$ReportJson = "copier_matrix_report.json",
-    [string]$ReportCsv = "copier_matrix_report.csv"
+    [string]$ReportCsv = "copier_matrix_report.csv",
+    [string]$OutputDir = "",
+    [string]$ReportPrefix = "copier_matrix"
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,9 +101,34 @@ function Build-Profile {
 $savedPath = $env:PATH
 $savedManifest = [Environment]::GetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", "Process")
 $savedPureGuard = [Environment]::GetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "Process")
+$copierMutex = $null
+$copierMutexHeld = $false
 
 try {
     $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
+
+    $copierMutex = New-Object System.Threading.Mutex($false, "Global\Jemu64_RunCopierMatrix")
+    $copierMutexHeld = $copierMutex.WaitOne([TimeSpan]::FromMinutes(45))
+    if (-not $copierMutexHeld) {
+        throw "Timed out waiting for copier matrix global lock"
+    }
+
+    $outputDirFull = ""
+    if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+        $outputDirFull = Resolve-PathLocal -PathInput $OutputDir
+        if (-not (Test-Path -LiteralPath $outputDirFull)) {
+            New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+        }
+    }
+
+    if ($ReportPrefix -ne "copier_matrix") {
+        if ($ReportJson -eq "copier_matrix_report.json") {
+            $ReportJson = "${ReportPrefix}_report.json"
+        }
+        if ($ReportCsv -eq "copier_matrix_report.csv") {
+            $ReportCsv = "${ReportPrefix}_report.csv"
+        }
+    }
 
     $matrixFull = Resolve-PathLocal -PathInput $MatrixPath
     $manifestFull = Resolve-PathLocal -PathInput $Manifest
@@ -124,6 +151,10 @@ try {
         $macro = "RUN_PROFILE_STRICT"
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($outputDirFull)) {
+        $exe = Join-Path -Path $outputDirFull -ChildPath $exe
+    }
+
     Build-Profile -Macro $macro -OutFile $exe
 
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $manifestFull, "Process")
@@ -132,7 +163,7 @@ try {
     $savedEapRun = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $run = Invoke-BinaryWithLockRetry -ExePath "$repo\$exe" -RetryCount 3
+        $run = Invoke-BinaryWithLockRetry -ExePath $exe -RetryCount 3
         $runOutput = @($run[0])
         $runExitCode = [int]$run[1]
     }
@@ -232,6 +263,23 @@ try {
 
     $reportJsonPath = Resolve-PathLocal -PathInput $ReportJson
     $reportCsvPath = Resolve-PathLocal -PathInput $ReportCsv
+    if (-not [string]::IsNullOrWhiteSpace($outputDirFull)) {
+        if (-not [System.IO.Path]::IsPathRooted($ReportJson)) {
+            $reportJsonPath = Join-Path -Path $outputDirFull -ChildPath $ReportJson
+        }
+        if (-not [System.IO.Path]::IsPathRooted($ReportCsv)) {
+            $reportCsvPath = Join-Path -Path $outputDirFull -ChildPath $ReportCsv
+        }
+    }
+
+    $reportJsonDir = Split-Path -Path $reportJsonPath -Parent
+    if (-not [string]::IsNullOrWhiteSpace($reportJsonDir) -and -not (Test-Path -LiteralPath $reportJsonDir)) {
+        New-Item -ItemType Directory -Path $reportJsonDir -Force | Out-Null
+    }
+    $reportCsvDir = Split-Path -Path $reportCsvPath -Parent
+    if (-not [string]::IsNullOrWhiteSpace($reportCsvDir) -and -not (Test-Path -LiteralPath $reportCsvDir)) {
+        New-Item -ItemType Directory -Path $reportCsvDir -Force | Out-Null
+    }
     ($reportObj | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $reportJsonPath -Encoding UTF8
     $rows | Export-Csv -LiteralPath $reportCsvPath -NoTypeInformation -Encoding UTF8
 
@@ -245,6 +293,17 @@ try {
     exit 0
 }
 finally {
+    if ($copierMutexHeld -and $null -ne $copierMutex) {
+        try {
+            $copierMutex.ReleaseMutex() | Out-Null
+        }
+        catch {
+            # Best-effort release.
+        }
+    }
+    if ($null -ne $copierMutex) {
+        $copierMutex.Dispose()
+    }
     [Environment]::SetEnvironmentVariable("EXTERNAL_TEST_MANIFEST", $savedManifest, "Process")
     [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", $savedPureGuard, "Process")
     $env:PATH = $savedPath

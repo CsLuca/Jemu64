@@ -17,6 +17,7 @@ param(
     [string]$CopierMatrixProfile = "fast",
     [string]$CopierMatrixReportJson = "copier_matrix_report.json",
     [string]$CopierMatrixReportCsv = "copier_matrix_report.csv",
+    [string]$OutputDir = "",
     [string]$PromotionSnapshotJson = "reference\\edge\\level_promotion_signoff.json",
     [string]$PromotionSnapshotCsv = "reference\\edge\\level_promotion_signoff.csv"
 )
@@ -691,6 +692,17 @@ $savedPath = $env:PATH
 try {
     $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
 
+    $outputDirFull = ""
+    if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+        $outputDirFull = $OutputDir
+        if (-not [System.IO.Path]::IsPathRooted($outputDirFull)) {
+            $outputDirFull = Join-Path -Path $repo -ChildPath $outputDirFull
+        }
+        if (-not (Test-Path -LiteralPath $outputDirFull)) {
+            New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+        }
+    }
+
     $realGoldenManifestPath = Resolve-PathOrThrow -PathInput $RealGoldenManifest -Label "real golden manifest"
     $realGoldenTitles = Test-RealGoldenManifest -ManifestPath $realGoldenManifestPath
 
@@ -741,7 +753,7 @@ try {
 
     $copierMatrixManifestInput = Resolve-ManifestPath -ManifestInput $CopierMatrixManifest -FallbackManifestInput $Manifest
     $results += Invoke-Step -Name "run-copier-matrix" -Action {
-        & "$repo\run_copier_matrix.ps1" -MatrixPath $CopierMatrixPath -Profile $CopierMatrixProfile -Manifest $copierMatrixManifestInput -ReportJson $CopierMatrixReportJson -ReportCsv $CopierMatrixReportCsv
+        & "$repo\run_copier_matrix.ps1" -MatrixPath $CopierMatrixPath -Profile $CopierMatrixProfile -Manifest $copierMatrixManifestInput -ReportJson $CopierMatrixReportJson -ReportCsv $CopierMatrixReportCsv -OutputDir $outputDirFull -ReportPrefix "copier_matrix_signoff"
     } -Assert {
         param($o, $e)
         if ($e -ne 0) { return $false }
@@ -796,7 +808,7 @@ try {
     }
 
     $results += Invoke-Step -Name "run-real-golden-gate" -Action {
-        & "$repo\run_real_golden_gate.ps1" -Manifest $realGoldenManifestPath -Mode pure -DefaultMaxHalfCycles $KernelMaxHalfCycles -ReportCsv "real_golden_gate_runtime.csv"
+        & "$repo\run_real_golden_gate.ps1" -Manifest $realGoldenManifestPath -Mode pure -DefaultMaxHalfCycles $KernelMaxHalfCycles -ReportCsv "real_golden_gate_runtime.csv" -OutputDir $outputDirFull
     } -Assert {
         param($o, $e)
         if ($e -ne 0) { return $false }
@@ -822,7 +834,18 @@ try {
         }
     }
 
-    $copierReportResolved = Resolve-PathOrThrow -PathInput $CopierMatrixReportJson -Label 'copier matrix json report'
+    $copierReportInput = $CopierMatrixReportJson
+    $copierCsvInput = $CopierMatrixReportCsv
+    if (-not [string]::IsNullOrWhiteSpace($outputDirFull)) {
+        if (-not [System.IO.Path]::IsPathRooted($copierReportInput)) {
+            $copierReportInput = Join-Path -Path $outputDirFull -ChildPath "copier_matrix_signoff_report.json"
+        }
+        if (-not [System.IO.Path]::IsPathRooted($copierCsvInput)) {
+            $copierCsvInput = Join-Path -Path $outputDirFull -ChildPath "copier_matrix_signoff_report.csv"
+        }
+    }
+
+    $copierReportResolved = Resolve-PathOrThrow -PathInput $copierReportInput -Label 'copier matrix json report'
     $copierStats = Get-CopierMatrixStats -ReportPath $copierReportResolved
     $strictTextForPromotion = ""
     if ($null -ne $script:__runStrict -and $script:__runStrict.Count -ge 2) {
@@ -894,7 +917,7 @@ try {
     "[SIGNOFF] fast 8500 manifest: $(Resolve-ManifestPath -ManifestInput $FastManifest8500 -FallbackManifestInput $Manifest)"
     "[SIGNOFF] copier matrix manifest: $copierMatrixManifestInput"
     "[SIGNOFF] copier matrix report json: $copierReportResolved"
-    "[SIGNOFF] copier matrix report csv: $(Resolve-PathOrThrow -PathInput $CopierMatrixReportCsv -Label 'copier matrix csv report')"
+    "[SIGNOFF] copier matrix report csv: $(Resolve-PathOrThrow -PathInput $copierCsvInput -Label 'copier matrix csv report')"
     "[SIGNOFF] level promotion (L1/L2) json: $promotionJsonPath"
     "[SIGNOFF] level promotion (L1/L2) csv: $promotionCsvPath"
     "[SIGNOFF] promoted level from signoff core: $($promotion.promoted_level)"

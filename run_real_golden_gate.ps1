@@ -3,7 +3,8 @@ param(
     [ValidateSet('pure', 'compat')]
     [string]$Mode = 'pure',
     [int]$DefaultMaxHalfCycles = 700000,
-    [string]$ReportCsv = "real_golden_gate_runtime.csv"
+    [string]$ReportCsv = "real_golden_gate_runtime.csv",
+    [string]$OutputDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -213,6 +214,15 @@ foreach ($title in $manifestObj.titles) {
 }
 
 $reportPath = Resolve-RepoPath -InputPath $ReportCsv
+if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+    $outputDirFull = Resolve-RepoPath -InputPath $OutputDir
+    if (-not (Test-Path -LiteralPath $outputDirFull)) {
+        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+    }
+    if (-not [System.IO.Path]::IsPathRooted($ReportCsv)) {
+        $reportPath = Join-Path -Path $outputDirFull -ChildPath $ReportCsv
+    }
+}
 $results | Export-Csv -LiteralPath $reportPath -NoTypeInformation -Encoding ASCII
 
 $passCount = @($results | Where-Object { $_.overall_pass }).Count

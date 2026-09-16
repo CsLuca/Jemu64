@@ -2,6 +2,7 @@ param(
     [string]$MatrixPath = "copier_matrix.json",
     [string]$ReportPath = "copier_matrix_report.json",
     [string]$ChecklistPath = "COPIER_SUPPORT_MATRIX.md",
+    [string]$OutputDir = "",
     [switch]$GenerateChecklist
 )
 
@@ -20,6 +21,19 @@ function Resolve-LocalPath {
 $matrixFull = Resolve-LocalPath -PathInput $MatrixPath
 $reportFull = Resolve-LocalPath -PathInput $ReportPath
 $checklistFull = Resolve-LocalPath -PathInput $ChecklistPath
+
+if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
+    if (-not (Test-Path -LiteralPath $outputDirFull)) {
+        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+    }
+    if (-not [System.IO.Path]::IsPathRooted($ReportPath)) {
+        $reportFull = Join-Path -Path $outputDirFull -ChildPath $ReportPath
+    }
+    if (-not [System.IO.Path]::IsPathRooted($ChecklistPath)) {
+        $checklistFull = Join-Path -Path $outputDirFull -ChildPath $ChecklistPath
+    }
+}
 
 if ($GenerateChecklist) {
     & "$repo\run_generate_copier_support_matrix.ps1" -MatrixPath $matrixFull -ReportPath $reportFull -OutputPath $checklistFull

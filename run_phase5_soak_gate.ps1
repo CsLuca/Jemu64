@@ -2,7 +2,8 @@ param(
     [string]$Manifest = "external_tests_manifest.json",
     [int]$Runs = 6,
     [double]$MaxFlakeRate = 0.05,
-    [string]$ReportCsv = "phase5_soak_runtime.csv"
+    [string]$ReportCsv = "phase5_soak_runtime.csv",
+    [string]$OutputDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +31,17 @@ if (-not (Test-Path -LiteralPath $manifestFull)) {
 
 $reportFull = Resolve-LocalPath -PathInput $ReportCsv
 
+$outputDirFull = ""
+if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
+    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
+    if (-not (Test-Path -LiteralPath $outputDirFull)) {
+        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
+    }
+    if (-not [System.IO.Path]::IsPathRooted($ReportCsv)) {
+        $reportFull = Join-Path -Path $outputDirFull -ChildPath $ReportCsv
+    }
+}
+
 $rows = @()
 $passRuns = 0
 for ($i = 1; $i -le $Runs; ++$i) {
@@ -38,7 +50,8 @@ for ($i = 1; $i -le $Runs; ++$i) {
     try {
         $output = @()
         $okRetry = Invoke-WithRetry -RetryCount 2 -RetryDelayMs 400 -Action {
-            $script:output = @(& "$repo\run_copier_matrix.ps1" -Profile fast -Manifest $manifestFull 2>&1 | ForEach-Object { "$_" })
+            $prefix = "copier_matrix_soak_run$($i)"
+            $script:output = @(& "$repo\run_copier_matrix.ps1" -Profile fast -Manifest $manifestFull -OutputDir $outputDirFull -ReportPrefix $prefix 2>&1 | ForEach-Object { "$_" })
             if ($LASTEXITCODE -ne 0) {
                 $global:LASTEXITCODE = $LASTEXITCODE
             }
