@@ -20801,11 +20801,345 @@ static void runMainExecutionLoop(Bus &bus, CPU6510 &cpu, uint64_t &halfCycleCoun
     }
 }
 
+static std::string toUpperAscii(std::string s) {
+    for (char &c : s) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    return s;
+}
+
+static std::string trimAscii(const std::string &s) {
+    size_t b = 0;
+    while (b < s.size() && std::isspace(static_cast<unsigned char>(s[b])) != 0) {
+        ++b;
+    }
+    size_t e = s.size();
+    while (e > b && std::isspace(static_cast<unsigned char>(s[e - 1])) != 0) {
+        --e;
+    }
+    return s.substr(b, e - b);
+}
+
+static std::string stripOptionalQuotes(const std::string &s) {
+    if (s.size() >= 2) {
+        const char first = s.front();
+        const char last = s.back();
+        if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+            return s.substr(1, s.size() - 2);
+        }
+    }
+    return s;
+}
+
+static std::string drivePowerStateText(Drive1541::PowerState st) {
+    switch (st) {
+        case Drive1541::PowerState::Off: return "OFF";
+        case Drive1541::PowerState::SpinningUp: return "SPINNING_UP";
+        case Drive1541::PowerState::On: return "ON";
+        case Drive1541::PowerState::Resetting: return "RESETTING";
+        case Drive1541::PowerState::SpinningDown: return "SPINNING_DOWN";
+    }
+    return "UNKNOWN";
+}
+
+static std::string detectMountedImageFormat(const std::string &path) {
+    std::filesystem::path p(path);
+    std::string ext = p.extension().string();
+    if (!ext.empty() && ext[0] == '.') {
+        ext.erase(ext.begin());
+    }
+    for (char &c : ext) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    if (ext == "d64" || ext == "g64" || ext == "nib" || ext == "raw") {
+        return ext;
+    }
+    return "";
+}
+
+struct EmulatorConsoleState {
+    Bus *bus = nullptr;
+    VICII *vic = nullptr;
+    CIA6526 *cia1 = nullptr;
+    CIA6526 *cia2 = nullptr;
+    SID *sid = nullptr;
+    CPU6510 *cpu = nullptr;
+    std::array<Drive1541, 4> drives;
+    std::array<bool, 4> cableConnected{{true, true, true, true}};
+    bool c64PoweredOn = false;
+    bool lastVicHadBus = false;
+    uint64_t stepCount = 0;
+    IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
+};
+
+static bool initializeEmulatorConsoleDrives(EmulatorConsoleState &st) {
+    for (size_t i = 0; i < st.drives.size(); ++i) {
+        Drive1541 &d = st.drives[i];
+        d.iecDeviceAddress = static_cast<uint8_t>(8 + i);
+        configureDriveRevisionFromEnv(d);
+        configureDrivePhysicalProfileFromEnv(d);
+        if (!d.loadRom("roms/dos1541.rom")) {
+            std::cerr << "[CONSOLE] FAIL: cannot load roms/dos1541.rom for drive " << (8 + i) << std::endl;
+            return false;
+        }
+        d.powerOff();
+        for (int t = 0; t < 6000; ++t) {
+            d.tickIecHalfCycle();
+        }
+    }
+    return true;
+}
+
+static void syncConsoleIecBus(EmulatorConsoleState &st) {
+    const IecC64Signals sig = deriveIecC64Signals(*st.cia2, st.polarity);
+    bool pullClk = false;
+    bool pullData = false;
+    for (size_t i = 0; i < st.drives.size(); ++i) {
+        if (!st.cableConnected[i]) {
+            continue;
+        }
+        pullClk = (pullClk || st.drives[i].getIecDrivePullCLK());
+        pullData = (pullData || st.drives[i].getIecDrivePullDATA());
+    }
+    const IecResolvedLines lines = resolveIecLinesFromPulls(sig.c64PullATN, sig.c64PullCLK, sig.c64PullDATA, pullClk, pullData);
+    for (size_t i = 0; i < st.drives.size(); ++i) {
+        if (st.cableConnected[i]) {
+            st.drives[i].setIecLines(lines.atnHigh, lines.clkHigh, lines.dataHigh);
+        } else {
+            st.drives[i].setIecLines(true, true, true);
+        }
+    }
+    applyIecInputsToCia(*st.cia2, st.polarity, sig, lines);
+}
+
+static void tickConsoleHalfCycle(EmulatorConsoleState &st) {
+    syncConsoleIecBus(st);
+    for (Drive1541 &d : st.drives) {
+        d.tickIecHalfCycle();
+    }
+    syncConsoleIecBus(st);
+    if (st.c64PoweredOn) {
+        tickVideo(*st.bus);
+        tickCpuWithVicContention(*st.bus, *st.cpu, st.lastVicHadBus);
+        tickPeripherals(*st.bus);
+        syncInterruptLines(*st.bus, *st.cpu);
+    }
+    st.stepCount++;
+}
+
+static void printConsoleDriveState(const EmulatorConsoleState &st, int unit) {
+    if (unit < 8 || unit > 11) {
+        std::cout << "ERR: drive unit must be 8..11" << std::endl;
+        return;
+    }
+    const size_t idx = static_cast<size_t>(unit - 8);
+    const Drive1541 &d = st.drives[idx];
+    std::cout << std::dec
+              << "DRIVE " << unit
+              << " cable=" << (st.cableConnected[idx] ? "ON" : "OFF")
+              << " power=" << drivePowerStateText(d.getPowerState())
+              << " mounted=" << (d.mountedImageConfigured ? "YES" : "NO");
+    if (d.mountedImageConfigured) {
+        std::cout << " format=" << d.mountedImageFormat
+                  << " path=\"" << d.mountedImagePath << "\""
+                  << " exists=" << (d.mountedImageExists ? "YES" : "NO");
+    }
+    std::cout << std::endl;
+}
+
+static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2, SID &sid, CPU6510 &cpu) {
+    EmulatorConsoleState st;
+    st.bus = &bus;
+    st.vic = &vic;
+    st.cia1 = &cia1;
+    st.cia2 = &cia2;
+    st.sid = &sid;
+    st.cpu = &cpu;
+
+    if (!initializeEmulatorConsoleDrives(st)) {
+        return 1;
+    }
+
+    std::cout << "[CONSOLE] Emulator control console enabled (feature flag JEMU_EMULATOR_CONSOLE=1)." << std::endl;
+    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
+
+    std::string line;
+    while (true) {
+        std::cout << "jemu> " << std::flush;
+        if (!std::getline(std::cin, line)) {
+            break;
+        }
+        const std::string trimmed = trimAscii(line);
+        if (trimmed.empty()) {
+            continue;
+        }
+
+        std::istringstream iss(trimmed);
+        std::string cmd;
+        iss >> cmd;
+        cmd = toUpperAscii(cmd);
+
+        if (cmd == "HELP") {
+            std::cout << "C64 ON|OFF|RESET|STATE" << std::endl;
+            std::cout << "DRIVE <8|9|10|11> ATTACH <path>" << std::endl;
+            std::cout << "DRIVE <unit> DETACH" << std::endl;
+            std::cout << "DRIVE <unit> CABLE ON|OFF" << std::endl;
+            std::cout << "DRIVE <unit> POWER ON|OFF|RESET" << std::endl;
+            std::cout << "DRIVE <unit> STATE" << std::endl;
+            std::cout << "STEP <n>" << std::endl;
+            std::cout << "STATUS" << std::endl;
+            std::cout << "QUIT" << std::endl;
+            continue;
+        }
+        if (cmd == "QUIT" || cmd == "EXIT") {
+            break;
+        }
+
+        if (cmd == "C64") {
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+            if (op == "ON") {
+                cpu.reset();
+                st.c64PoweredOn = true;
+                std::cout << "OK: C64 ON" << std::endl;
+            } else if (op == "OFF") {
+                st.c64PoweredOn = false;
+                std::cout << "OK: C64 OFF" << std::endl;
+            } else if (op == "RESET") {
+                if (!st.c64PoweredOn) {
+                    std::cout << "ERR: C64 is OFF" << std::endl;
+                } else {
+                    cpu.reset();
+                    std::cout << "OK: C64 RESET" << std::endl;
+                }
+            } else if (op == "STATE") {
+                std::cout << std::dec
+                          << "C64 power=" << (st.c64PoweredOn ? "ON" : "OFF")
+                          << " steps=" << st.stepCount
+                          << " pc=$" << std::hex << std::setw(4) << std::setfill('0') << cpu.getRegisters().PC
+                          << std::dec << std::setfill(' ') << std::endl;
+            } else {
+                std::cout << "ERR: expected C64 ON|OFF|RESET|STATE" << std::endl;
+            }
+            continue;
+        }
+
+        if (cmd == "DRIVE") {
+            int unit = 0;
+            iss >> unit;
+            if (unit < 8 || unit > 11) {
+                std::cout << "ERR: drive unit must be 8..11" << std::endl;
+                continue;
+            }
+            const size_t idx = static_cast<size_t>(unit - 8);
+            Drive1541 &d = st.drives[idx];
+
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+
+            if (op == "ATTACH") {
+                std::string path;
+                std::getline(iss, path);
+                path = trimAscii(path);
+                path = stripOptionalQuotes(path);
+                if (path.empty()) {
+                    std::cout << "ERR: missing path" << std::endl;
+                    continue;
+                }
+                const std::string format = detectMountedImageFormat(path);
+                if (format.empty()) {
+                    std::cout << "ERR: supported extensions are .d64/.g64/.nib/.raw" << std::endl;
+                    continue;
+                }
+                const bool exists = std::filesystem::exists(path);
+                if (!exists) {
+                    std::cout << "ERR: file not found: " << path << std::endl;
+                    continue;
+                }
+                d.configureMountedImage(path, format, true);
+                std::cout << "OK: DRIVE " << unit << " ATTACH format=" << format << std::endl;
+            } else if (op == "DETACH") {
+                d.configureMountedImage("", "", false);
+                std::cout << "OK: DRIVE " << unit << " DETACH" << std::endl;
+            } else if (op == "CABLE") {
+                std::string v;
+                iss >> v;
+                v = toUpperAscii(v);
+                if (v == "ON") {
+                    st.cableConnected[idx] = true;
+                    std::cout << "OK: DRIVE " << unit << " CABLE ON" << std::endl;
+                } else if (v == "OFF") {
+                    st.cableConnected[idx] = false;
+                    std::cout << "OK: DRIVE " << unit << " CABLE OFF" << std::endl;
+                } else {
+                    std::cout << "ERR: expected CABLE ON|OFF" << std::endl;
+                }
+            } else if (op == "POWER") {
+                std::string v;
+                iss >> v;
+                v = toUpperAscii(v);
+                if (v == "ON") {
+                    d.powerOn(true);
+                    std::cout << "OK: DRIVE " << unit << " POWER ON" << std::endl;
+                } else if (v == "OFF") {
+                    d.powerOff();
+                    std::cout << "OK: DRIVE " << unit << " POWER OFF" << std::endl;
+                } else if (v == "RESET") {
+                    d.powerReset();
+                    std::cout << "OK: DRIVE " << unit << " POWER RESET" << std::endl;
+                } else {
+                    std::cout << "ERR: expected POWER ON|OFF|RESET" << std::endl;
+                }
+            } else if (op == "STATE") {
+                printConsoleDriveState(st, unit);
+            } else {
+                std::cout << "ERR: expected DRIVE <unit> ATTACH|DETACH|CABLE|POWER|STATE" << std::endl;
+            }
+            continue;
+        }
+
+        if (cmd == "STEP") {
+            uint64_t n = 0;
+            iss >> n;
+            if (n == 0) {
+                std::cout << "ERR: expected STEP <n>, n >= 1" << std::endl;
+                continue;
+            }
+            for (uint64_t i = 0; i < n; ++i) {
+                tickConsoleHalfCycle(st);
+            }
+            std::cout << std::dec << "OK: STEP " << n << " total_steps=" << st.stepCount << std::endl;
+            continue;
+        }
+
+        if (cmd == "STATUS") {
+            std::cout << std::dec
+                      << "C64 power=" << (st.c64PoweredOn ? "ON" : "OFF")
+                      << " steps=" << st.stepCount
+                      << " pc=$" << std::hex << std::setw(4) << std::setfill('0') << cpu.getRegisters().PC
+                      << std::dec << std::setfill(' ') << std::endl;
+            for (int unit = 8; unit <= 11; ++unit) {
+                printConsoleDriveState(st, unit);
+            }
+            continue;
+        }
+
+        std::cout << "ERR: unknown command. Type HELP." << std::endl;
+    }
+
+    std::cout << "[CONSOLE] exit" << std::endl;
+    return 0;
+}
+
 int main() {
+
+    const bool emulatorConsoleEnabled = (std::getenv("JEMU_EMULATOR_CONSOLE") != nullptr);
 
     std::ofstream quietStdout("NUL");
 #if !CPU_TRACE_VERBOSE
-    if (quietStdout.is_open()) {
+    if (!emulatorConsoleEnabled && quietStdout.is_open()) {
         std::cout.rdbuf(quietStdout.rdbuf());
     }
 #endif
@@ -20832,6 +21166,10 @@ int main() {
     CPU6510 cpu(bus);
     configureChipRevisionsFromEnv(bus, cpu, vic, cia1, cia2);
     ALU alu;
+
+    if (emulatorConsoleEnabled) {
+        return runEmulatorConsole(bus, vic, cia1, cia2, sid, cpu);
+    }
 
     // -------------------------
     // NMI VECTOR (no test code) 
