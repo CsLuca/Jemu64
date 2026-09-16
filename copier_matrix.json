@@ -926,6 +926,60 @@
         "Commit 17 level3 long-tail hardening target",
         "weak-bit deterministic policy + dirty-gap tolerance"
       ]
+    },
+    {
+      "id": "advanced_multidrive_independence_8_9_10_11",
+      "description": "Multi-drive independence stress for unit 8/9/10/11 with separate scheduler and power domains",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 8,
+      "target_unit": 11,
+      "source_format": "d64",
+      "target_format": "d64",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_multidrive_independence_8_9_10_11"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 18 multi-drive stress",
+        "shared-state leak guard across 4 drive instances"
+      ]
+    },
+    {
+      "id": "advanced_multidrive_timing_divergence_8_9_10_11",
+      "description": "Multi-drive timing divergence determinism check with mixed workloads on 8/9/10/11",
+      "level": "advanced",
+      "mode": "file_copy",
+      "source_unit": 9,
+      "target_unit": 10,
+      "source_format": "g64",
+      "target_format": "nib",
+      "gates": {
+        "required_markers": [
+          "[IEC COPY E2E] PASS: advanced_multidrive_timing_divergence_8_9_10_11"
+        ],
+        "require_manifest_match": false,
+        "expected_manifest_columns": [
+          "src_path",
+          "dst_path",
+          "src_checksum",
+          "dst_checksum",
+          "match"
+        ]
+      },
+      "notes": [
+        "Commit 18 multi-drive stress",
+        "timing divergence envelope + run-to-run determinism"
+      ]
     }
   ]
 }
