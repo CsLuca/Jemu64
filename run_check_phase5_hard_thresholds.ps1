@@ -16,6 +16,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
+$artifactsHelpersPath = Join-Path -Path $repo -ChildPath "tools\artifacts.ps1"
+. $artifactsHelpersPath
 
 function Resolve-LocalPath {
     param([string]$PathInput)
@@ -37,11 +39,9 @@ $promotionCsvPath = Resolve-LocalPath -PathInput $PromotionReportCsv
 $signoffPromotionJsonPath = Resolve-LocalPath -PathInput $SignoffPromotionJson
 $signoffPromotionCsvPath = Resolve-LocalPath -PathInput $SignoffPromotionCsv
 
-if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
-    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
-    if (-not (Test-Path -LiteralPath $outputDirFull)) {
-        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
-    }
+$runCtx = New-RunContext -RepoPath $repo -OutputDir $OutputDir
+$outputDirFull = [string]$runCtx.OutputDir
+if ($runCtx.Scoped) {
 
     if (-not [System.IO.Path]::IsPathRooted($Report)) {
         $reportPath = Join-Path -Path $outputDirFull -ChildPath $Report

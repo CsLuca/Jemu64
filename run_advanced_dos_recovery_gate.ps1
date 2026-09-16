@@ -11,7 +11,9 @@ $ErrorActionPreference = "Stop"
 
 $repo = $PSScriptRoot
 $lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+$artifactsHelpersPath = Join-Path -Path $repo -ChildPath "tools\artifacts.ps1"
 . $lockHelpersPath
+. $artifactsHelpersPath
 
 function Resolve-LocalPath {
     param([string]$PathInput)
@@ -27,11 +29,9 @@ $reportPath = Resolve-LocalPath -PathInput $ReportCsv
 
 $outputDirFull = ""
 $copierReportPrefix = "copier_matrix"
-if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
-    $outputDirFull = Resolve-LocalPath -PathInput $OutputDir
-    if (-not (Test-Path -LiteralPath $outputDirFull)) {
-        New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
-    }
+$runCtx = New-RunContext -RepoPath $repo -OutputDir $OutputDir
+$outputDirFull = [string]$runCtx.OutputDir
+if ($runCtx.Scoped) {
     $copierReportPrefix = "copier_matrix_dos_recovery"
     if (-not [System.IO.Path]::IsPathRooted($ReportCsv)) {
         $reportPath = Join-Path -Path $outputDirFull -ChildPath $ReportCsv

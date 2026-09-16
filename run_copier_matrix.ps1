@@ -14,7 +14,9 @@ $ErrorActionPreference = "Stop"
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 $lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+$artifactsHelpersPath = Join-Path -Path $repo -ChildPath "tools\artifacts.ps1"
 . $lockHelpersPath
+. $artifactsHelpersPath
 
 function Resolve-PathLocal {
     param([string]$PathInput)
@@ -113,13 +115,8 @@ try {
         throw "Timed out waiting for copier matrix global lock"
     }
 
-    $outputDirFull = ""
-    if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
-        $outputDirFull = Resolve-PathLocal -PathInput $OutputDir
-        if (-not (Test-Path -LiteralPath $outputDirFull)) {
-            New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
-        }
-    }
+    $runCtx = New-RunContext -RepoPath $repo -OutputDir $OutputDir
+    $outputDirFull = [string]$runCtx.OutputDir
 
     if ($ReportPrefix -ne "copier_matrix") {
         if ($ReportJson -eq "copier_matrix_report.json") {

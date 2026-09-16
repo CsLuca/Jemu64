@@ -456,6 +456,9 @@ Outputs:
 
 - JSON report: `copier_matrix_report.json`
 - CSV report: `copier_matrix_report.csv`
+- Optional run-scoped outputs:
+  - `-OutputDir artifacts\\runs\\<run-id>`
+  - `-ReportPrefix <name>` -> `<name>_report.json/.csv`
 
 Terminal summary marker:
 
@@ -466,6 +469,14 @@ Example:
 ```powershell
 .\run_copier_matrix.ps1 -Profile fast -Manifest external_tests_manifest.json
 ```
+
+Parallel-safe example:
+
+```powershell
+.\run_copier_matrix.ps1 -Profile fast -Manifest external_tests_manifest.json -OutputDir artifacts\runs\jobA -ReportPrefix copier_jobA
+```
+
+Related gate scripts (`run_phase5_soak_gate.ps1`, `run_advanced_dos_recovery_gate.ps1`, `run_advanced_real_corpus_gate.ps1`, `run_real_golden_gate.ps1`, `run_check_phase5_hard_thresholds.ps1`, `run_check_phase5_closure.ps1`, `run_signoff_week13_14.ps1`) also accept `-OutputDir` for run-scoped artifacts.
 
 ## Copier Matrix Signoff/CI Gate (Commit 18)
 

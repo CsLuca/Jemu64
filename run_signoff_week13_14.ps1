@@ -27,7 +27,9 @@ $ErrorActionPreference = "Stop"
 $repo = $PSScriptRoot
 $gxx = "C:\msys64\ucrt64\bin\g++.exe"
 $lockHelpersPath = Join-Path -Path $repo -ChildPath "tools\runner_lock_hardening.ps1"
+$artifactsHelpersPath = Join-Path -Path $repo -ChildPath "tools\artifacts.ps1"
 . $lockHelpersPath
+. $artifactsHelpersPath
 
 function Invoke-Step {
     param(
@@ -692,16 +694,8 @@ $savedPath = $env:PATH
 try {
     $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
 
-    $outputDirFull = ""
-    if (-not [string]::IsNullOrWhiteSpace($OutputDir)) {
-        $outputDirFull = $OutputDir
-        if (-not [System.IO.Path]::IsPathRooted($outputDirFull)) {
-            $outputDirFull = Join-Path -Path $repo -ChildPath $outputDirFull
-        }
-        if (-not (Test-Path -LiteralPath $outputDirFull)) {
-            New-Item -ItemType Directory -Path $outputDirFull -Force | Out-Null
-        }
-    }
+    $runCtx = New-RunContext -RepoPath $repo -OutputDir $OutputDir
+    $outputDirFull = [string]$runCtx.OutputDir
 
     $realGoldenManifestPath = Resolve-PathOrThrow -PathInput $RealGoldenManifest -Label "real golden manifest"
     $realGoldenTitles = Test-RealGoldenManifest -ManifestPath $realGoldenManifestPath
