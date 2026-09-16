@@ -16,6 +16,29 @@ static void runDrive1541IecDualDriveCopySmoke() {
     const std::filesystem::path srcPath = tmpDir / "dual_copy_src.d64";
     const std::filesystem::path dstPath = tmpDir / "dual_copy_dst.d64";
 
+    auto d64TrackSectorToOffset = [](uint8_t track, uint8_t sector, uint32_t &offset) -> bool {
+        if (track < 1 || track > 35) {
+            return false;
+        }
+        static const uint8_t sectorsPerTrack[36] = {
+            0,
+            21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
+            19,19,19,19,19,19,19,
+            18,18,18,18,18,18,
+            17,17,17,17,17
+        };
+        const uint8_t spt = sectorsPerTrack[track];
+        if (sector >= spt) {
+            return false;
+        }
+        uint32_t sectorsBefore = 0;
+        for (uint8_t t = 1; t < track; ++t) {
+            sectorsBefore += sectorsPerTrack[t];
+        }
+        offset = (sectorsBefore + sector) * 256u;
+        return true;
+    };
+
     {
         std::vector<uint8_t> zero(174848, 0);
         std::ofstream outSrc(srcPath, std::ios::binary | std::ios::trunc);
@@ -26,7 +49,7 @@ static void runDrive1541IecDualDriveCopySmoke() {
 
     uint32_t srcOff = 0;
     uint32_t dstOff = 0;
-    if (!drive8.d64TrackSectorToOffset(0x12, 0x01, srcOff) || !drive9.d64TrackSectorToOffset(0x12, 0x01, dstOff)) {
+    if (!d64TrackSectorToOffset(0x12, 0x01, srcOff) || !d64TrackSectorToOffset(0x12, 0x01, dstOff)) {
         std::cerr << "[1541 IEC COPY] FAIL: D64 offset mapping failed for copy block." << std::endl;
         assert(false);
     }
