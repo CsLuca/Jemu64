@@ -40,6 +40,14 @@ jobs:
         shell: powershell
         run: .\run_phase5_soak_gate.ps1 -Manifest external_tests_manifest.json -Runs 12 -MaxFlakeRate 0.05 -ReportCsv phase5_soak_runtime.csv -OutputDir artifacts/runs/ci-tolerance
 
+      - name: Run Level4 KPI gate
+        shell: powershell
+        run: .\run_level4_kpi_gate.ps1 -PathologicalManifest level4_pathological_corpus_manifest.json -AdvancedManifest advanced_real_corpus_manifest.json -RealGoldenManifest real_golden_manifest.json -DosRecoveryManifest advanced_dos_recovery_manifest.json -ExternalManifest external_tests_manifest.json -ReportCsv level4_kpi_gate_runtime.csv -KpiJson level4_kpi_metrics.json -OutputDir artifacts/runs/ci-tolerance
+
+      - name: Run Level4 chaos soak
+        shell: powershell
+        run: .\run_level4_chaos_soak.ps1 -ExternalManifest external_tests_manifest.json -Runs 12 -MaxFlakeRate 0.05 -ReportCsv level4_chaos_soak_runtime.csv -OutputDir artifacts/runs/ci-tolerance
+
       - name: Check phase5 hard thresholds
         shell: powershell
         run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report artifacts/runs/ci-tolerance/copier_matrix_signoff_report.json -AdvancedRealCorpusReport artifacts/runs/ci-tolerance/advanced_real_corpus_runtime.csv -AdvancedDosRecoveryReport artifacts/runs/ci-tolerance/advanced_dos_recovery_runtime.csv -SoakReport artifacts/runs/ci-tolerance/phase5_soak_runtime.csv -RevisionMetrics reference/edge/revision_tolerance_metrics.json -PromotionReportJson reference/edge/level1_vs_level2_vs_level3.json -PromotionReportCsv reference/edge/level1_vs_level2_vs_level3.csv
@@ -63,6 +71,10 @@ jobs:
             artifacts/runs/ci-tolerance/advanced_real_corpus_runtime.csv
             artifacts/runs/ci-tolerance/advanced_dos_recovery_runtime.csv
             artifacts/runs/ci-tolerance/phase5_soak_runtime.csv
+            artifacts/runs/ci-tolerance/level4_pathological_runtime.csv
+            artifacts/runs/ci-tolerance/level4_kpi_gate_runtime.csv
+            artifacts/runs/ci-tolerance/level4_kpi_metrics.json
+            artifacts/runs/ci-tolerance/level4_chaos_soak_runtime.csv
             artifacts/runs/ci-tolerance/COPIER_SUPPORT_MATRIX.md
             artifacts/runs/ci-tolerance/real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json
