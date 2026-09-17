@@ -1051,6 +1051,23 @@ This gate is additive and does not alter existing Level1/2/3 promotion policy.
 
 This gate is additive and does not alter existing Level1/2/3 promotion policy.
 
+## L4.3 Increment: Pathological KPI + Chaos Soak (Experimental)
+
+- Added Level4 pathological corpus manifest:
+  - `level4_pathological_corpus_manifest.json`
+  - includes long-tail g64/nib fixtures and RAW flux-heavy fixture with strict oracle fields.
+- Added KPI gate:
+  - `run_level4_kpi_gate.ps1`
+  - executes Level4 pathological corpus + advanced corpus + real golden + DOS recovery under `C64_DRIVE_PROFILE=level4-accuracy`,
+  - emits `level4_kpi_metrics.json` + `level4_kpi_gate_runtime.csv`,
+  - checks differential multi-oracle spread budget (`0.0`) and full pass-rate budgets.
+- Added Level4 chaos soak gate:
+  - `run_level4_chaos_soak.ps1`
+  - runs copier matrix repeatedly under Level4 profile,
+  - emits `level4_chaos_soak_runtime.csv` with flake-budget assertion.
+
+These gates are additive and do not alter existing Level1/2/3 promotion policy.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:
