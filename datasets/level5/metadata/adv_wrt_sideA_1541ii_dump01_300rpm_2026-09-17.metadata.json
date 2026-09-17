@@ -1,0 +1,29 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_seed_adv_wrt_sideA",
+  "side": "A",
+  "track_range": "1-35",
+  "capture": {
+    "hardware": "SCP",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-17T11:10:00Z",
+    "operator": "seed_operator"
+  },
+  "drive": {
+    "model": "1541-II",
+    "revision": "seed-rev"
+  },
+  "mechanical": {
+    "rpm_mean": 300.1,
+    "rpm_stddev": 1.0,
+    "ambient_celsius": 24.0,
+    "warmup_minutes": 18
+  },
+  "source_integrity": {
+    "sha256_flux": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "file_size_bytes": 1
+  },
+  "license": {
+    "rights_note": "Seed placeholder capture for onboarding."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_seed_vic1541_demo_sideA",
+  "side": "A",
+  "track_range": "1-35",
+  "capture": {
+    "hardware": "Greaseweazle",
+    "sample_rate_hz": 24000000,
+    "timestamp_utc": "2026-09-17T11:05:00Z",
+    "operator": "seed_operator"
+  },
+  "drive": {
+    "model": "1541",
+    "revision": "seed-rev"
+  },
+  "mechanical": {
+    "rpm_mean": 299.9,
+    "rpm_stddev": 1.2,
+    "ambient_celsius": 24.0,
+    "warmup_minutes": 15
+  },
+  "source_integrity": {
+    "sha256_flux": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "file_size_bytes": 1
+  },
+  "license": {
+    "rights_note": "Seed placeholder capture for onboarding."
+  }
+}
