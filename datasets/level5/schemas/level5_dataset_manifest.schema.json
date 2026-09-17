@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "level5_dataset_manifest.schema.json",
+  "title": "Level5 Dataset Manifest",
+  "type": "object",
+  "required": ["manifest_version", "name", "description", "global_oracle", "titles"],
+  "properties": {
+    "manifest_version": { "type": "integer", "minimum": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "global_oracle": {
+      "type": "object",
+      "required": ["require_no_host_fallback", "default_timing_window"],
+      "properties": {
+        "require_no_host_fallback": { "type": "boolean" },
+        "default_timing_window": {
+          "type": "object",
+          "required": ["max_halfcycles", "min_done_hits"],
+          "properties": {
+            "max_halfcycles": { "type": "integer", "minimum": 1 },
+            "min_done_hits": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "titles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "format", "path", "metadata", "oracle"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "format": { "type": "string", "enum": ["raw", "g64", "nib", "d64"] },
+          "path": { "type": "string", "minLength": 1 },
+          "metadata": { "type": "string", "minLength": 1 },
+          "oracle": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

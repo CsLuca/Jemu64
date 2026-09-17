@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "level5_capture_metadata.schema.json",
+  "title": "Level5 Capture Metadata",
+  "type": "object",
+  "required": [
+    "dataset_version",
+    "title_id",
+    "side",
+    "track_range",
+    "capture",
+    "drive",
+    "mechanical",
+    "source_integrity",
+    "license"
+  ],
+  "properties": {
+    "dataset_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "side": {
+      "type": "string",
+      "enum": ["A", "B", "single"]
+    },
+    "track_range": {
+      "type": "string",
+      "pattern": "^[0-9]+-[0-9]+$"
+    },
+    "capture": {
+      "type": "object",
+      "required": ["hardware", "sample_rate_hz", "timestamp_utc", "operator"],
+      "properties": {
+        "hardware": { "type": "string", "minLength": 1 },
+        "sample_rate_hz": { "type": "integer", "minimum": 1 },
+        "timestamp_utc": { "type": "string", "format": "date-time" },
+        "operator": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "drive": {
+      "type": "object",
+      "required": ["model", "revision"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 },
+        "head_alignment_note": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "mechanical": {
+      "type": "object",
+      "required": ["rpm_mean", "rpm_stddev", "ambient_celsius", "warmup_minutes"],
+      "properties": {
+        "rpm_mean": { "type": "number", "minimum": 1 },
+        "rpm_stddev": { "type": "number", "minimum": 0 },
+        "ambient_celsius": { "type": "number" },
+        "warmup_minutes": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "source_integrity": {
+      "type": "object",
+      "required": ["sha256_flux", "file_size_bytes"],
+      "properties": {
+        "sha256_flux": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "file_size_bytes": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "license": {
+      "type": "object",
+      "required": ["rights_note"],
+      "properties": {
+        "rights_note": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

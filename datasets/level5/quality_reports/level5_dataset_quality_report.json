@@ -1,0 +1,18 @@
+{
+    "generated_at_utc":  "2026-09-17T15:44:01.7270975Z",
+    "manifest":  "C:\\Users\\LBiondi\\AppData\\Local\\Temp\\opencode\\Jemu64\\datasets\\level5\\manifests\\level5_dataset_manifest.sample.json",
+    "pass":  1,
+    "total":  1,
+    "pass_rate":  1,
+    "rows":  [
+                 {
+                     "title_id":  "sample_title",
+                     "format":  "raw",
+                     "flux_path":  "C:\\Users\\LBiondi\\AppData\\Local\\Temp\\opencode\\Jemu64\\datasets\\level5\\raw_flux\\sample_title_sideA_1541c_dump01_300rpm_2026-09-17.raw",
+                     "metadata_path":  "C:\\Users\\LBiondi\\AppData\\Local\\Temp\\opencode\\Jemu64\\datasets\\level5\\templates\\sample_capture.metadata.json",
+                     "oracle_path":  "C:\\Users\\LBiondi\\AppData\\Local\\Temp\\opencode\\Jemu64\\datasets\\level5\\templates\\sample_capture.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 }
+             ]
+}

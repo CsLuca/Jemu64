@@ -1,0 +1,21 @@
+{
+  "manifest_version": 1,
+  "name": "level5_dataset_sample",
+  "description": "Sample manifest wiring flux paths to metadata+oracle templates.",
+  "global_oracle": {
+    "require_no_host_fallback": true,
+    "default_timing_window": {
+      "max_halfcycles": 700000,
+      "min_done_hits": 1
+    }
+  },
+  "titles": [
+    {
+      "id": "sample_title",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/sample_title_sideA_1541c_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/templates/sample_capture.metadata.json",
+      "oracle": "datasets/level5/templates/sample_capture.oracle.json"
+    }
+  ]
+}

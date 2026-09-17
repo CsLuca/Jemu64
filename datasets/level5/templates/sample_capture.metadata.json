@@ -1,0 +1,31 @@
+{
+  "dataset_version": 1,
+  "title_id": "sample_title",
+  "side": "A",
+  "track_range": "1-35",
+  "capture": {
+    "hardware": "KryoFlux",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-17T10:00:00Z",
+    "operator": "operator_name",
+    "notes": "clean disk, warm drive"
+  },
+  "drive": {
+    "model": "1541C",
+    "revision": "revB",
+    "head_alignment_note": "verified with alignment disk"
+  },
+  "mechanical": {
+    "rpm_mean": 300.3,
+    "rpm_stddev": 0.9,
+    "ambient_celsius": 24.0,
+    "warmup_minutes": 20
+  },
+  "source_integrity": {
+    "sha256_flux": "ef4b8c6c31218cffd012caed213c4868d51142446aa6d3462e8208d6df574b71",
+    "file_size_bytes": 23
+  },
+  "license": {
+    "rights_note": "Internal measurement dataset. Redistribution not permitted."
+  }
+}

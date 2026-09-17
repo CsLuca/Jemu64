@@ -1,0 +1,2 @@
+"title_id","format","flux_path","metadata_path","oracle_path","pass","issues"
+"sample_title","raw","C:\Users\LBiondi\AppData\Local\Temp\opencode\Jemu64\datasets\level5\raw_flux\sample_title_sideA_1541c_dump01_300rpm_2026-09-17.raw","C:\Users\LBiondi\AppData\Local\Temp\opencode\Jemu64\datasets\level5\templates\sample_capture.metadata.json","C:\Users\LBiondi\AppData\Local\Temp\opencode\Jemu64\datasets\level5\templates\sample_capture.oracle.json","1","ok"
