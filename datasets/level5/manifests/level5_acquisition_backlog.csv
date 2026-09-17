@@ -1,0 +1,8 @@
+priority,title_id,side,target_format,target_drive_models,min_captures_per_side,metadata_template,oracle_template,status,notes
+P0,l5_seed_copyii_pc_v1_sideA,A,raw,"1541C;1541-II",3,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"High-value protection baseline"
+P0,l5_seed_copyii_pc_v1_sideB,B,raw,"1541C;1541-II",3,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Capture in same thermal session as side A"
+P0,l5_seed_vic1541_demo_sideA,A,raw,"1541;1541C",3,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Stress loader timing and IEC behavior"
+P1,l5_seed_adv_wrt_sideA,A,raw,"1541-II",2,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Write/rewrite behavior target"
+P1,l5_seed_3dkit_sideB,B,raw,"1541C",2,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Long-loader sync/weak coverage"
+P2,l5_seed_9_sideA,A,raw,"1541;1541C;1541-II",3,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Cross-drive variability profiling"
+P2,l5_seed_design3d_sideA,A,raw,"1541C",2,datasets/level5/templates/sample_capture.metadata.json,datasets/level5/templates/sample_capture.oracle.json,pending,"Pathological timing window candidate"

@@ -1068,6 +1068,13 @@ This gate is additive and does not alter existing Level1/2/3 promotion policy.
 
 These gates are additive and do not alter existing Level1/2/3 promotion policy.
 
+## Level5 Planning Assets
+
+- `LEVEL5_ROADMAP.md`: phased roadmap (L5.0 -> L5.4), gates, KPI targets, promotion criteria.
+- `datasets/level5/manifests/level5_real_seed_manifest.json`: initial real-data seed manifest for onboarding.
+- `datasets/level5/manifests/level5_acquisition_backlog.csv`: prioritized acquisition backlog with per-title capture targets.
+- `run_level5_dataset_quality_gate.ps1`: automated dataset quality gate for metadata/oracle/integrity thresholds.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

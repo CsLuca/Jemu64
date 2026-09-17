@@ -1,0 +1,49 @@
+{
+  "manifest_version": 1,
+  "name": "level5_real_seed_manifest",
+  "description": "Seed set for Level5 real-data onboarding. Paths are placeholders until captures are imported.",
+  "global_oracle": {
+    "require_no_host_fallback": true,
+    "default_timing_window": {
+      "max_halfcycles": 700000,
+      "min_done_hits": 1
+    }
+  },
+  "titles": [
+    {
+      "id": "l5_seed_copyii_pc_v1_sideA",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/copyii_pc_v1_sideA_1541c_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/metadata/copyii_pc_v1_sideA_1541c_dump01_300rpm_2026-09-17.metadata.json",
+      "oracle": "datasets/level5/oracles/copyii_pc_v1_sideA.oracle.json"
+    },
+    {
+      "id": "l5_seed_copyii_pc_v1_sideB",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/copyii_pc_v1_sideB_1541c_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/metadata/copyii_pc_v1_sideB_1541c_dump01_300rpm_2026-09-17.metadata.json",
+      "oracle": "datasets/level5/oracles/copyii_pc_v1_sideB.oracle.json"
+    },
+    {
+      "id": "l5_seed_vic1541_demo_sideA",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/vic1541_demo_sideA_1541_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/metadata/vic1541_demo_sideA_1541_dump01_300rpm_2026-09-17.metadata.json",
+      "oracle": "datasets/level5/oracles/vic1541_demo_sideA.oracle.json"
+    },
+    {
+      "id": "l5_seed_adv_wrt_sideA",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/adv_wrt_sideA_1541ii_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/metadata/adv_wrt_sideA_1541ii_dump01_300rpm_2026-09-17.metadata.json",
+      "oracle": "datasets/level5/oracles/adv_wrt_sideA.oracle.json"
+    },
+    {
+      "id": "l5_seed_3dkit_sideB",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/3dkit_sideB_1541c_dump01_300rpm_2026-09-17.raw",
+      "metadata": "datasets/level5/metadata/3dkit_sideB_1541c_dump01_300rpm_2026-09-17.metadata.json",
+      "oracle": "datasets/level5/oracles/3dkit_sideB.oracle.json"
+    }
+  ]
+}
