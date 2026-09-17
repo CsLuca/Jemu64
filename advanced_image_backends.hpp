@@ -122,13 +122,30 @@ static inline bool isPhysicalLevel3ProfileEnabled() {
     return v == "level3-physical";
 }
 
+static inline bool isPhysicalLevel4ProfileEnabled() {
+    const char *profile = std::getenv("C64_DRIVE_PROFILE");
+    if (profile == nullptr || profile[0] == '\0') {
+        profile = std::getenv("KERNAL_DRIVE_PROFILE");
+    }
+    if (profile == nullptr) {
+        return false;
+    }
+    std::string v(profile);
+    std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return v == "level4-accuracy";
+}
+
 static inline bool isFluxCapableFormat(const std::string &format) {
     return format == "g64" || format == "nib" || format == "raw";
 }
 
 static inline bool shouldUseFluxLayer(const std::string &format,
                                       drive1541_physical::PhysicalProfile profile) {
-    return profile == drive1541_physical::PhysicalProfile::Level3Physical && isFluxCapableFormat(format);
+    return (profile == drive1541_physical::PhysicalProfile::Level3Physical ||
+            profile == drive1541_physical::PhysicalProfile::Level4Accuracy) &&
+           isFluxCapableFormat(format);
 }
 
 static inline bool decodeGcrToNibble(uint8_t symbol, uint8_t &nibble) {

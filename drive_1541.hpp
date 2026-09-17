@@ -35,6 +35,7 @@
 #include "drive1541_physical/gcr_codec.hpp"
 #include "drive1541_physical/mechanics_model.hpp"
 #include "drive1541_physical/physical_profile.hpp"
+#include "drive1541_physical/read_channel_pll.hpp"
 #include "image_backend.hpp"
 #include "iec_device.hpp"
 
@@ -92,6 +93,7 @@ public:
     uint8_t physicalPipelineLastBit = 0;
     uint16_t physicalPipelineLastHalfTrack = 36;
     double physicalPipelineLastAngleNorm = 0.0;
+    drive1541_physical::ReadChannelPllSample physicalPipelineLastPll{};
     bool driveLedMotorOn = false;
     bool driveLedActivity = false;
     bool driveLedError = false;
@@ -146,6 +148,9 @@ public:
         }
         if (v == "level3-physical") {
             return PhysicalProfile::Level3Physical;
+        }
+        if (v == "level4-accuracy") {
+            return PhysicalProfile::Level4Accuracy;
         }
         return PhysicalProfile::Level1Functional;
     }
@@ -2128,6 +2133,14 @@ public:
         physicalMechanicsModel.reset();
         physicalMechanicsModel.set_motor_on(true);
         physicalBitcellTimingModel.reset(seed == 0 ? 0x1541u : seed);
+        physicalBitcellTimingModel.set_drive_revision(static_cast<uint8_t>(revision));
+        physicalBitcellTimingModel.set_level4_enabled(physicalProfile == PhysicalProfile::Level4Accuracy);
+        if (physicalProfile == PhysicalProfile::Level4Accuracy) {
+            const uint16_t baseNoise = static_cast<uint16_t>(22u + static_cast<uint16_t>(iecDeviceAddress & 0x03u) * 3u);
+            const uint16_t jitterScale = static_cast<uint16_t>(30u + static_cast<uint16_t>(revision) * 4u);
+            const uint16_t lockGain = static_cast<uint16_t>(250u + static_cast<uint16_t>(revision) * 25u);
+            physicalBitcellTimingModel.set_level4_calibration(baseNoise, jitterScale, lockGain);
+        }
 
         std::vector<drive1541_physical::FluxTransition> transitions;
         transitions.push_back({7u});
@@ -2145,7 +2158,7 @@ public:
     }
 
     void runPhysicalLevel3ReadPipeline(uint8_t track, uint8_t sector) {
-        if (physicalProfile != PhysicalProfile::Level3Physical) {
+        if (physicalProfile != PhysicalProfile::Level3Physical && physicalProfile != PhysicalProfile::Level4Accuracy) {
             return;
         }
         if (!mountedImageBackend || iecBlockBuffer.empty()) {
@@ -2193,6 +2206,7 @@ public:
         physicalPipelineLastBit = static_cast<uint8_t>((byteSample >> (physicalPipelineAbsTick & 0x07u)) & 0x01u);
         physicalPipelineLastHalfTrack = physicalMechanicsModel.half_track();
         physicalPipelineLastAngleNorm = physicalMechanicsModel.spindle_angle_norm();
+        physicalPipelineLastPll = physicalBitcellTimingModel.last_pll_sample();
     }
 
     void flushVirtualBlock(uint8_t track, uint8_t sector) {

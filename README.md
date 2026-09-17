@@ -1021,6 +1021,19 @@ Release pin manifest:
 - Strict/timing/VIC runs may intermittently exit in this environment (`-1073740791` class failure); strict-marker rerun policy remains valid.
 - Full custom copy-protection parity beyond declared matrix/corpus fixtures is not claimed by this milestone.
 
+## L4.1 Increment: Read-Channel PLL Gate (Experimental)
+
+- Added `level4-accuracy` profile parsing for 1541 physical pipeline experiments.
+- Added read-channel PLL model with:
+  - lock dynamics,
+  - revision-aware phase noise shaping,
+  - deterministic jitter window sampling hooks for calibration.
+- Added incremental gate: `run_level4_pll_gate.ps1`
+  - runs matrix under `C64_DRIVE_PROFILE=level4-accuracy`,
+  - requires marker `[1541 PLL] PASS`.
+
+This gate is additive and does not alter existing Level1/2/3 promotion policy.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:
