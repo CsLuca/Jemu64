@@ -1034,6 +1034,23 @@ Release pin manifest:
 
 This gate is additive and does not alter existing Level1/2/3 promotion policy.
 
+## L4.2 Increment: Write Persistence Roundtrip Gate (Experimental)
+
+- Added write-surface persistence model:
+  - `drive1541_physical/write_surface_model.hpp`
+  - `drive1541_physical/write_surface_model.cpp`
+- Integrated Level4-only write persistence hooks in flux-mapped image backends:
+  - write splice / erase band evolution across write passes,
+  - weak-window epoch coupling for readback drift in Level4 profile.
+- Added runtime test marker and test:
+  - `tests/drive1541_write_roundtrip_tests.hpp`
+  - marker: `[1541 L4 WRITE] PASS`
+- Added incremental gate: `run_level4_write_roundtrip_gate.ps1`
+  - forces `C64_DRIVE_PROFILE=level4-accuracy`,
+  - requires markers `[1541 L4 WRITE] PASS` and copier disk E2E pass.
+
+This gate is additive and does not alter existing Level1/2/3 promotion policy.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

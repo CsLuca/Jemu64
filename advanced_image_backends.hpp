@@ -17,6 +17,7 @@
 #include "drive1541_physical/bitcell_timing_model.hpp"
 #include "drive1541_physical/mechanics_model.hpp"
 #include "drive1541_physical/flux_track_model.hpp"
+#include "drive1541_physical/write_surface_model.hpp"
 #include "image_backend.hpp"
 
 namespace advanced_image_detail {
@@ -227,6 +228,7 @@ public:
         std::array<uint8_t, 256> encoded = in;
         applyStrictGcrEncodePipeline(track, sector, encoded);
         applyTrackZoneMapping(track, encoded);
+        applyLevel4WritePersistence(track, sector, encoded);
         return writeRawBlock(track, sector, encoded, error);
     }
 
@@ -256,6 +258,10 @@ private:
     mutable std::array<drive1541_physical::FluxTrackModel, 36u * 21u> fluxTrackModel = {};
     mutable std::array<uint8_t, 36u * 21u> fluxTrackInit = {};
     mutable std::array<uint32_t, 36u * 21u> fluxAbsTick = {};
+    mutable std::array<drive1541_physical::WriteSurfaceModel, 36u * 21u> writeSurfaceModel = {};
+    mutable std::array<uint8_t, 36u * 21u> writeSurfaceInit = {};
+    mutable std::array<uint8_t, 36u * 21u> writePassCounter = {};
+    mutable std::array<uint8_t, 36u * 21u> weakWriteEpoch = {};
 
 protected:
     const std::string &path() const {
@@ -414,7 +420,10 @@ protected:
             spanState = static_cast<uint8_t>((spanState + 1u + zone) % 5u);
             const uint8_t windowSpan = static_cast<uint8_t>(4u + zone + spanState);
             const size_t windowPos = std::min<size_t>(8u + ((phase % windowSpan) * 2u), buffer.size() - 1);
-            const uint8_t driftNibble = static_cast<uint8_t>((phase + (track * 3u) + sector) & 0x0Fu);
+            uint8_t driftNibble = static_cast<uint8_t>((phase + (track * 3u) + sector) & 0x0Fu);
+            if (advanced_image_detail::isPhysicalLevel4ProfileEnabled()) {
+                driftNibble = static_cast<uint8_t>((driftNibble + weakWriteEpoch[idx]) & 0x0Fu);
+            }
             buffer[windowPos] = static_cast<uint8_t>((buffer[windowPos] & 0xF0u) | driftNibble);
 
             if ((phase % 5u) == 0u) {
@@ -586,6 +595,33 @@ protected:
 
         last = classByte;
         conf = 1u;
+    }
+
+    void applyLevel4WritePersistence(uint8_t track,
+                                     uint8_t sector,
+                                     std::array<uint8_t, 256> &buffer) {
+        if (!advanced_image_detail::isPhysicalLevel4ProfileEnabled()) {
+            return;
+        }
+
+        const size_t idx = modelIndex(track, sector);
+        auto &wm = writeSurfaceModel[idx];
+        if (writeSurfaceInit[idx] == 0u) {
+            const uint32_t seed = static_cast<uint32_t>((uint32_t(track) << 17) |
+                                                        (uint32_t(sector) << 9) |
+                                                        (uint32_t(imageFormat.empty() ? 0u : imageFormat[0]) << 1) |
+                                                        0x95u);
+            wm.reset(seed);
+            writeSurfaceInit[idx] = 1u;
+        }
+        wm.begin_track(track, sector);
+        const uint8_t pass = writePassCounter[idx]++;
+        const uint8_t revision = static_cast<uint8_t>((track + sector + pass) % 3u);
+        wm.apply_write_pass(buffer, revision, pass);
+
+        if (hasWeakBits || hasSyncLossModel) {
+            weakWriteEpoch[idx] = static_cast<uint8_t>(weakWriteEpoch[idx] + 1u);
+        }
     }
 };
 
