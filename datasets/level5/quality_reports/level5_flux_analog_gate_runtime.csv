@@ -1,0 +1,5 @@
+"metric","value","budget","pass"
+"dataset_pass_rate","1","1","1"
+"write_roundtrip_fast","1","1","1"
+"write_roundtrip_strict","0","0","1"
+"kernel_gate_pass","1","1","1"

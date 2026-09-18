@@ -1089,6 +1089,19 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - `run_level5_cycle_coupling_gate.ps1`
   - runs dataset quality gate + kernel IEC E2E under `C64_DRIVE_PROFILE=level5-coupling` (fast/strict).
 
+## L5.2 Increment: Flux/Write Analog Gate (Experimental)
+
+- Added incremental gate scaffold:
+  - `run_level5_flux_analog_gate.ps1`
+  - runs dataset quality + write roundtrip + kernel IEC E2E under `C64_DRIVE_PROFILE=level5-coupling`.
+- Fast profile validates:
+  - official Level5 testset quality,
+  - write roundtrip fast,
+  - kernel IEC pure E2E.
+- Strict profile additionally requires write roundtrip strict and stronger kernel repeat/budget settings.
+  - Default strict mode keeps strict-write optional to avoid unrelated hard-reference corpus blockers.
+  - Set `-RequireStrictWriteRoundtrip` to enforce strict write roundtrip as a hard gate.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:
