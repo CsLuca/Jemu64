@@ -152,6 +152,9 @@ public:
         if (v == "level4-accuracy") {
             return PhysicalProfile::Level4Accuracy;
         }
+        if (v == "level5-coupling") {
+            return PhysicalProfile::Level5Coupling;
+        }
         return PhysicalProfile::Level1Functional;
     }
 
@@ -498,11 +501,12 @@ public:
         iecPrevCLK = true;
         iecPrevATN = true;
         iecPrevDATA = true;
-        iecEnableAtnAck = false;
-        iecEnableListenerByteAck = false;
-        iecKernelCompatSampleBothClockEdges = false;
+        const bool level5CouplingProfile = (physicalProfile == PhysicalProfile::Level5Coupling);
+        iecEnableAtnAck = level5CouplingProfile;
+        iecEnableListenerByteAck = level5CouplingProfile;
+        iecKernelCompatSampleBothClockEdges = level5CouplingProfile;
         iecKernelSampleOnFallingClockEdge = false;
-        iecKernelSampleBothCommandEdges = false;
+        iecKernelSampleBothCommandEdges = level5CouplingProfile;
         iecKernelCompatAutoTalkDirectory = false;
         iecKernelCompatAutoDirectoryOnTalk0 = false;
         iecKernelCompatForceTalkOnIcrSerial = false;
@@ -2134,8 +2138,11 @@ public:
         physicalMechanicsModel.set_motor_on(true);
         physicalBitcellTimingModel.reset(seed == 0 ? 0x1541u : seed);
         physicalBitcellTimingModel.set_drive_revision(static_cast<uint8_t>(revision));
-        physicalBitcellTimingModel.set_level4_enabled(physicalProfile == PhysicalProfile::Level4Accuracy);
-        if (physicalProfile == PhysicalProfile::Level4Accuracy) {
+        const bool level4OrHigher =
+            (physicalProfile == PhysicalProfile::Level4Accuracy ||
+             physicalProfile == PhysicalProfile::Level5Coupling);
+        physicalBitcellTimingModel.set_level4_enabled(level4OrHigher);
+        if (level4OrHigher) {
             const uint16_t baseNoise = static_cast<uint16_t>(22u + static_cast<uint16_t>(iecDeviceAddress & 0x03u) * 3u);
             const uint16_t jitterScale = static_cast<uint16_t>(30u + static_cast<uint16_t>(revision) * 4u);
             const uint16_t lockGain = static_cast<uint16_t>(250u + static_cast<uint16_t>(revision) * 25u);
@@ -2158,7 +2165,9 @@ public:
     }
 
     void runPhysicalLevel3ReadPipeline(uint8_t track, uint8_t sector) {
-        if (physicalProfile != PhysicalProfile::Level3Physical && physicalProfile != PhysicalProfile::Level4Accuracy) {
+        if (physicalProfile != PhysicalProfile::Level3Physical &&
+            physicalProfile != PhysicalProfile::Level4Accuracy &&
+            physicalProfile != PhysicalProfile::Level5Coupling) {
             return;
         }
         if (!mountedImageBackend || iecBlockBuffer.empty()) {

@@ -1075,6 +1075,20 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - `datasets/level5/manifests/level5_acquisition_backlog.csv`: prioritized acquisition backlog with per-title capture targets.
 - `run_level5_dataset_quality_gate.ps1`: automated dataset quality gate for metadata/oracle/integrity thresholds.
 
+## L5.1 Increment: Sub-cycle Coupling Gate (Experimental)
+
+- Added `level5-coupling` drive profile parsing and routing in physical pipeline:
+  - profile enum support in `drive1541_physical/physical_profile.hpp`,
+  - runtime profile parsing in `drive_1541.hpp`,
+  - flux-layer routing parity with Level4 for flux-capable formats.
+- Added Level5-coupling defaults for IEC phase behavior in `Drive1541` and kernel E2E setup:
+  - stronger default ATN/listener ACK behavior,
+  - default command/data edge coupling suitable for sub-cycle validation,
+  - profile defaults remain overrideable via existing `KERNAL_DRIVE_*` environment flags.
+- Added and validated gate:
+  - `run_level5_cycle_coupling_gate.ps1`
+  - runs dataset quality gate + kernel IEC E2E under `C64_DRIVE_PROFILE=level5-coupling` (fast/strict).
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

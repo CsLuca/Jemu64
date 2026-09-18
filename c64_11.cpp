@@ -5947,6 +5947,34 @@ static void configureDrivePhysicalProfileFromEnv(Drive1541 &drive) {
     drive.setPhysicalProfile(Drive1541::parsePhysicalProfile(driveProfile));
 }
 
+static void applyProfileDefaultIecCoupling(Drive1541 &drive) {
+    if (drive.getPhysicalProfile() != Drive1541::PhysicalProfile::Level5Coupling) {
+        return;
+    }
+
+    if (std::getenv("KERNAL_DRIVE_DISABLE_ATN_ACK") == nullptr) {
+        drive.iecEnableAtnAck = true;
+    }
+    if (std::getenv("KERNAL_DRIVE_DISABLE_LISTENER_ACK") == nullptr) {
+        drive.iecEnableListenerByteAck = true;
+    }
+    if (std::getenv("KERNAL_DRIVE_SAMPLE_BOTH_EDGES") == nullptr) {
+        drive.iecKernelCompatSampleBothClockEdges = true;
+    }
+    if (std::getenv("KERNAL_DRIVE_SAMPLE_FALLING_EDGE") == nullptr) {
+        drive.iecKernelSampleOnFallingClockEdge = false;
+    }
+    if (std::getenv("KERNAL_DRIVE_SAMPLE_BOTH_CMD_EDGES") == nullptr) {
+        drive.iecKernelSampleBothCommandEdges = true;
+    }
+    if (std::getenv("KERNAL_DRIVE_AUTO_TALK_DIR") == nullptr) {
+        drive.iecKernelCompatAutoTalkDirectory = true;
+    }
+    if (std::getenv("KERNAL_DRIVE_AUTO_DIR_ON_TALK0") == nullptr) {
+        drive.iecKernelCompatAutoDirectoryOnTalk0 = true;
+    }
+}
+
 struct DriveSlotMountConfig {
     std::string path;
     std::string format;
@@ -6326,6 +6354,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     drive.iecKernelCompatAutoDirectoryOnTalk0 = (std::getenv("KERNAL_DRIVE_AUTO_DIR_ON_TALK0") != nullptr);
     drive.iecKernelCompatForceTalkOnIcrSerial = (std::getenv("KERNAL_DRIVE_FORCE_TALK_ON_DD0D8") != nullptr);
     drive.iecKernelIgnoreAtnForTalkDataPhase = (std::getenv("KERNAL_DRIVE_IGNORE_ATN_FOR_TALK") != nullptr);
+    applyProfileDefaultIecCoupling(drive);
     cia2.ier = 0;
     cia2.icr = 0;
 

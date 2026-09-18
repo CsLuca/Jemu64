@@ -135,7 +135,7 @@ static inline bool isPhysicalLevel4ProfileEnabled() {
     std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
     });
-    return v == "level4-accuracy";
+    return v == "level4-accuracy" || v == "level5-coupling";
 }
 
 static inline bool isFluxCapableFormat(const std::string &format) {
@@ -145,7 +145,8 @@ static inline bool isFluxCapableFormat(const std::string &format) {
 static inline bool shouldUseFluxLayer(const std::string &format,
                                       drive1541_physical::PhysicalProfile profile) {
     return (profile == drive1541_physical::PhysicalProfile::Level3Physical ||
-            profile == drive1541_physical::PhysicalProfile::Level4Accuracy) &&
+            profile == drive1541_physical::PhysicalProfile::Level4Accuracy ||
+            profile == drive1541_physical::PhysicalProfile::Level5Coupling) &&
            isFluxCapableFormat(format);
 }
 
