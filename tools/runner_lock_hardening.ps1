@@ -23,6 +23,18 @@ function Stop-ExeIfRunning {
     }
 }
 
+function Convert-ToMsysPath {
+    param([string]$WindowsPath)
+
+    $normalized = $WindowsPath -replace '\\', '/'
+    if ($normalized -match '^([A-Za-z]):/(.+)$') {
+        $drive = $matches[1].ToLowerInvariant()
+        $rest = $matches[2]
+        return "/$drive/$rest"
+    }
+    return $normalized
+}
+
 function Invoke-WithRetry {
     param(
         [scriptblock]$Action,
@@ -63,12 +75,23 @@ function Build-Profile-Retry {
     $sourcePath = if ([System.IO.Path]::IsPathRooted($SourceFile)) { $SourceFile } else { Join-Path -Path $RepoPath -ChildPath $SourceFile }
     $outPath = if ([System.IO.Path]::IsPathRooted($OutFile)) { $OutFile } else { Join-Path -Path $RepoPath -ChildPath $OutFile }
 
+    $msysShell = 'C:\msys64\msys2_shell.cmd'
+    $preferUcrtShell = ($CompilerPath -ieq 'C:\msys64\ucrt64\bin\g++.exe' -and (Test-Path -LiteralPath $msysShell))
+
     for ($attempt = 0; $attempt -le $RetryCount; $attempt++) {
         Stop-ExeIfRunning -ExeName $OutFile
         $savedEap = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         try {
-            $buildOutput = @(& $CompilerPath -std=c++17 -O2 "-DRUN_PROFILE=$Macro" $sourcePath -o $outPath 2>&1 | ForEach-Object { "$_" })
+            if ($preferUcrtShell) {
+                $sourceMsys = Convert-ToMsysPath -WindowsPath $sourcePath
+                $outMsys = Convert-ToMsysPath -WindowsPath $outPath
+                $cmd = "g++ -std=c++17 -O2 -DRUN_PROFILE=$Macro '$sourceMsys' -o '$outMsys'"
+                $buildOutput = @(& $msysShell -ucrt64 -defterm -no-start -here -c $cmd 2>&1 | ForEach-Object { "$_" })
+            }
+            else {
+                $buildOutput = @(& $CompilerPath -std=c++17 -O2 "-DRUN_PROFILE=$Macro" $sourcePath -o $outPath 2>&1 | ForEach-Object { "$_" })
+            }
             $exitCode = $LASTEXITCODE
         }
         finally {

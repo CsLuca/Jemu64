@@ -1,0 +1,19 @@
+{
+    "generated_at_utc":  "2026-09-18T15:03:34.1001812Z",
+    "profile":  "strict",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "level5_drive_profile":  "level5-coupling",
+    "metrics":  {
+                    "dataset_total":  8,
+                    "dataset_pass":  8,
+                    "dataset_pass_rate":  1,
+                    "kernel_mode":  "pure",
+                    "kernel_max_halfcycles":  900000,
+                    "kernel_repeat":  3
+                },
+    "budgets":  {
+                    "dataset_min_pass_rate":  1,
+                    "kernel_require_pass":  1
+                },
+    "overall_pass":  true
+}
