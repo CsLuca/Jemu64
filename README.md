@@ -1105,6 +1105,20 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Gate hardening:
   - write roundtrip execution includes controlled retry and stale-exe process cleanup (`-WriteRoundtripRetryCount`, default `3`) to reduce transient lock flakes.
 
+## L5.3 Increment: Differential Multi-Oracle Gate (Experimental)
+
+- Added incremental gate scaffold:
+  - `run_level5_diff_oracle_gate.ps1`
+  - orchestrates:
+    1) Level5 cycle coupling gate fast,
+    2) Level5 cycle coupling gate strict,
+    3) Level5 flux/analog gate fast.
+- Produces differential spread report:
+  - `datasets/level5/quality_reports/level5_diff_oracle_gate_metrics.json`
+  - `datasets/level5/quality_reports/level5_diff_oracle_gate_runtime.csv`
+- Default budget policy:
+  - `SpreadBudget=0.0` (strict parity target).
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

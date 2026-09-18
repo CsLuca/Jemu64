@@ -1,0 +1,5 @@
+"metric","value","budget","pass"
+"cycle_fast_dataset_pass_rate","1","1","1"
+"cycle_strict_dataset_pass_rate","1","1","1"
+"flux_fast_dataset_pass_rate","1","1","1"
+"differential_oracle_spread","0","0","1"

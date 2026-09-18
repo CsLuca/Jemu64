@@ -1,0 +1,15 @@
+{
+    "generated_at_utc":  "2026-09-18T22:11:14.1275817Z",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "external_manifest":  "C:\\dev\\Jemu64\\external_tests_manifest.json",
+    "metrics":  {
+                    "cycle_fast_dataset_pass_rate":  1,
+                    "cycle_strict_dataset_pass_rate":  1,
+                    "flux_fast_dataset_pass_rate":  1,
+                    "differential_oracle_spread":  0
+                },
+    "budgets":  {
+                    "differential_oracle_spread_max":  0
+                },
+    "overall_pass":  true
+}
