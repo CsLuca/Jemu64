@@ -1,0 +1,30 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap01",
+  "side": "A",
+  "track_range": "0-0",
+  "capture": {
+    "hardware": "KryoFlux (archive raw import)",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-18T15:30:00Z",
+    "operator": "opencode_ingest",
+    "notes": "Imported from Archive.org Bill Budge Pinball Construction Set (1of2) track00.0 raw stream; provisional cap01 pending same-media Greaseweazle capture."
+  },
+  "drive": {
+    "model": "1541-family",
+    "revision": "unknown"
+  },
+  "mechanical": {
+    "rpm_mean": 300,
+    "rpm_stddev": 1,
+    "ambient_celsius": 24,
+    "warmup_minutes": 0
+  },
+  "source_integrity": {
+    "sha256_flux": "a4e792c93fb70292a7bb98f6f1441a0a0452a8114fb8506797e2f2d77863001c",
+    "file_size_bytes": 184534
+  },
+  "license": {
+    "rights_note": "For preservation/research validation only; verify rights before redistribution."
+  }
+}

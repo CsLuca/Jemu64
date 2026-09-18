@@ -1,0 +1,30 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_archive_aztec_challenge_c64_sideA_cap01",
+  "side": "A",
+  "track_range": "0-0",
+  "capture": {
+    "hardware": "KryoFlux (archive raw import)",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-18T15:58:00Z",
+    "operator": "opencode_ingest",
+    "notes": "Imported from Archive.org aztec-challenge-c64 Track00.0.raw; provisional cap01 pending same-media Greaseweazle cap02."
+  },
+  "drive": {
+    "model": "1541-family",
+    "revision": "unknown"
+  },
+  "mechanical": {
+    "rpm_mean": 300,
+    "rpm_stddev": 1,
+    "ambient_celsius": 24,
+    "warmup_minutes": 0
+  },
+  "source_integrity": {
+    "sha256_flux": "4c615ad32cac8daab9d1a2f9c5a1d7cb691c35dcca042b81e851a02c7c557592",
+    "file_size_bytes": 165037
+  },
+  "license": {
+    "rights_note": "For preservation/research validation only; verify rights before redistribution."
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_archive_transylvania_c_64_atari_sideA_cap01",
+  "side": "A",
+  "track_range": "0-0",
+  "capture": {
+    "hardware": "KryoFlux (archive raw import)",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-18T15:40:00Z",
+    "operator": "opencode_ingest",
+    "notes": "Imported from Archive.org transylvania-c-64-atari Track00.0.raw; provisional cap01 pending same-media Greaseweazle cap02."
+  },
+  "drive": {
+    "model": "1541-family",
+    "revision": "unknown"
+  },
+  "mechanical": {
+    "rpm_mean": 300,
+    "rpm_stddev": 1,
+    "ambient_celsius": 24,
+    "warmup_minutes": 0
+  },
+  "source_integrity": {
+    "sha256_flux": "68fd60f64bfc834ec5febe96cfc542529ea2284e797629b92c7f826e396f518e",
+    "file_size_bytes": 170041
+  },
+  "license": {
+    "rights_note": "For preservation/research validation only; verify rights before redistribution."
+  }
+}

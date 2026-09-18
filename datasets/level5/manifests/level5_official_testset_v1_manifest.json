@@ -1,0 +1,70 @@
+{
+  "manifest_version": 1,
+  "name": "level5_official_testset_v1",
+  "description": "Official Level5 working test set v1 based on currently available raw captures (archive imports + bootstrap calibration).",
+  "global_oracle": {
+    "require_no_host_fallback": true,
+    "default_timing_window": {
+      "max_halfcycles": 700000,
+      "min_done_hits": 1
+    }
+  },
+  "titles": [
+    {
+      "id": "l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_billbudgepinballconstructionsetcommodore64_sideA_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_billbudgepinballconstructionsetcommodore64_sideA.oracle.json"
+    },
+    {
+      "id": "l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap02",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_billbudgepinballconstructionsetcommodore64_sideA_gw_cap02_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap02.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_billbudgepinballconstructionsetcommodore64_sideA.oracle.json"
+    },
+    {
+      "id": "l5_archive_transylvania_c_64_atari_sideA_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_transylvania_c_64_atari_sideA_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_transylvania_c_64_atari_sideA_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_transylvania_c_64_atari_sideA.oracle.json"
+    },
+    {
+      "id": "l5_archive_transylvania_c_64_atari_sideB_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_transylvania_c_64_atari_sideB_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_transylvania_c_64_atari_sideB_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_transylvania_c_64_atari_sideB.oracle.json"
+    },
+    {
+      "id": "l5_archive_kane_human_race_sideA_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_kane_human_race_sideA_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_kane_human_race_sideA_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_kane_human_race_sideA.oracle.json"
+    },
+    {
+      "id": "l5_archive_kane_human_race_sideB_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_kane_human_race_sideB_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_kane_human_race_sideB_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_kane_human_race_sideB.oracle.json"
+    },
+    {
+      "id": "l5_archive_aztec_challenge_c64_sideA_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_aztec_challenge_c64_sideA_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_aztec_challenge_c64_sideA_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_aztec_challenge_c64_sideA.oracle.json"
+    },
+    {
+      "id": "l5_archive_aztec_challenge_c64_sideB_cap01",
+      "format": "raw",
+      "path": "datasets/level5/raw_flux/l5_archive_aztec_challenge_c64_sideB_gw_cap01_25000000hz.raw",
+      "metadata": "datasets/level5/metadata/l5_archive_aztec_challenge_c64_sideB_cap01.metadata.json",
+      "oracle": "datasets/level5/oracles/l5_archive_aztec_challenge_c64_sideB.oracle.json"
+    }
+  ]
+}

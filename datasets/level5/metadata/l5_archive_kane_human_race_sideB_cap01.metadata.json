@@ -1,0 +1,30 @@
+{
+  "dataset_version": 1,
+  "title_id": "l5_archive_kane_human_race_sideB_cap01",
+  "side": "B",
+  "track_range": "0-0",
+  "capture": {
+    "hardware": "KryoFlux (archive raw import)",
+    "sample_rate_hz": 25000000,
+    "timestamp_utc": "2026-09-18T15:53:00Z",
+    "operator": "opencode_ingest",
+    "notes": "Imported from Archive.org kane-human-race Track00.1.raw; provisional cap01 pending same-media Greaseweazle cap02."
+  },
+  "drive": {
+    "model": "1541-family",
+    "revision": "unknown"
+  },
+  "mechanical": {
+    "rpm_mean": 300,
+    "rpm_stddev": 1,
+    "ambient_celsius": 24,
+    "warmup_minutes": 0
+  },
+  "source_integrity": {
+    "sha256_flux": "5309e07d4c27a5c711ecb83cd26fdc3f806ffea532a55626d4186ed396cc4e93",
+    "file_size_bytes": 209608
+  },
+  "license": {
+    "rights_note": "For preservation/research validation only; verify rights before redistribution."
+  }
+}
