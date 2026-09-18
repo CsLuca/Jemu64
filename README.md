@@ -1101,6 +1101,8 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Strict profile additionally requires write roundtrip strict and stronger kernel repeat/budget settings.
   - Default strict mode keeps strict-write optional to avoid unrelated hard-reference corpus blockers.
   - Set `-RequireStrictWriteRoundtrip` to enforce strict write roundtrip as a hard gate.
+- Gate hardening:
+  - write roundtrip execution includes controlled retry and stale-exe process cleanup (`-WriteRoundtripRetryCount`, default `3`) to reduce transient lock flakes.
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 

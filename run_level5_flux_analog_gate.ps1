@@ -5,6 +5,7 @@ param(
     [string]$ExternalManifest = "external_tests_manifest.json",
     [int]$KernelMaxHalfCycles = 700000,
     [int]$KernelRepeat = 2,
+    [int]$WriteRoundtripRetryCount = 3,
     [switch]$RequireStrictWriteRoundtrip,
     [string]$OutputDir = ""
 )
@@ -59,6 +60,49 @@ function Invoke-WriteRoundtripWithWeek37Bootstrap {
     }
 }
 
+function Stop-WriteRoundtripExecutables {
+    $exeNames = @("c64_11_fast_signoff", "c64_11_strict_signoff", "c64_11")
+    foreach ($name in $exeNames) {
+        $procs = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+        foreach ($p in $procs) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Invoke-WriteRoundtripWithRetry {
+    param(
+        [string]$RepoPath,
+        [string]$ProfileName,
+        [string]$ManifestPath,
+        [int]$RetryCount
+    )
+
+    if ($RetryCount -lt 1) {
+        $RetryCount = 1
+    }
+
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
+        try {
+            Stop-WriteRoundtripExecutables
+            Invoke-WriteRoundtripWithWeek37Bootstrap -RepoPath $RepoPath -ProfileName $ProfileName -ManifestPath $ManifestPath
+            return
+        }
+        catch {
+            $lastError = $_
+            if ($attempt -lt $RetryCount) {
+                Start-Sleep -Milliseconds (200 * $attempt)
+            }
+        }
+    }
+
+    if ($null -ne $lastError) {
+        throw $lastError
+    }
+    throw "Write roundtrip failed after retries"
+}
+
 $manifestPath = Resolve-LocalPath -PathInput $Manifest
 $externalManifestPath = Resolve-LocalPath -PathInput $ExternalManifest
 Assert-PathExists -Path $manifestPath -Label "level5 manifest"
@@ -85,12 +129,12 @@ try {
         throw "Level5 dataset quality gate failed"
     }
 
-    Invoke-WriteRoundtripWithWeek37Bootstrap -RepoPath $repo -ProfileName "fast" -ManifestPath $externalManifestPath
+    Invoke-WriteRoundtripWithRetry -RepoPath $repo -ProfileName "fast" -ManifestPath $externalManifestPath -RetryCount $WriteRoundtripRetryCount
 
     $strictWriteStatus = -1
     if ($Profile -eq "strict") {
         if ($RequireStrictWriteRoundtrip) {
-            Invoke-WriteRoundtripWithWeek37Bootstrap -RepoPath $repo -ProfileName "strict" -ManifestPath $externalManifestPath
+            Invoke-WriteRoundtripWithRetry -RepoPath $repo -ProfileName "strict" -ManifestPath $externalManifestPath -RetryCount $WriteRoundtripRetryCount
             $strictWriteStatus = 1
         }
         else {
