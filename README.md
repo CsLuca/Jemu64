@@ -1088,6 +1088,7 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Added and validated gate:
   - `run_level5_cycle_coupling_gate.ps1`
   - runs dataset quality gate + kernel IEC E2E under `C64_DRIVE_PROFILE=level5-coupling` (fast/strict).
+  - includes controlled kernel-run retry and process cleanup (`-KernelRetryCount`, default `3`) to reduce transient runtime lock flakes.
 
 ## L5.2 Increment: Flux/Write Analog Gate (Experimental)
 

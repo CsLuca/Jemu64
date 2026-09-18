@@ -4,6 +4,7 @@ param(
     [string]$Manifest = "datasets/level5/manifests/level5_official_testset_v1_manifest.json",
     [int]$KernelMaxHalfCycles = 700000,
     [int]$KernelRepeat = 2,
+    [int]$KernelRetryCount = 3,
     [string]$OutputDir = ""
 )
 
@@ -63,6 +64,51 @@ function Ensure-KernelExecutable {
     return $exePath
 }
 
+function Stop-KernelExecutables {
+    $exeNames = @("c64_11", "c64_11_fast_signoff", "c64_11_strict_signoff")
+    foreach ($name in $exeNames) {
+        $procs = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+        foreach ($p in $procs) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Invoke-KernelE2EWithRetry {
+    param(
+        [string]$RepoPath,
+        [hashtable]$KernelArgs,
+        [int]$RetryCount
+    )
+
+    if ($RetryCount -lt 1) {
+        $RetryCount = 1
+    }
+
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
+        try {
+            Stop-KernelExecutables
+            & "$RepoPath\run_kernel_iec_e2e.ps1" @KernelArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "Kernel IEC E2E failed under level5-coupling profile"
+            }
+            return
+        }
+        catch {
+            $lastError = $_
+            if ($attempt -lt $RetryCount) {
+                Start-Sleep -Milliseconds (250 * $attempt)
+            }
+        }
+    }
+
+    if ($null -ne $lastError) {
+        throw $lastError
+    }
+    throw "Kernel IEC E2E failed after retries"
+}
+
 $manifestPath = Resolve-LocalPath -PathInput $Manifest
 Assert-PathExists -Path $manifestPath -Label "level5 manifest"
 
@@ -101,10 +147,7 @@ try {
         $kernelArgs.Repeat = [Math]::Max($KernelRepeat, 3)
     }
 
-    & "$repo\run_kernel_iec_e2e.ps1" @kernelArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Kernel IEC E2E failed under level5-coupling profile"
-    }
+    Invoke-KernelE2EWithRetry -RepoPath $repo -KernelArgs $kernelArgs -RetryCount $KernelRetryCount
 
     $qualityJsonPath = Resolve-OutputPath -OutputRoot $outputRoot -FileName "level5_dataset_quality_report.json"
     Assert-PathExists -Path $qualityJsonPath -Label "quality report json"
