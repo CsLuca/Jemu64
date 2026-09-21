@@ -1162,6 +1162,12 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - L5.4 integration:
   - `run_level5_chaos_soak.ps1` can enforce power-matrix precheck via `-RequirePowerMatrixGate` (`-PowerMatrixTimeoutSec`),
   - chaos metrics/runtime now include `power_matrix_ok` and `power_matrix_gate_pass` observability fields.
+- Consolidated promotion check:
+  - `run_check_level5_promotion.ps1`
+  - fail-fast order: `level5_power_matrix_gate` -> `level5_diff_oracle_gate` -> `level5_chaos_soak_gate`
+  - emits:
+    - `datasets/level5/quality_reports/level5_promotion_gate_runtime.csv`
+    - `datasets/level5/quality_reports/level5_promotion_gate_metrics.json`
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
