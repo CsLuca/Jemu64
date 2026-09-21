@@ -1154,6 +1154,11 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Phase 4 (boot/reset semantics) in progress:
   - C64 `off/resetting` forces drive IEC parser idle and arms command reacquire,
   - after C64 resume (`on`), first valid command byte is required before accepting data bytes.
+- Added dedicated gate:
+  - `run_level5_power_matrix_gate.ps1`
+  - validates power-matrix scenarios (`C64OffDriveOff`, `C64OffDriveOn`, `C64OnDriveOff`, `C64OnDriveOn`) and emits:
+    - `datasets/level5/quality_reports/level5_power_matrix_gate_runtime.csv`
+    - `datasets/level5/quality_reports/level5_power_matrix_gate_metrics.json`
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 

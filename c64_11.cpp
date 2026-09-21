@@ -6290,6 +6290,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/drive1541_power_matrix_domain_independence_tests.hpp"
 
+#include "tests/drive1541_power_matrix_gate_tests.hpp"
+
 #include "tests/drive1541_read_channel_pll_tests.hpp"
 
 #include "tests/drive1541_write_roundtrip_tests.hpp"
@@ -8693,6 +8695,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541PowerTortureTests();
     runDrive1541IecHotplugTortureTests();
     runDrive1541PowerMatrixDomainIndependenceTests();
+    runDrive1541PowerMatrixGateScenarios();
     runDrive1541ReadChannelPllTests();
     runDrive1541WriteRoundtripTests();
     runDrive1541TimingBattery(cia2);
@@ -8771,6 +8774,14 @@ static void runWeek81FluxBehaviorParityEdgeHardReference();
 static void syncInterruptLines(Bus &bus, CPU6510 &cpu);
 
 static bool runConfiguredProfiles(Bus &bus, CPU6510 &cpu, VICII &vic, CIA6526 &cia2) {
+    #if DRIVE1541_SMOKE_TEST
+    const bool runOnlyPowerMatrixGate = (std::getenv("RUN_ONLY_1541_POWER_MATRIX_GATE") != nullptr);
+    if (runOnlyPowerMatrixGate) {
+        runDrive1541PowerMatrixGateScenarios();
+        return true;
+    }
+    #endif
+
     #if RUN_PROFILE == RUN_PROFILE_FULL
     runWeek45TimeCoreMultiDomainSelfCheck();
     runWeek11OpenBusBankingChecks(bus, cpu);
