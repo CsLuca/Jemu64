@@ -1159,6 +1159,9 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - validates power-matrix scenarios (`C64OffDriveOff`, `C64OffDriveOn`, `C64OnDriveOff`, `C64OnDriveOn`) and emits:
     - `datasets/level5/quality_reports/level5_power_matrix_gate_runtime.csv`
     - `datasets/level5/quality_reports/level5_power_matrix_gate_metrics.json`
+- L5.4 integration:
+  - `run_level5_chaos_soak.ps1` can enforce power-matrix precheck via `-RequirePowerMatrixGate` (`-PowerMatrixTimeoutSec`),
+  - chaos metrics/runtime now include `power_matrix_ok` and `power_matrix_gate_pass` observability fields.
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 

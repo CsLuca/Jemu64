@@ -75,6 +75,14 @@ jobs:
         shell: powershell
         run: .\run_level4_chaos_soak.ps1 -ExternalManifest external_tests_manifest.json -Runs 12 -MaxFlakeRate 0.05 -ReportCsv level4_chaos_soak_runtime.csv -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
 
+      - name: Run Level5 power matrix gate (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_level5_power_matrix_gate.ps1 -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}" -ReportCsv level5_power_matrix_gate_runtime.csv -MetricsJson level5_power_matrix_gate_metrics.json
+
+      - name: Run Level5 chaos soak (${{ matrix.rev.name }})
+        shell: powershell
+        run: .\run_level5_chaos_soak.ps1 -Profile fast -Manifest datasets/level5/manifests/level5_official_testset_v1_manifest.json -ExternalManifest external_tests_manifest.json -Runs 6 -EnableWarmup -WarmupKernelRepeat 1 -RequirePowerMatrixGate -MaxFlakeRate 0.05 -ReportCsv level5_chaos_soak_runtime.csv -MetricsJson level5_chaos_soak_metrics.json -OutputDir "artifacts/runs/ci-signoff-${{ matrix.rev.name }}"
+
       - name: Check phase5 hard thresholds (${{ matrix.rev.name }})
         shell: powershell
         run: .\run_check_phase5_hard_thresholds.ps1 -Thresholds phase5_hard_thresholds.json -Matrix copier_matrix.json -Report "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/copier_matrix_signoff_report.json" -AdvancedRealCorpusReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_real_corpus_runtime.csv" -AdvancedDosRecoveryReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/advanced_dos_recovery_runtime.csv" -SoakReport "artifacts/runs/ci-signoff-${{ matrix.rev.name }}/phase5_soak_runtime.csv" -RevisionMetrics reference/edge/revision_tolerance_metrics.json -PromotionReportJson reference/edge/level1_vs_level2_vs_level3.json -PromotionReportCsv reference/edge/level1_vs_level2_vs_level3.csv
@@ -98,6 +106,10 @@ jobs:
             artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level4_kpi_gate_runtime.csv
             artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level4_kpi_metrics.json
             artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level4_chaos_soak_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level5_power_matrix_gate_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level5_power_matrix_gate_metrics.json
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level5_chaos_soak_runtime.csv
+            artifacts/runs/ci-signoff-${{ matrix.rev.name }}/level5_chaos_soak_metrics.json
             artifacts/runs/ci-signoff-${{ matrix.rev.name }}/COPIER_SUPPORT_MATRIX.md
             artifacts/runs/ci-signoff-${{ matrix.rev.name }}/real_golden_gate_runtime.csv
             reference/edge/revision_tolerance_metrics.json

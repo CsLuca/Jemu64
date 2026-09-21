@@ -12,6 +12,8 @@ param(
     [int]$WarmupTimeoutSec = 300,
     [int]$KernelOnlyRetryCount = 2,
     [int]$KernelRecoveryTimeoutSec = 300,
+    [switch]$RequirePowerMatrixGate,
+    [int]$PowerMatrixTimeoutSec = 300,
     [double]$MaxFlakeRate = 0.05,
     [double]$SpreadBudget = 0.0,
     [string]$ReportCsv = "level5_chaos_soak_runtime.csv",
@@ -250,6 +252,9 @@ if ($WarmupTimeoutSec -lt 30) {
 if ($KernelRecoveryTimeoutSec -lt 30) {
     throw "KernelRecoveryTimeoutSec must be >= 30"
 }
+if ($PowerMatrixTimeoutSec -lt 30) {
+    throw "PowerMatrixTimeoutSec must be >= 30"
+}
 
 $manifestPath = Resolve-LocalPath -PathInput $Manifest
 $externalManifestPath = Resolve-LocalPath -PathInput $ExternalManifest
@@ -269,6 +274,21 @@ $metricsPath = if ([System.IO.Path]::IsPathRooted($MetricsJson)) { $MetricsJson 
 $rows = @()
 $passRuns = 0
 $firstFailedRun = 0
+
+$powerMatrixPass = $true
+if ($RequirePowerMatrixGate) {
+    $pmScript = "$repo\run_level5_power_matrix_gate.ps1"
+    $pmArgs = @{
+        OutputDir = $outputRoot
+        ReportCsv = "level5_power_matrix_gate_runtime.csv"
+        MetricsJson = "level5_power_matrix_gate_metrics.json"
+    }
+    $pmResult = Invoke-ChildScriptWithTimeout -ScriptPath $pmScript -NamedArgs $pmArgs -TimeoutSec $PowerMatrixTimeoutSec
+    $powerMatrixPass = (-not $pmResult.timed_out -and $pmResult.exit_code -eq 0)
+    if (-not $powerMatrixPass) {
+        "[L5-CHAOS] power-matrix precheck failed exit=$($pmResult.exit_code) timeout=$($pmResult.timed_out)"
+    }
+}
 
 for ($i = 1; $i -le $Runs; ++$i) {
     $runOutDir = Join-Path -Path $outputRoot -ChildPath ("l5_chaos_run{0}" -f $i)
@@ -311,6 +331,7 @@ for ($i = 1; $i -le $Runs; ++$i) {
         run = $i
         profile = $Profile
         attempts = $runAttempts
+        power_matrix_ok = if ($powerMatrixPass) { 1 } else { 0 }
         warmup_ok = if ($warmupOk) { 1 } else { 0 }
         pass = if ($runPass) { 1 } else { 0 }
         issue = $runIssue
@@ -323,7 +344,7 @@ $rows | Export-Csv -LiteralPath $reportPath -NoTypeInformation -Encoding ASCII
 
 $failRuns = $Runs - $passRuns
 $flakeRate = [double]$failRuns / [double]$Runs
-$overallPass = ($flakeRate -le $MaxFlakeRate)
+$overallPass = ($flakeRate -le $MaxFlakeRate -and $powerMatrixPass)
 
 $metrics = [ordered]@{
     generated_at_utc = [DateTime]::UtcNow.ToString("o")
@@ -341,6 +362,8 @@ $metrics = [ordered]@{
         warmup_timeout_sec = $WarmupTimeoutSec
         kernel_only_retry_count = $KernelOnlyRetryCount
         kernel_recovery_timeout_sec = $KernelRecoveryTimeoutSec
+        power_matrix_gate_required = if ($RequirePowerMatrixGate) { 1 } else { 0 }
+        power_matrix_gate_pass = if ($powerMatrixPass) { 1 } else { 0 }
         warmup_enabled = if ($EnableWarmup) { 1 } else { 0 }
         differential_oracle_spread_budget = $SpreadBudget
     }
