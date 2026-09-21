@@ -1168,6 +1168,12 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - emits:
     - `datasets/level5/quality_reports/level5_promotion_gate_runtime.csv`
     - `datasets/level5/quality_reports/level5_promotion_gate_metrics.json`
+- Final release wrapper:
+  - `run_level5_final_signoff.ps1`
+  - wraps `run_check_level5_promotion.ps1` with release defaults (`SpreadBudget=0.0`, `ChaosRuns=6`, `MaxFlakeRate=0.05`, power-matrix required by default)
+  - emits:
+    - `datasets/level5/quality_reports/level5_final_signoff_runtime.csv`
+    - `datasets/level5/quality_reports/level5_final_signoff_metrics.json`
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
