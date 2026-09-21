@@ -1131,6 +1131,8 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Budget defaults:
   - `MaxFlakeRate=0.05`
   - `SpreadBudget=0.0` (strict profile delegated to L5.3 gate).
+- Hardening:
+  - per-run gate retry with stale executable cleanup (`-GateRetryCount`, default `3`; `-RetryDelayMs`, default `250`) to reduce transient lock/runtime flakes in long soaks.
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
