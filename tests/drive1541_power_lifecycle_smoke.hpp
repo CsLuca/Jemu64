@@ -113,6 +113,10 @@ static void runDrive1541PowerLifecycleSmoke() {
         std::cerr << "[1541 POWER] FAIL: expected C64 resetting state" << std::endl;
         assert(false);
     }
+    if (!drive.getPowerMatrixState().command_rearm_required) {
+        std::cerr << "[1541 POWER] FAIL: expected command rearm while C64 resetting" << std::endl;
+        assert(false);
+    }
 
     drive.setDrivePower(false);
     for (int i = 0; i < 6000; ++i) {
@@ -146,6 +150,23 @@ static void runDrive1541PowerLifecycleSmoke() {
     matrix = drive.getPowerMatrixState();
     if (matrix.c64 != Drive1541::C64PowerState::On || !matrix.c64_powered || !matrix.drive_powered) {
         std::cerr << "[1541 POWER] FAIL: expected C64 on + drive on matrix state" << std::endl;
+        assert(false);
+    }
+    if (!matrix.command_rearm_required) {
+        std::cerr << "[1541 POWER] FAIL: expected command rearm pending after C64 resume" << std::endl;
+        assert(false);
+    }
+
+    const uint64_t rxBeforeDataDrop = drive.iecRxProcessed;
+    drive.consumeReceivedByte(static_cast<uint8_t>('$'), false);
+    if (drive.iecRxProcessed != rxBeforeDataDrop) {
+        std::cerr << "[1541 POWER] FAIL: data should be ignored until first post-resume command" << std::endl;
+        assert(false);
+    }
+
+    drive.consumeReceivedByte(static_cast<uint8_t>(0x20 | 0x08), true);
+    if (drive.getPowerMatrixState().command_rearm_required) {
+        std::cerr << "[1541 POWER] FAIL: command rearm should clear after first command" << std::endl;
         assert(false);
     }
 

@@ -1146,6 +1146,15 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - `ready_for_l5_promotion` in physical readiness tracker stays authoritative for final closure.
 - Final Level5 physical promotion requires closing all tracker blockers and setting `ready_for_l5_promotion=yes` on target corpus rows.
 
+## 1541 Power Matrix Progress
+
+- Phase 1 complete: explicit C64 power states (`off/on/resetting`) + drive power APIs (`setC64Power`, `setDrivePower`, `getPowerMatrixState`).
+- Phase 2 complete: IEC bus rules for all matrix combinations (`C64OffDriveOff`, `C64OffDriveOn`, `C64OnDriveOff`, `C64OnDriveOn`).
+- Phase 3 complete: independent C64/drive domain scheduling controls in IEC bridge domains.
+- Phase 4 (boot/reset semantics) in progress:
+  - C64 `off/resetting` forces drive IEC parser idle and arms command reacquire,
+  - after C64 resume (`on`), first valid command byte is required before accepting data bytes.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:

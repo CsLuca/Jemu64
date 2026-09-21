@@ -120,12 +120,18 @@ public:
         PowerMatrixMode mode = PowerMatrixMode::C64OnDriveOn;
         bool c64_powered = true;
         bool drive_powered = true;
+        bool command_rearm_required = false;
     };
 
     void setC64Power(bool enabled) {
+        const C64PowerState prev = c64PowerState;
         c64PowerState = enabled ? C64PowerState::On : C64PowerState::Off;
         if (!enabled) {
             forceIecIdleForC64PowerOff();
+            armCommandReacquire();
+        }
+        if (enabled && prev != C64PowerState::On) {
+            armCommandReacquire();
         }
         if (!enabled) {
             setIecLines(true, true, true);
@@ -133,9 +139,18 @@ public:
     }
 
     void setC64PowerState(C64PowerState state) {
+        const C64PowerState prev = c64PowerState;
         c64PowerState = state;
         if (state == C64PowerState::Off) {
             forceIecIdleForC64PowerOff();
+            armCommandReacquire();
+        }
+        if (state == C64PowerState::Resetting) {
+            forceIecIdleForC64PowerOff();
+            armCommandReacquire();
+        }
+        if (state == C64PowerState::On && prev != C64PowerState::On) {
+            armCommandReacquire();
         }
         if (!isC64DrivingIecLines()) {
             setIecLines(true, true, true);
@@ -170,7 +185,8 @@ public:
             powerController.state(),
             mode,
             c64On,
-            driveOn
+            driveOn,
+            iecRequireFreshCommandAfterC64Resume
         };
     }
 
@@ -201,6 +217,11 @@ public:
         iecEoiPendingAck = false;
         iecDrivePullCLK = false;
         iecDrivePullDATA = false;
+    }
+
+    void armCommandReacquire() {
+        iecRequireFreshCommandAfterC64Resume = true;
+        iecCommandRearmTransitions++;
     }
 
     void powerOn(bool coldBoot) {
@@ -333,6 +354,8 @@ public:
     uint64_t iecAtnFallingSeen = 0;
     uint64_t iecClockRisingSeen = 0;
     uint64_t iecClockRisingAtnLow = 0;
+    bool iecRequireFreshCommandAfterC64Resume = false;
+    uint64_t iecCommandRearmTransitions = 0;
 
     bool iecPrevCLK = true;
     bool iecPrevATN = true;
@@ -596,6 +619,8 @@ public:
         iecAtnFallingSeen = 0;
         iecClockRisingSeen = 0;
         iecClockRisingAtnLow = 0;
+        iecRequireFreshCommandAfterC64Resume = false;
+        iecCommandRearmTransitions = 0;
         driveLedMotorOn = false;
         driveLedActivity = false;
         driveLedError = false;
@@ -1123,6 +1148,12 @@ public:
     }
 
     void consumeReceivedByte(uint8_t byte, bool isCommand) {
+        if (iecRequireFreshCommandAfterC64Resume) {
+            if (!isCommand) {
+                return;
+            }
+            iecRequireFreshCommandAfterC64Resume = false;
+        }
         if (isCommand) {
             processIecCommandByte(byte);
         } else {
