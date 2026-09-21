@@ -283,6 +283,7 @@ public:
 
     void setPhysicalProfile(PhysicalProfile profile) {
         physicalProfile = profile;
+        driveCpuUseMicroOpEngine = (physicalProfile == PhysicalProfile::Level5Coupling);
         applyMountedBackendRouting();
     }
 
@@ -572,6 +573,7 @@ public:
         bool pageCrossPenaltyPending = false;
         uint64_t microOpsExecuted = 0;
         uint64_t busCyclesExecuted = 0;
+        uint8_t cyclesConsumed = 0;
     };
 
     bool driveCpuUseMicroOpEngine = false;
@@ -581,21 +583,168 @@ public:
         driveCpuMicroOpState = DriveCpuMicroOpState{};
     }
 
+    bool executeDriveCpuMicroOpBaseOpcode(uint8_t op, uint8_t &cyclesUsed) {
+        cyclesUsed = 2;
+        switch (op) {
+            case 0xEA:
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0x78:
+                cpuP |= 0x04;
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0x58:
+                cpuP &= static_cast<uint8_t>(~0x04);
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0xD8:
+                cpuP &= static_cast<uint8_t>(~0x08);
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0xF8:
+                cpuP |= 0x08;
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0x18:
+                cpuP &= static_cast<uint8_t>(~0x01);
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0x38:
+                cpuP |= 0x01;
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0xA9:
+                cpuA = read(static_cast<uint16_t>(pc + 1));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
+            case 0xA2:
+                cpuX = read(static_cast<uint16_t>(pc + 1));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
+            case 0xA0:
+                cpuY = read(static_cast<uint16_t>(pc + 1));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
+            case 0x4C:
+                pc = read16(static_cast<uint16_t>(pc + 1));
+                cyclesUsed = 3;
+                return true;
+            case 0x20: {
+                const uint16_t target = read16(static_cast<uint16_t>(pc + 1));
+                const uint16_t ret = static_cast<uint16_t>(pc + 2);
+                push(static_cast<uint8_t>((ret >> 8) & 0xFF));
+                push(static_cast<uint8_t>(ret & 0xFF));
+                pc = target;
+                cyclesUsed = 6;
+                return true;
+            }
+            case 0x60: {
+                const uint8_t lo = pull();
+                const uint8_t hi = pull();
+                pc = static_cast<uint16_t>((uint16_t(hi) << 8) | lo);
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 6;
+                return true;
+            }
+            case 0xD0: {
+                const int8_t rel = static_cast<int8_t>(read(static_cast<uint16_t>(pc + 1)));
+                pc = static_cast<uint16_t>(pc + 2);
+                if ((cpuP & 0x02) == 0) {
+                    pc = static_cast<uint16_t>(pc + rel);
+                    cyclesUsed = 3;
+                } else {
+                    cyclesUsed = 2;
+                }
+                return true;
+            }
+            case 0xF0: {
+                const int8_t rel = static_cast<int8_t>(read(static_cast<uint16_t>(pc + 1)));
+                pc = static_cast<uint16_t>(pc + 2);
+                if ((cpuP & 0x02) != 0) {
+                    pc = static_cast<uint16_t>(pc + rel);
+                    cyclesUsed = 3;
+                } else {
+                    cyclesUsed = 2;
+                }
+                return true;
+            }
+            default:
+                return false;
+        }
+    }
+
     bool stepDriveCpuMicroOpScaffold() {
-        // Commit-1 scaffold only: micro-op engine remains feature-gated and inert by default.
-        // No opcode ownership change is performed in this step.
         if (!driveCpuUseMicroOpEngine) {
             return false;
         }
+
+        const uint16_t oldPc = pc;
         if (!driveCpuMicroOpState.active) {
             driveCpuMicroOpState.active = true;
             driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Fetch;
             driveCpuMicroOpState.ir = read(pc);
             driveCpuMicroOpState.microPc = 0;
+            driveCpuMicroOpState.cyclesConsumed = 0;
         }
+
         driveCpuMicroOpState.microOpsExecuted++;
-        driveCpuMicroOpState.busCyclesExecuted++;
-        return false;
+
+        if (driveCpuMicroOpState.phase == DriveCpuMicroOpPhase::Fetch) {
+            driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Decode;
+            driveCpuMicroOpState.microPc++;
+            driveCpuMicroOpState.busCyclesExecuted++;
+            return true;
+        }
+
+        if (driveCpuMicroOpState.phase == DriveCpuMicroOpPhase::Decode) {
+            driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Execute;
+            driveCpuMicroOpState.microPc++;
+            return true;
+        }
+
+        if (driveCpuMicroOpState.phase == DriveCpuMicroOpPhase::Execute) {
+            uint8_t cyclesUsed = 2;
+            const bool handled = executeDriveCpuMicroOpBaseOpcode(driveCpuMicroOpState.ir, cyclesUsed);
+            if (!handled) {
+                pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+            }
+            if (pc == oldPc) {
+                pc = static_cast<uint16_t>(pc + 1);
+            }
+            driveCpuMicroOpState.cyclesConsumed = cyclesUsed;
+            driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Writeback;
+            driveCpuMicroOpState.microPc++;
+            driveCpuMicroOpState.busCyclesExecuted += cyclesUsed;
+            return true;
+        }
+
+        if (driveCpuMicroOpState.phase == DriveCpuMicroOpPhase::Writeback) {
+            const uint8_t scale = (revisionProfile.cpuCyclesPerStep == 0) ? 1 : revisionProfile.cpuCyclesPerStep;
+            const uint8_t scaledConsumed = static_cast<uint8_t>((driveCpuMicroOpState.cyclesConsumed / scale) + ((driveCpuMicroOpState.cyclesConsumed % scale) ? 1 : 0));
+            cpuCyclesToNext = (scaledConsumed > 0) ? static_cast<uint8_t>(scaledConsumed - 1) : 0;
+            cpuLastOpcode = driveCpuMicroOpState.ir;
+            cpuLastFetchAddr = oldPc;
+            cpuStepCount++;
+            driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Complete;
+            driveCpuMicroOpState.microPc++;
+            return true;
+        }
+
+        driveCpuMicroOpState.active = false;
+        driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Fetch;
+        driveCpuMicroOpState.microPc = 0;
+        return true;
     }
 
     bool loadRom(const std::string &romPath) {
@@ -652,6 +801,7 @@ public:
         cpuSP = 0xFF;
         cpuP = 0x24;
         resetDriveCpuMicroOpState();
+        driveCpuUseMicroOpEngine = (physicalProfile == PhysicalProfile::Level5Coupling);
 
         iecListenSecondary = 0xFF;
         iecTalkSecondary = 0xFF;
@@ -930,7 +1080,12 @@ public:
             return;
         }
 
-        (void)stepDriveCpuMicroOpScaffold();
+        if (stepDriveCpuMicroOpScaffold()) {
+            if (pc < 0xC000) {
+                pc = static_cast<uint16_t>(memory[0xFFFC] | (uint16_t(memory[0xFFFD]) << 8));
+            }
+            return;
+        }
 
         cpuReadyEdge = !cpuReadyEdge;
         if (!cpuReadyEdge) {
