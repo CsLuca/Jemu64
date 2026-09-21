@@ -107,9 +107,17 @@ public:
         Resetting = 2
     };
 
+    enum class PowerMatrixMode : uint8_t {
+        C64OffDriveOff = 0,
+        C64OffDriveOn = 1,
+        C64OnDriveOff = 2,
+        C64OnDriveOn = 3
+    };
+
     struct PowerMatrixState {
         C64PowerState c64 = C64PowerState::On;
         PowerState drive = PowerState::On;
+        PowerMatrixMode mode = PowerMatrixMode::C64OnDriveOn;
         bool c64_powered = true;
         bool drive_powered = true;
     };
@@ -117,12 +125,18 @@ public:
     void setC64Power(bool enabled) {
         c64PowerState = enabled ? C64PowerState::On : C64PowerState::Off;
         if (!enabled) {
+            forceIecIdleForC64PowerOff();
+        }
+        if (!enabled) {
             setIecLines(true, true, true);
         }
     }
 
     void setC64PowerState(C64PowerState state) {
         c64PowerState = state;
+        if (state == C64PowerState::Off) {
+            forceIecIdleForC64PowerOff();
+        }
         if (!isC64DrivingIecLines()) {
             setIecLines(true, true, true);
         }
@@ -146,16 +160,47 @@ public:
 
     PowerMatrixState getPowerMatrixState() const {
         const bool c64On = (c64PowerState != C64PowerState::Off);
+        const bool driveOn = powerController.isOn();
+        const PowerMatrixMode mode =
+            c64On
+                ? (driveOn ? PowerMatrixMode::C64OnDriveOn : PowerMatrixMode::C64OnDriveOff)
+                : (driveOn ? PowerMatrixMode::C64OffDriveOn : PowerMatrixMode::C64OffDriveOff);
         return PowerMatrixState{
             c64PowerState,
             powerController.state(),
+            mode,
             c64On,
-            powerController.isOn()
+            driveOn
         };
     }
 
     bool isC64DrivingIecLines() const {
         return c64PowerState == C64PowerState::On;
+    }
+
+    drive1541_physical::IecLines resolveHostLinesForPowerMatrix(bool atnHigh, bool clkHigh, bool dataHigh) const {
+        if (!isC64DrivingIecLines()) {
+            return drive1541_physical::IecLines{true, true, true};
+        }
+        return drive1541_physical::IecLines{atnHigh, clkHigh, dataHigh};
+    }
+
+    bool isDriveOutputAllowedForPowerMatrix() const {
+        return powerController.isDriveOutputAllowed();
+    }
+
+    void forceIecIdleForC64PowerOff() {
+        iecListening = false;
+        iecTalking = false;
+        iecSerialState = IecSerialState::Idle;
+        iecSerialPullDATA = false;
+        iecAtnAckPullDATA = false;
+        iecRxByteAckPullDATA = false;
+        iecTxByteActive = false;
+        iecTalkStartPending = false;
+        iecEoiPendingAck = false;
+        iecDrivePullCLK = false;
+        iecDrivePullDATA = false;
     }
 
     void powerOn(bool coldBoot) {
@@ -709,12 +754,10 @@ public:
 
     void tickIecHalfCycle() override {
         const bool wasPoweredOn = powerController.isOn();
-        const bool hostAtnBefore = isC64DrivingIecLines() ? iecATN : true;
-        const bool hostClkBefore = isC64DrivingIecLines() ? iecCLK : true;
-        const bool hostDataBefore = isC64DrivingIecLines() ? iecDATA : true;
+        const drive1541_physical::IecLines hostLinesBefore = resolveHostLinesForPowerMatrix(iecATN, iecCLK, iecDATA);
         powerController.tick(1);
         const bool isPoweredOn = powerController.isOn();
-        const bool allowDriveOutput = powerController.isDriveOutputAllowed();
+        const bool allowDriveOutput = isDriveOutputAllowedForPowerMatrix();
         signalModel.begin_tick(powerController.state());
         if (wasPoweredOn && !allowDriveOutput) {
             physicalIecPort.dropPendingDriveEdges();
@@ -722,7 +765,7 @@ public:
         }
 
         const uint64_t nowAfterPowerTick = physicalScheduler.now();
-        physicalIecPort.queueHostLines(nowAfterPowerTick, {hostAtnBefore, hostClkBefore, hostDataBefore});
+        physicalIecPort.queueHostLines(nowAfterPowerTick, hostLinesBefore);
         const std::size_t preAppliedEdges = physicalIecPort.applyReady(nowAfterPowerTick, allowDriveOutput);
         signalModel.note_iec_edges(preAppliedEdges);
         {
@@ -1053,13 +1096,10 @@ public:
     }
 
     void setIecLines(bool atnHigh, bool clkHigh, bool dataHigh) override {
-        const bool applyAtn = isC64DrivingIecLines() ? atnHigh : true;
-        const bool applyClk = isC64DrivingIecLines() ? clkHigh : true;
-        const bool applyData = isC64DrivingIecLines() ? dataHigh : true;
+        const drive1541_physical::IecLines hostLines = resolveHostLinesForPowerMatrix(atnHigh, clkHigh, dataHigh);
         const uint64_t now = physicalScheduler.now();
-        const drive1541_physical::IecLines hostLines{applyAtn, applyClk, applyData};
         physicalIecPort.queueHostLines(now, hostLines);
-        physicalIecPort.applyReady(now, powerController.isDriveOutputAllowed());
+        physicalIecPort.applyReady(now, isDriveOutputAllowedForPowerMatrix());
         const drive1541_physical::IecLines applied = physicalIecPort.busInput();
         iecATN = applied.atn;
         iecCLK = applied.clk;

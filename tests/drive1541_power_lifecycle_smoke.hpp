@@ -97,6 +97,10 @@ static void runDrive1541PowerLifecycleSmoke() {
         std::cerr << "[1541 POWER] FAIL: expected C64 off + drive on matrix state" << std::endl;
         assert(false);
     }
+    if (matrix.mode != Drive1541::PowerMatrixMode::C64OffDriveOn) {
+        std::cerr << "[1541 POWER] FAIL: expected power matrix mode C64OffDriveOn" << std::endl;
+        assert(false);
+    }
 
     drive.setIecLines(false, false, false);
     if (!drive.iecATN || !drive.iecCLK || !drive.iecDATA) {
@@ -119,6 +123,10 @@ static void runDrive1541PowerLifecycleSmoke() {
         std::cerr << "[1541 POWER] FAIL: expected C64 resetting + drive off matrix state" << std::endl;
         assert(false);
     }
+    if (matrix.mode != Drive1541::PowerMatrixMode::C64OnDriveOff) {
+        std::cerr << "[1541 POWER] FAIL: expected power matrix mode C64OnDriveOff" << std::endl;
+        assert(false);
+    }
 
     drive.setDrivePower(true);
     for (int i = 0; i < 21000; ++i) {
@@ -129,11 +137,26 @@ static void runDrive1541PowerLifecycleSmoke() {
         std::cerr << "[1541 POWER] FAIL: expected C64 resetting + drive on matrix state" << std::endl;
         assert(false);
     }
+    if (matrix.mode != Drive1541::PowerMatrixMode::C64OnDriveOn) {
+        std::cerr << "[1541 POWER] FAIL: expected power matrix mode C64OnDriveOn" << std::endl;
+        assert(false);
+    }
 
     drive.setC64Power(true);
     matrix = drive.getPowerMatrixState();
     if (matrix.c64 != Drive1541::C64PowerState::On || !matrix.c64_powered || !matrix.drive_powered) {
         std::cerr << "[1541 POWER] FAIL: expected C64 on + drive on matrix state" << std::endl;
+        assert(false);
+    }
+
+    drive.setC64Power(false);
+    drive.setDrivePower(false);
+    for (int i = 0; i < 6000; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    matrix = drive.getPowerMatrixState();
+    if (matrix.mode != Drive1541::PowerMatrixMode::C64OffDriveOff) {
+        std::cerr << "[1541 POWER] FAIL: expected power matrix mode C64OffDriveOff" << std::endl;
         assert(false);
     }
 

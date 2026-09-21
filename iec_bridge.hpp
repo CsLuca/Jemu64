@@ -159,9 +159,10 @@ static IecBridgePolarity makeRuntimeDefaultIecPolarity() {
 
 static void syncIecBusWithPolarity(CIA6526 &cia2, Drive1541 &drive, const IecBridgePolarity &polarity) {
     const IecC64Signals sig = deriveIecC64Signals(cia2, polarity);
-    const IecResolvedLines lines = resolveIecLinesFromPulls(sig.c64PullATN,
-                                                            sig.c64PullCLK,
-                                                            sig.c64PullDATA,
+    const bool c64Driving = drive.isC64DrivingIecLines();
+    const IecResolvedLines lines = resolveIecLinesFromPulls(c64Driving ? sig.c64PullATN : false,
+                                                            c64Driving ? sig.c64PullCLK : false,
+                                                            c64Driving ? sig.c64PullDATA : false,
                                                             drive.iecDrivePullCLK,
                                                             drive.iecDrivePullDATA);
     drive.setIecLines(lines.atnHigh, lines.clkHigh, lines.dataHigh);
