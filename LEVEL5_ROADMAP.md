@@ -84,6 +84,12 @@ Exit criteria:
 - Flake rate <= 0.05 (or stricter project budget).
 - Full regression stack remains green.
 
+## Current Promotion Policy Note
+
+- Development snapshots may use `L5 promoted (cap02_deferred)` when software gates are green but physical corpus closure is pending.
+- `cap02_deferred` is not final physical promotion: rows with missing multi-capture/calibration remain blocked in `datasets/level5/manifests/level5_real20_physical_readiness_tracker.csv`.
+- Final L5 promotion requires full physical closure (`ready_for_l5_promotion=yes` on target corpus rows).
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.

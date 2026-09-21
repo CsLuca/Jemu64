@@ -1136,6 +1136,16 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - per-run gate retry with stale executable cleanup (`-GateRetryCount`, default `3`; `-RetryDelayMs`, default `250`) to reduce transient lock/runtime flakes in long soaks.
   - optional warmup path (`-EnableWarmup`) and kernel-only recovery retries (`-KernelOnlyRetryCount`) to reduce first-run instability before full gate replay.
 
+## Level5 Promotion Status (Current)
+
+- Current state is `software-ready` on official v1 testset gates (L5.1/L5.2/L5.3/L5.4).
+- Temporary promotion label allowed for active development snapshots: `L5 promoted (cap02_deferred)`.
+- `cap02_deferred` means physical promotion is not final yet:
+  - per-side multi-capture (`min_required_captures=2`) is incomplete on part of the real corpus,
+  - metadata/oracle calibration remains `partial` for deferred rows,
+  - `ready_for_l5_promotion` in physical readiness tracker stays authoritative for final closure.
+- Final Level5 physical promotion requires closing all tracker blockers and setting `ready_for_l5_promotion=yes` on target corpus rows.
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:
