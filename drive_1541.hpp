@@ -101,6 +101,63 @@ public:
 
     using PowerState = drive1541_physical::PowerState;
 
+    enum class C64PowerState : uint8_t {
+        Off = 0,
+        On = 1,
+        Resetting = 2
+    };
+
+    struct PowerMatrixState {
+        C64PowerState c64 = C64PowerState::On;
+        PowerState drive = PowerState::On;
+        bool c64_powered = true;
+        bool drive_powered = true;
+    };
+
+    void setC64Power(bool enabled) {
+        c64PowerState = enabled ? C64PowerState::On : C64PowerState::Off;
+        if (!enabled) {
+            setIecLines(true, true, true);
+        }
+    }
+
+    void setC64PowerState(C64PowerState state) {
+        c64PowerState = state;
+        if (!isC64DrivingIecLines()) {
+            setIecLines(true, true, true);
+        }
+    }
+
+    C64PowerState getC64PowerState() const {
+        return c64PowerState;
+    }
+
+    void setDrivePower(bool enabled) {
+        if (enabled) {
+            if (!powerController.isOn() && powerController.state() != PowerState::SpinningUp) {
+                powerController.powerOn(true);
+            }
+            return;
+        }
+        if (powerController.state() != PowerState::Off && powerController.state() != PowerState::SpinningDown) {
+            powerController.powerOff();
+        }
+    }
+
+    PowerMatrixState getPowerMatrixState() const {
+        const bool c64On = (c64PowerState != C64PowerState::Off);
+        return PowerMatrixState{
+            c64PowerState,
+            powerController.state(),
+            c64On,
+            powerController.isOn()
+        };
+    }
+
+    bool isC64DrivingIecLines() const {
+        return c64PowerState == C64PowerState::On;
+    }
+
     void powerOn(bool coldBoot) {
         powerController.powerOn(coldBoot);
     }
@@ -425,6 +482,7 @@ public:
     uint8_t cpuY = 0;
     uint8_t cpuSP = 0xFF;
     uint8_t cpuP = 0x24;
+    C64PowerState c64PowerState = C64PowerState::On;
 
     bool loadRom(const std::string &romPath) {
         std::ifstream in(romPath, std::ios::binary);
@@ -651,9 +709,9 @@ public:
 
     void tickIecHalfCycle() override {
         const bool wasPoweredOn = powerController.isOn();
-        const bool hostAtnBefore = iecATN;
-        const bool hostClkBefore = iecCLK;
-        const bool hostDataBefore = iecDATA;
+        const bool hostAtnBefore = isC64DrivingIecLines() ? iecATN : true;
+        const bool hostClkBefore = isC64DrivingIecLines() ? iecCLK : true;
+        const bool hostDataBefore = isC64DrivingIecLines() ? iecDATA : true;
         powerController.tick(1);
         const bool isPoweredOn = powerController.isOn();
         const bool allowDriveOutput = powerController.isDriveOutputAllowed();
@@ -995,8 +1053,11 @@ public:
     }
 
     void setIecLines(bool atnHigh, bool clkHigh, bool dataHigh) override {
+        const bool applyAtn = isC64DrivingIecLines() ? atnHigh : true;
+        const bool applyClk = isC64DrivingIecLines() ? clkHigh : true;
+        const bool applyData = isC64DrivingIecLines() ? dataHigh : true;
         const uint64_t now = physicalScheduler.now();
-        const drive1541_physical::IecLines hostLines{atnHigh, clkHigh, dataHigh};
+        const drive1541_physical::IecLines hostLines{applyAtn, applyClk, applyData};
         physicalIecPort.queueHostLines(now, hostLines);
         physicalIecPort.applyReady(now, powerController.isDriveOutputAllowed());
         const drive1541_physical::IecLines applied = physicalIecPort.busInput();

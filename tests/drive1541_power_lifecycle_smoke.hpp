@@ -91,5 +91,51 @@ static void runDrive1541PowerLifecycleSmoke() {
         assert(false);
     }
 
+    drive.setC64Power(false);
+    auto matrix = drive.getPowerMatrixState();
+    if (matrix.c64 != Drive1541::C64PowerState::Off || !matrix.drive_powered) {
+        std::cerr << "[1541 POWER] FAIL: expected C64 off + drive on matrix state" << std::endl;
+        assert(false);
+    }
+
+    drive.setIecLines(false, false, false);
+    if (!drive.iecATN || !drive.iecCLK || !drive.iecDATA) {
+        std::cerr << "[1541 POWER] FAIL: C64-off host lines should be forced idle high" << std::endl;
+        assert(false);
+    }
+
+    drive.setC64PowerState(Drive1541::C64PowerState::Resetting);
+    if (drive.getC64PowerState() != Drive1541::C64PowerState::Resetting) {
+        std::cerr << "[1541 POWER] FAIL: expected C64 resetting state" << std::endl;
+        assert(false);
+    }
+
+    drive.setDrivePower(false);
+    for (int i = 0; i < 6000; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    matrix = drive.getPowerMatrixState();
+    if (matrix.c64 != Drive1541::C64PowerState::Resetting || matrix.drive_powered) {
+        std::cerr << "[1541 POWER] FAIL: expected C64 resetting + drive off matrix state" << std::endl;
+        assert(false);
+    }
+
+    drive.setDrivePower(true);
+    for (int i = 0; i < 21000; ++i) {
+        drive.tickIecHalfCycle();
+    }
+    matrix = drive.getPowerMatrixState();
+    if (matrix.c64 != Drive1541::C64PowerState::Resetting || !matrix.drive_powered) {
+        std::cerr << "[1541 POWER] FAIL: expected C64 resetting + drive on matrix state" << std::endl;
+        assert(false);
+    }
+
+    drive.setC64Power(true);
+    matrix = drive.getPowerMatrixState();
+    if (matrix.c64 != Drive1541::C64PowerState::On || !matrix.c64_powered || !matrix.drive_powered) {
+        std::cerr << "[1541 POWER] FAIL: expected C64 on + drive on matrix state" << std::endl;
+        assert(false);
+    }
+
     std::cerr << "[1541 POWER] PASS: per-drive power lifecycle and deterministic cycling" << std::endl;
 }
