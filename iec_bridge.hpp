@@ -213,6 +213,8 @@ struct SharedIecClockDomain {
     uint64_t linkLatencyBusToDrive = 1;
     uint64_t linkJitterUnits = 0;
     uint32_t linkJitterSeed = 0;
+    bool c64DomainEnabled = true;
+    bool driveDomainEnabled = true;
 
     bool linkC64PullATN = false;
     bool linkC64PullCLK = false;
@@ -295,6 +297,20 @@ struct SharedIecClockDomain {
 
     uint64_t getDriveHalfTicks() const {
         return driveHalfTicks;
+    }
+
+    void setC64DomainEnabled(bool enabled) {
+        c64DomainEnabled = enabled;
+        if (!enabled) {
+            linkC64PullATN = false;
+            linkC64PullCLK = false;
+            linkC64PullDATA = false;
+            settleBusAndPropagateSamples();
+        }
+    }
+
+    void setDriveDomainEnabled(bool enabled) {
+        driveDomainEnabled = enabled;
     }
 
     void scheduleEventAtAbsolute(uint64_t when, const std::function<void()> &callback) {
@@ -427,6 +443,11 @@ struct SharedIecClockDomain {
     }
 
     void tickDriveDomainOnce() {
+        if (!driveDomainEnabled) {
+            nextDriveUnits += nextDrivePeriodUnits();
+            return;
+        }
+
         const bool prevPullCLK = drive.iecDrivePullCLK;
         const bool prevPullDATA = drive.iecDrivePullDATA;
 
@@ -441,6 +462,12 @@ struct SharedIecClockDomain {
     }
 
     void tickC64DomainOnce() {
+        if (!c64DomainEnabled) {
+            c64HalfTicks++;
+            nextC64Units += C64_HALF_PERIOD_UNITS;
+            return;
+        }
+
         const bool cntHigh = (cia2.praInput & 0x40) != 0;
         const bool spHigh = (cia2.praInput & 0x80) != 0;
         cia2.setSerialPins(cntHigh, spHigh);
@@ -522,6 +549,8 @@ struct IecBusDomain {
     uint64_t linkLatencyBusToDrive = 1;
     uint64_t linkJitterUnits = 0;
     uint32_t linkJitterSeed = 0;
+    bool c64DomainEnabled = true;
+    bool driveDomainEnabled = true;
 
     bool linkC64PullATN = false;
     bool linkC64PullCLK = false;
@@ -619,6 +648,20 @@ struct IecBusDomain {
 
     uint64_t getDriveHalfTicks() const {
         return driveHalfTicks;
+    }
+
+    void setC64DomainEnabled(bool enabled) {
+        c64DomainEnabled = enabled;
+        if (!enabled) {
+            linkC64PullATN = false;
+            linkC64PullCLK = false;
+            linkC64PullDATA = false;
+            settleBusAndPropagateSamples();
+        }
+    }
+
+    void setDriveDomainEnabled(bool enabled) {
+        driveDomainEnabled = enabled;
     }
 
     void scheduleEventAtAbsolute(uint64_t when, const std::function<void()> &callback) {
@@ -777,6 +820,11 @@ struct IecBusDomain {
     }
 
     void tickDriveDomainOnce() {
+        if (!driveDomainEnabled) {
+            nextDriveUnits += nextDrivePeriodUnits();
+            return;
+        }
+
         const bool prevPullCLK = anyDrivePullCLK();
         const bool prevPullDATA = anyDrivePullDATA();
 
@@ -797,6 +845,12 @@ struct IecBusDomain {
     }
 
     void tickC64DomainOnce() {
+        if (!c64DomainEnabled) {
+            c64HalfTicks++;
+            nextC64Units += C64_HALF_PERIOD_UNITS;
+            return;
+        }
+
         const bool cntHigh = (cia2.praInput & 0x40) != 0;
         const bool spHigh = (cia2.praInput & 0x80) != 0;
         cia2.setSerialPins(cntHigh, spHigh);
