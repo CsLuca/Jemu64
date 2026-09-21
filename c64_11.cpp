@@ -20895,6 +20895,25 @@ static std::string drivePowerStateText(Drive1541::PowerState st) {
     return "UNKNOWN";
 }
 
+static std::string c64PowerStateText(Drive1541::C64PowerState st) {
+    switch (st) {
+        case Drive1541::C64PowerState::Off: return "OFF";
+        case Drive1541::C64PowerState::On: return "ON";
+        case Drive1541::C64PowerState::Resetting: return "RESETTING";
+    }
+    return "UNKNOWN";
+}
+
+static std::string powerMatrixModeText(Drive1541::PowerMatrixMode mode) {
+    switch (mode) {
+        case Drive1541::PowerMatrixMode::C64OffDriveOff: return "C64OffDriveOff";
+        case Drive1541::PowerMatrixMode::C64OffDriveOn: return "C64OffDriveOn";
+        case Drive1541::PowerMatrixMode::C64OnDriveOff: return "C64OnDriveOff";
+        case Drive1541::PowerMatrixMode::C64OnDriveOn: return "C64OnDriveOn";
+    }
+    return "Unknown";
+}
+
 static std::string detectMountedImageFormat(const std::string &path) {
     std::filesystem::path p(path);
     std::string ext = p.extension().string();
@@ -20987,10 +21006,14 @@ static void printConsoleDriveState(const EmulatorConsoleState &st, int unit) {
     }
     const size_t idx = static_cast<size_t>(unit - 8);
     const Drive1541 &d = st.drives[idx];
+    const Drive1541::PowerMatrixState matrix = d.getPowerMatrixState();
     std::cout << std::dec
               << "DRIVE " << unit
               << " cable=" << (st.cableConnected[idx] ? "ON" : "OFF")
               << " power=" << drivePowerStateText(d.getPowerState())
+              << " c64_power=" << c64PowerStateText(matrix.c64)
+              << " pmatrix=" << powerMatrixModeText(matrix.mode)
+              << " pmatrix_rearm=" << (matrix.command_rearm_required ? "YES" : "NO")
               << " mounted=" << (d.mountedImageConfigured ? "YES" : "NO");
     if (d.mountedImageConfigured) {
         std::cout << " format=" << d.mountedImageFormat
@@ -21014,7 +21037,7 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
     }
 
     std::cout << "[CONSOLE] Emulator control console enabled (feature flag JEMU_EMULATOR_CONSOLE=1)." << std::endl;
-    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
+    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
 
     std::string line;
     while (true) {
@@ -21034,11 +21057,13 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
 
         if (cmd == "HELP") {
             std::cout << "C64 ON|OFF|RESET|STATE" << std::endl;
+            std::cout << "C64 POWER ON|OFF|RESET" << std::endl;
             std::cout << "DRIVE <8|9|10|11> ATTACH <path>" << std::endl;
             std::cout << "DRIVE <unit> DETACH" << std::endl;
             std::cout << "DRIVE <unit> CABLE ON|OFF" << std::endl;
             std::cout << "DRIVE <unit> POWER ON|OFF|RESET" << std::endl;
             std::cout << "DRIVE <unit> STATE" << std::endl;
+            std::cout << "PMATRIX STATE" << std::endl;
             std::cout << "STEP <n>" << std::endl;
             std::cout << "STATUS" << std::endl;
             std::cout << "QUIT" << std::endl;
@@ -21052,18 +21077,34 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
             std::string op;
             iss >> op;
             op = toUpperAscii(op);
+            if (op == "POWER") {
+                iss >> op;
+                op = toUpperAscii(op);
+            }
             if (op == "ON") {
                 cpu.reset();
                 st.c64PoweredOn = true;
+                for (Drive1541 &d : st.drives) {
+                    d.setC64Power(true);
+                }
                 std::cout << "OK: C64 ON" << std::endl;
             } else if (op == "OFF") {
                 st.c64PoweredOn = false;
+                for (Drive1541 &d : st.drives) {
+                    d.setC64Power(false);
+                }
                 std::cout << "OK: C64 OFF" << std::endl;
             } else if (op == "RESET") {
                 if (!st.c64PoweredOn) {
                     std::cout << "ERR: C64 is OFF" << std::endl;
                 } else {
+                    for (Drive1541 &d : st.drives) {
+                        d.setC64PowerState(Drive1541::C64PowerState::Resetting);
+                    }
                     cpu.reset();
+                    for (Drive1541 &d : st.drives) {
+                        d.setC64Power(true);
+                    }
                     std::cout << "OK: C64 RESET" << std::endl;
                 }
             } else if (op == "STATE") {
@@ -21074,6 +21115,29 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
                           << std::dec << std::setfill(' ') << std::endl;
             } else {
                 std::cout << "ERR: expected C64 ON|OFF|RESET|STATE" << std::endl;
+            }
+            continue;
+        }
+
+        if (cmd == "PMATRIX") {
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+            if (op != "STATE") {
+                std::cout << "ERR: expected PMATRIX STATE" << std::endl;
+                continue;
+            }
+            for (int unit = 8; unit <= 11; ++unit) {
+                const size_t idx = static_cast<size_t>(unit - 8);
+                const Drive1541::PowerMatrixState matrix = st.drives[idx].getPowerMatrixState();
+                std::cout << "PMATRIX " << unit
+                          << " mode=" << powerMatrixModeText(matrix.mode)
+                          << " c64=" << c64PowerStateText(matrix.c64)
+                          << " drive=" << drivePowerStateText(matrix.drive)
+                          << " c64_powered=" << (matrix.c64_powered ? "YES" : "NO")
+                          << " drive_powered=" << (matrix.drive_powered ? "YES" : "NO")
+                          << " command_rearm=" << (matrix.command_rearm_required ? "YES" : "NO")
+                          << std::endl;
             }
             continue;
         }
@@ -21134,10 +21198,10 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
                 iss >> v;
                 v = toUpperAscii(v);
                 if (v == "ON") {
-                    d.powerOn(true);
+                    d.setDrivePower(true);
                     std::cout << "OK: DRIVE " << unit << " POWER ON" << std::endl;
                 } else if (v == "OFF") {
-                    d.powerOff();
+                    d.setDrivePower(false);
                     std::cout << "OK: DRIVE " << unit << " POWER OFF" << std::endl;
                 } else if (v == "RESET") {
                     d.powerReset();
