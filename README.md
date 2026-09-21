@@ -1089,6 +1089,7 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - `run_level5_cycle_coupling_gate.ps1`
   - runs dataset quality gate + kernel IEC E2E under `C64_DRIVE_PROFILE=level5-coupling` (fast/strict).
   - includes controlled kernel-run retry and process cleanup (`-KernelRetryCount`, default `3`) to reduce transient runtime lock flakes.
+  - optional kernel warmup (`-EnableKernelWarmup`, `-KernelWarmupRepeat`) before main kernel gate attempts.
 
 ## L5.2 Increment: Flux/Write Analog Gate (Experimental)
 
@@ -1133,6 +1134,7 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
   - `SpreadBudget=0.0` (strict profile delegated to L5.3 gate).
 - Hardening:
   - per-run gate retry with stale executable cleanup (`-GateRetryCount`, default `3`; `-RetryDelayMs`, default `250`) to reduce transient lock/runtime flakes in long soaks.
+  - optional warmup path (`-EnableWarmup`) and kernel-only recovery retries (`-KernelOnlyRetryCount`) to reduce first-run instability before full gate replay.
 
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 

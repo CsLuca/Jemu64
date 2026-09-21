@@ -48,12 +48,12 @@ Ensure-Directory -Path $runFastDir
 Ensure-Directory -Path $runStrictDir
 Ensure-Directory -Path $runFluxDir
 
-& "$repo\run_level5_cycle_coupling_gate.ps1" -Profile "fast" -Manifest $manifestPath -OutputDir $runFastDir
+& "$repo\run_level5_cycle_coupling_gate.ps1" -Profile "fast" -Manifest $manifestPath -EnableKernelWarmup -KernelWarmupRepeat 1 -OutputDir $runFastDir
 if ($LASTEXITCODE -ne 0) {
     throw "L5 cycle coupling fast failed"
 }
 
-& "$repo\run_level5_cycle_coupling_gate.ps1" -Profile "strict" -Manifest $manifestPath -OutputDir $runStrictDir
+& "$repo\run_level5_cycle_coupling_gate.ps1" -Profile "strict" -Manifest $manifestPath -EnableKernelWarmup -KernelWarmupRepeat 1 -OutputDir $runStrictDir
 if ($LASTEXITCODE -ne 0) {
     throw "L5 cycle coupling strict failed"
 }

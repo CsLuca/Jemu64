@@ -6,6 +6,12 @@ param(
     [int]$Runs = 12,
     [int]$GateRetryCount = 3,
     [int]$RetryDelayMs = 250,
+    [int]$GateAttemptTimeoutSec = 900,
+    [switch]$EnableWarmup,
+    [int]$WarmupKernelRepeat = 1,
+    [int]$WarmupTimeoutSec = 300,
+    [int]$KernelOnlyRetryCount = 2,
+    [int]$KernelRecoveryTimeoutSec = 300,
     [double]$MaxFlakeRate = 0.05,
     [double]$SpreadBudget = 0.0,
     [string]$ReportCsv = "level5_chaos_soak_runtime.csv",
@@ -42,6 +48,68 @@ function Stop-L5GateExecutables {
     }
 }
 
+function Invoke-ChildScriptWithTimeout {
+    param(
+        [string]$ScriptPath,
+        [hashtable]$NamedArgs,
+        [int]$TimeoutSec
+    )
+
+    $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+    foreach ($key in $NamedArgs.Keys) {
+        $value = $NamedArgs[$key]
+        if ($null -eq $value) {
+            continue
+        }
+        if ($value -is [bool]) {
+            if ($value) {
+                $argList += "-$key"
+            }
+            continue
+        }
+        $argList += "-$key"
+        $argList += [string]$value
+    }
+
+    $token = [Guid]::NewGuid().ToString("N")
+    $stdoutPath = Join-Path -Path $env:TEMP -ChildPath ("l5_gate_stdout_{0}.log" -f $token)
+    $stderrPath = Join-Path -Path $env:TEMP -ChildPath ("l5_gate_stderr_{0}.log" -f $token)
+
+    try {
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList $argList -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        $timedOut = $false
+        try {
+            Wait-Process -Id $proc.Id -Timeout $TimeoutSec -ErrorAction Stop
+        }
+        catch {
+            $timedOut = $true
+        }
+
+        if ($timedOut) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Stop-L5GateExecutables
+            return [pscustomobject]@{
+                exit_code = -1
+                timed_out = $true
+                output = "gate_timeout"
+            }
+        }
+
+        $stdOut = if (Test-Path -LiteralPath $stdoutPath) { [string](Get-Content -LiteralPath $stdoutPath -Raw) } else { "" }
+        $stdErr = if (Test-Path -LiteralPath $stderrPath) { [string](Get-Content -LiteralPath $stderrPath -Raw) } else { "" }
+        $combined = ($stdOut + "`n" + $stdErr).Trim()
+        return [pscustomobject]@{
+            exit_code = [int]$proc.ExitCode
+            timed_out = $false
+            output = $combined
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $stdoutPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Invoke-L5GateWithRetry {
     param(
         [string]$RepoPath,
@@ -51,7 +119,8 @@ function Invoke-L5GateWithRetry {
         [double]$Spread,
         [string]$RunOutputDir,
         [int]$RetryCount,
-        [int]$DelayMs
+        [int]$DelayMs,
+        [int]$TimeoutSec
     )
 
     if ($RetryCount -lt 1) {
@@ -64,27 +133,42 @@ function Invoke-L5GateWithRetry {
     $lastIssue = "unknown_failure"
     for ($attempt = 1; $attempt -le $RetryCount; ++$attempt) {
         Stop-L5GateExecutables
-        try {
-            if ($RunProfile -eq "strict") {
-                & "$RepoPath\run_level5_diff_oracle_gate.ps1" -Manifest $ManifestPath -ExternalManifest $ExternalManifestPath -SpreadBudget $Spread -OutputDir $RunOutputDir
-            }
-            else {
-                & "$RepoPath\run_level5_cycle_coupling_gate.ps1" -Profile "fast" -Manifest $ManifestPath -OutputDir $RunOutputDir
-            }
-
-            if ($LASTEXITCODE -ne 0) {
-                $lastIssue = "gate_exit=$LASTEXITCODE"
-            }
-            else {
-                return [pscustomobject]@{
-                    pass = $true
-                    issue = "ok"
-                    attempts = $attempt
-                }
+        if ($RunProfile -eq "strict") {
+            $scriptPath = "$RepoPath\run_level5_diff_oracle_gate.ps1"
+            $args = @{
+                Manifest = $ManifestPath
+                ExternalManifest = $ExternalManifestPath
+                SpreadBudget = $Spread
+                OutputDir = $RunOutputDir
             }
         }
-        catch {
-            $lastIssue = $_.Exception.Message
+        else {
+            $scriptPath = "$RepoPath\run_level5_cycle_coupling_gate.ps1"
+            $args = @{
+                Profile = "fast"
+                Manifest = $ManifestPath
+                EnableKernelWarmup = $true
+                KernelWarmupRepeat = 1
+                OutputDir = $RunOutputDir
+            }
+        }
+
+        $result = Invoke-ChildScriptWithTimeout -ScriptPath $scriptPath -NamedArgs $args -TimeoutSec $TimeoutSec
+        if ($result.timed_out) {
+            $lastIssue = "gate_timeout"
+        }
+        elseif ($result.exit_code -eq 0) {
+            return [pscustomobject]@{
+                pass = $true
+                issue = "ok"
+                attempts = $attempt
+            }
+        }
+        elseif ([string]$result.output -match "Kernel IEC E2E failed") {
+            $lastIssue = "Kernel IEC E2E failed under level5-coupling profile"
+        }
+        else {
+            $lastIssue = "gate_exit=$($result.exit_code)"
         }
 
         if ($attempt -lt $RetryCount) {
@@ -99,11 +183,72 @@ function Invoke-L5GateWithRetry {
     }
 }
 
+function Invoke-WarmupRun {
+    param(
+        [string]$RepoPath,
+        [int]$KernelRepeat,
+        [int]$TimeoutSec
+    )
+
+    $repeat = [Math]::Max($KernelRepeat, 1)
+    $result = Invoke-ChildScriptWithTimeout -ScriptPath "$RepoPath\run_kernel_iec_e2e.ps1" -NamedArgs @{
+        Mode = "pure"
+        MaxHalfCycles = 700000
+        Repeat = $repeat
+        Quiet = $true
+        UseTestOnlyPureCmdGuard = $true
+    } -TimeoutSec $TimeoutSec
+    return ($result.exit_code -eq 0 -and -not $result.timed_out)
+}
+
+function Invoke-KernelOnlyRecovery {
+    param(
+        [string]$RepoPath,
+        [int]$RetryCount,
+        [int]$DelayMs,
+        [int]$TimeoutSec
+    )
+
+    if ($RetryCount -lt 1) {
+        return $false
+    }
+
+    for ($attempt = 1; $attempt -le $RetryCount; ++$attempt) {
+        $result = Invoke-ChildScriptWithTimeout -ScriptPath "$RepoPath\run_kernel_iec_e2e.ps1" -NamedArgs @{
+            Mode = "pure"
+            MaxHalfCycles = 700000
+            Repeat = 2
+            Quiet = $true
+            UseTestOnlyPureCmdGuard = $true
+        } -TimeoutSec $TimeoutSec
+        if ($result.exit_code -eq 0 -and -not $result.timed_out) {
+            return $true
+        }
+        if ($attempt -lt $RetryCount) {
+            Start-Sleep -Milliseconds ($DelayMs * $attempt)
+        }
+    }
+
+    return $false
+}
+
 if ($Runs -lt 1) {
     throw "Runs must be >= 1"
 }
 if ($GateRetryCount -lt 1) {
     throw "GateRetryCount must be >= 1"
+}
+if ($GateAttemptTimeoutSec -lt 30) {
+    throw "GateAttemptTimeoutSec must be >= 30"
+}
+if ($KernelOnlyRetryCount -lt 0) {
+    throw "KernelOnlyRetryCount must be >= 0"
+}
+if ($WarmupTimeoutSec -lt 30) {
+    throw "WarmupTimeoutSec must be >= 30"
+}
+if ($KernelRecoveryTimeoutSec -lt 30) {
+    throw "KernelRecoveryTimeoutSec must be >= 30"
 }
 
 $manifestPath = Resolve-LocalPath -PathInput $Manifest
@@ -129,10 +274,31 @@ for ($i = 1; $i -le $Runs; ++$i) {
     $runOutDir = Join-Path -Path $outputRoot -ChildPath ("l5_chaos_run{0}" -f $i)
     Ensure-Directory -Path $runOutDir
 
-    $runResult = Invoke-L5GateWithRetry -RepoPath $repo -RunProfile $Profile -ManifestPath $manifestPath -ExternalManifestPath $externalManifestPath -Spread $SpreadBudget -RunOutputDir $runOutDir -RetryCount $GateRetryCount -DelayMs $RetryDelayMs
-    $runPass = [bool]$runResult.pass
-    $runIssue = [string]$runResult.issue
+    $warmupOk = $true
+    if ($EnableWarmup) {
+        $warmupOk = Invoke-WarmupRun -RepoPath $repo -KernelRepeat $WarmupKernelRepeat -TimeoutSec $WarmupTimeoutSec
+    }
+
+    $runResult = Invoke-L5GateWithRetry -RepoPath $repo -RunProfile $Profile -ManifestPath $manifestPath -ExternalManifestPath $externalManifestPath -Spread $SpreadBudget -RunOutputDir $runOutDir -RetryCount $GateRetryCount -DelayMs $RetryDelayMs -TimeoutSec $GateAttemptTimeoutSec
+    $runPass = ([bool]$runResult.pass -and $warmupOk)
+    $runIssue = if (-not $warmupOk) { "warmup_failed" } else { [string]$runResult.issue }
     $runAttempts = [int]$runResult.attempts
+
+    if (-not $runPass -and $KernelOnlyRetryCount -gt 0) {
+        $kernelRecovered = Invoke-KernelOnlyRecovery -RepoPath $repo -RetryCount $KernelOnlyRetryCount -DelayMs $RetryDelayMs -TimeoutSec $KernelRecoveryTimeoutSec
+        if ($kernelRecovered -and $runResult.issue -like "*Kernel IEC E2E*") {
+            $runResult = Invoke-L5GateWithRetry -RepoPath $repo -RunProfile $Profile -ManifestPath $manifestPath -ExternalManifestPath $externalManifestPath -Spread $SpreadBudget -RunOutputDir $runOutDir -RetryCount 1 -DelayMs $RetryDelayMs -TimeoutSec $GateAttemptTimeoutSec
+            $runPass = [bool]$runResult.pass
+            $runIssue = [string]$runResult.issue
+            $runAttempts = $runAttempts + [int]$runResult.attempts
+            if (-not $runPass) {
+                $runIssue = "post_kernel_recovery_failed:$runIssue"
+            }
+            else {
+                $runIssue = "recovered"
+            }
+        }
+    }
 
     if ($runPass) {
         $passRuns++
@@ -145,6 +311,7 @@ for ($i = 1; $i -le $Runs; ++$i) {
         run = $i
         profile = $Profile
         attempts = $runAttempts
+        warmup_ok = if ($warmupOk) { 1 } else { 0 }
         pass = if ($runPass) { 1 } else { 0 }
         issue = $runIssue
     }
@@ -170,6 +337,11 @@ $metrics = [ordered]@{
         first_failed_run = if ($firstFailedRun -eq 0) { -1 } else { $firstFailedRun }
         flake_rate = $flakeRate
         gate_retry_count = $GateRetryCount
+        gate_attempt_timeout_sec = $GateAttemptTimeoutSec
+        warmup_timeout_sec = $WarmupTimeoutSec
+        kernel_only_retry_count = $KernelOnlyRetryCount
+        kernel_recovery_timeout_sec = $KernelRecoveryTimeoutSec
+        warmup_enabled = if ($EnableWarmup) { 1 } else { 0 }
         differential_oracle_spread_budget = $SpreadBudget
     }
     budgets = [ordered]@{

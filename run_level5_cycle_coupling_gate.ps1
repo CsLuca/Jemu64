@@ -5,6 +5,8 @@ param(
     [int]$KernelMaxHalfCycles = 700000,
     [int]$KernelRepeat = 2,
     [int]$KernelRetryCount = 3,
+    [switch]$EnableKernelWarmup,
+    [int]$KernelWarmupRepeat = 1,
     [string]$OutputDir = ""
 )
 
@@ -109,6 +111,19 @@ function Invoke-KernelE2EWithRetry {
     throw "Kernel IEC E2E failed after retries"
 }
 
+function Invoke-KernelWarmup {
+    param(
+        [string]$RepoPath,
+        [int]$WarmupRepeat,
+        [int]$MaxHalfCycles
+    )
+
+    $repeat = [Math]::Max($WarmupRepeat, 1)
+    Stop-KernelExecutables
+    & "$RepoPath\run_kernel_iec_e2e.ps1" -Mode pure -MaxHalfCycles $MaxHalfCycles -Repeat $repeat -Quiet -UseTestOnlyPureCmdGuard
+    return ($LASTEXITCODE -eq 0)
+}
+
 $manifestPath = Resolve-LocalPath -PathInput $Manifest
 Assert-PathExists -Path $manifestPath -Label "level5 manifest"
 
@@ -145,6 +160,10 @@ try {
     if ($Profile -eq "strict") {
         $kernelArgs.MaxHalfCycles = 900000
         $kernelArgs.Repeat = [Math]::Max($KernelRepeat, 3)
+    }
+
+    if ($EnableKernelWarmup) {
+        Invoke-KernelWarmup -RepoPath $repo -WarmupRepeat $KernelWarmupRepeat -MaxHalfCycles $kernelArgs.MaxHalfCycles | Out-Null
     }
 
     Invoke-KernelE2EWithRetry -RepoPath $repo -KernelArgs $kernelArgs -RetryCount $KernelRetryCount
