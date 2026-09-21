@@ -552,6 +552,52 @@ public:
     uint8_t cpuP = 0x24;
     C64PowerState c64PowerState = C64PowerState::On;
 
+    enum class DriveCpuMicroOpPhase : uint8_t {
+        Fetch = 0,
+        Decode = 1,
+        Execute = 2,
+        Writeback = 3,
+        Complete = 4
+    };
+
+    struct DriveCpuMicroOpState {
+        bool active = false;
+        DriveCpuMicroOpPhase phase = DriveCpuMicroOpPhase::Fetch;
+        uint8_t ir = 0;
+        uint8_t microPc = 0;
+        uint8_t operandLo = 0;
+        uint8_t operandHi = 0;
+        uint8_t dataLatch = 0;
+        uint16_t effectiveAddr = 0;
+        bool pageCrossPenaltyPending = false;
+        uint64_t microOpsExecuted = 0;
+        uint64_t busCyclesExecuted = 0;
+    };
+
+    bool driveCpuUseMicroOpEngine = false;
+    DriveCpuMicroOpState driveCpuMicroOpState;
+
+    void resetDriveCpuMicroOpState() {
+        driveCpuMicroOpState = DriveCpuMicroOpState{};
+    }
+
+    bool stepDriveCpuMicroOpScaffold() {
+        // Commit-1 scaffold only: micro-op engine remains feature-gated and inert by default.
+        // No opcode ownership change is performed in this step.
+        if (!driveCpuUseMicroOpEngine) {
+            return false;
+        }
+        if (!driveCpuMicroOpState.active) {
+            driveCpuMicroOpState.active = true;
+            driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Fetch;
+            driveCpuMicroOpState.ir = read(pc);
+            driveCpuMicroOpState.microPc = 0;
+        }
+        driveCpuMicroOpState.microOpsExecuted++;
+        driveCpuMicroOpState.busCyclesExecuted++;
+        return false;
+    }
+
     bool loadRom(const std::string &romPath) {
         std::ifstream in(romPath, std::ios::binary);
         if (!in.is_open()) {
@@ -605,6 +651,7 @@ public:
         cpuY = 0;
         cpuSP = 0xFF;
         cpuP = 0x24;
+        resetDriveCpuMicroOpState();
 
         iecListenSecondary = 0xFF;
         iecTalkSecondary = 0xFF;
@@ -882,6 +929,8 @@ public:
         if (!(cpuEnabled && romLoaded)) {
             return;
         }
+
+        (void)stepDriveCpuMicroOpScaffold();
 
         cpuReadyEdge = !cpuReadyEdge;
         if (!cpuReadyEdge) {
