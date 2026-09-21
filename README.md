@@ -1119,6 +1119,19 @@ These gates are additive and do not alter existing Level1/2/3 promotion policy.
 - Default budget policy:
   - `SpreadBudget=0.0` (strict parity target).
 
+## L5.4 Increment: Chaos/Soak Promotion Gate (Experimental)
+
+- Added soak gate scaffold:
+  - `run_level5_chaos_soak.ps1`
+  - fast profile runs repeated L5.1 cycle-coupling validation;
+  - strict profile runs repeated L5.3 diff-oracle validation.
+- Output artifacts:
+  - `datasets/level5/quality_reports/level5_chaos_soak_runtime.csv`
+  - `datasets/level5/quality_reports/level5_chaos_soak_metrics.json`
+- Budget defaults:
+  - `MaxFlakeRate=0.05`
+  - `SpreadBudget=0.0` (strict profile delegated to L5.3 gate).
+
 ## Commit 1: Physical Stack Scaffold and Runtime Profiles
 
 - Added initial non-functional scaffold under `drive1541_physical/`:
