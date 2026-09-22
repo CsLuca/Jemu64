@@ -1646,11 +1646,29 @@ public:
                 cyclesUsed = 6;
                 return true;
             }
+            case 0x00: {
+                const uint16_t returnPc = static_cast<uint16_t>(pc + 2);
+                push(static_cast<uint8_t>((returnPc >> 8) & 0xFF));
+                push(static_cast<uint8_t>(returnPc & 0xFF));
+                push(static_cast<uint8_t>(cpuP | 0x30));
+                cpuP = static_cast<uint8_t>(cpuP | 0x04);
+                pc = read16(0xFFFE);
+                cyclesUsed = 7;
+                return true;
+            }
             case 0x60: {
                 const uint8_t lo = pull();
                 const uint8_t hi = pull();
                 pc = static_cast<uint16_t>((uint16_t(hi) << 8) | lo);
                 pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 6;
+                return true;
+            }
+            case 0x40: {
+                cpuP = static_cast<uint8_t>((pull() & 0xEF) | 0x20);
+                const uint8_t lo = pull();
+                const uint8_t hi = pull();
+                pc = static_cast<uint16_t>((uint16_t(hi) << 8) | lo);
                 cyclesUsed = 6;
                 return true;
             }
