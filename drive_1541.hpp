@@ -1249,10 +1249,30 @@ public:
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 2;
                 return true;
+            case 0xE4:
+                setCpuCompareFlags(cpuX, read(read(static_cast<uint16_t>(pc + 1))));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 3;
+                return true;
+            case 0xEC:
+                setCpuCompareFlags(cpuX, read(read16(static_cast<uint16_t>(pc + 1))));
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 4;
+                return true;
             case 0xC0:
                 setCpuCompareFlags(cpuY, read(static_cast<uint16_t>(pc + 1)));
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 2;
+                return true;
+            case 0xC4:
+                setCpuCompareFlags(cpuY, read(read(static_cast<uint16_t>(pc + 1))));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 3;
+                return true;
+            case 0xCC:
+                setCpuCompareFlags(cpuY, read(read16(static_cast<uint16_t>(pc + 1))));
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 4;
                 return true;
             case 0xB8:
                 cpuP &= static_cast<uint8_t>(~0x40);
