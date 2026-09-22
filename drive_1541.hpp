@@ -865,15 +865,45 @@ public:
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 3;
                 return true;
+            case 0xA7:
+                cpuA = read(read(static_cast<uint16_t>(pc + 1)));
+                cpuX = cpuA;
+                setCpuZN(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 3;
+                return true;
             case 0xB6:
                 cpuX = read(static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuY));
                 setCpuZN(cpuX);
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 4;
                 return true;
+            case 0xB7:
+                cpuA = read(static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuY));
+                cpuX = cpuA;
+                setCpuZN(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 4;
+                return true;
+            case 0xA3: {
+                const uint8_t zpPtr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                cpuA = read(read16ZeroPageWrap(zpPtr));
+                cpuX = cpuA;
+                setCpuZN(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 6;
+                return true;
+            }
             case 0xAE:
                 cpuX = read(read16(static_cast<uint16_t>(pc + 1)));
                 setCpuZN(cpuX);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 4;
+                return true;
+            case 0xAF:
+                cpuA = read(read16(static_cast<uint16_t>(pc + 1)));
+                cpuX = cpuA;
+                setCpuZN(cpuA);
                 pc = static_cast<uint16_t>(pc + 3);
                 cyclesUsed = 4;
                 return true;
@@ -885,6 +915,29 @@ public:
                 driveCpuMicroOpState.pageCrossPenaltyPending = ((base & 0xFF00u) != (addr & 0xFF00u));
                 pc = static_cast<uint16_t>(pc + 3);
                 cyclesUsed = static_cast<uint8_t>(4 + (driveCpuMicroOpState.pageCrossPenaltyPending ? 1 : 0));
+                return true;
+            }
+            case 0xBF: {
+                const uint16_t base = read16(static_cast<uint16_t>(pc + 1));
+                const uint16_t addr = static_cast<uint16_t>(base + cpuY);
+                cpuA = read(addr);
+                cpuX = cpuA;
+                setCpuZN(cpuA);
+                driveCpuMicroOpState.pageCrossPenaltyPending = ((base & 0xFF00u) != (addr & 0xFF00u));
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = static_cast<uint8_t>(4 + (driveCpuMicroOpState.pageCrossPenaltyPending ? 1 : 0));
+                return true;
+            }
+            case 0xB3: {
+                const uint8_t zpPtr = read(static_cast<uint16_t>(pc + 1));
+                const uint16_t base = read16ZeroPageWrap(zpPtr);
+                const uint16_t addr = static_cast<uint16_t>(base + cpuY);
+                cpuA = read(addr);
+                cpuX = cpuA;
+                setCpuZN(cpuA);
+                driveCpuMicroOpState.pageCrossPenaltyPending = ((base & 0xFF00u) != (addr & 0xFF00u));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = static_cast<uint8_t>(5 + (driveCpuMicroOpState.pageCrossPenaltyPending ? 1 : 0));
                 return true;
             }
             case 0xA0:
@@ -931,6 +984,16 @@ public:
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 4;
                 return true;
+            case 0x87:
+                write(read(static_cast<uint16_t>(pc + 1)), static_cast<uint8_t>(cpuA & cpuX));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 3;
+                return true;
+            case 0x97:
+                write(static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuY), static_cast<uint8_t>(cpuA & cpuX));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 4;
+                return true;
             case 0x81: {
                 const uint8_t zpPtr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
                 write(read16ZeroPageWrap(zpPtr), cpuA);
@@ -938,8 +1001,20 @@ public:
                 cyclesUsed = 6;
                 return true;
             }
+            case 0x83: {
+                const uint8_t zpPtr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                write(read16ZeroPageWrap(zpPtr), static_cast<uint8_t>(cpuA & cpuX));
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 6;
+                return true;
+            }
             case 0x8D:
                 write(read16(static_cast<uint16_t>(pc + 1)), cpuA);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 4;
+                return true;
+            case 0x8F:
+                write(read16(static_cast<uint16_t>(pc + 1)), static_cast<uint8_t>(cpuA & cpuX));
                 pc = static_cast<uint16_t>(pc + 3);
                 cyclesUsed = 4;
                 return true;
