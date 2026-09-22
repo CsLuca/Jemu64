@@ -1545,11 +1545,29 @@ public:
                 cyclesUsed = 5;
                 return true;
             }
+            case 0xE7: {
+                const uint16_t addr = read(static_cast<uint16_t>(pc + 1));
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 5;
+                return true;
+            }
             case 0xF6: {
                 const uint16_t addr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
                 const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
                 write(addr, value);
                 setCpuZN(value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 6;
+                return true;
+            }
+            case 0xF7: {
+                const uint16_t addr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 6;
                 return true;
@@ -1563,6 +1581,15 @@ public:
                 cyclesUsed = 6;
                 return true;
             }
+            case 0xEF: {
+                const uint16_t addr = read16(static_cast<uint16_t>(pc + 1));
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 6;
+                return true;
+            }
             case 0xFE: {
                 const uint16_t addr = static_cast<uint16_t>(read16(static_cast<uint16_t>(pc + 1)) + cpuX);
                 const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
@@ -1572,11 +1599,58 @@ public:
                 cyclesUsed = 7;
                 return true;
             }
+            case 0xFF: {
+                const uint16_t addr = static_cast<uint16_t>(read16(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 7;
+                return true;
+            }
+            case 0xFB: {
+                const uint16_t addr = static_cast<uint16_t>(read16(static_cast<uint16_t>(pc + 1)) + cpuY);
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 7;
+                return true;
+            }
+            case 0xE3: {
+                const uint8_t zpPtr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint16_t addr = read16ZeroPageWrap(zpPtr);
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 8;
+                return true;
+            }
+            case 0xF3: {
+                const uint8_t zpPtr = read(static_cast<uint16_t>(pc + 1));
+                const uint16_t addr = static_cast<uint16_t>(read16ZeroPageWrap(zpPtr) + cpuY);
+                const uint8_t value = static_cast<uint8_t>(read(addr) + 1);
+                write(addr, value);
+                opSbc(value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 8;
+                return true;
+            }
             case 0xC6: {
                 const uint16_t addr = read(static_cast<uint16_t>(pc + 1));
                 const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
                 write(addr, value);
                 setCpuZN(value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 5;
+                return true;
+            }
+            case 0xC7: {
+                const uint16_t addr = read(static_cast<uint16_t>(pc + 1));
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 5;
                 return true;
@@ -1590,11 +1664,29 @@ public:
                 cyclesUsed = 6;
                 return true;
             }
+            case 0xD7: {
+                const uint16_t addr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 6;
+                return true;
+            }
             case 0xCE: {
                 const uint16_t addr = read16(static_cast<uint16_t>(pc + 1));
                 const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
                 write(addr, value);
                 setCpuZN(value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 6;
+                return true;
+            }
+            case 0xCF: {
+                const uint16_t addr = read16(static_cast<uint16_t>(pc + 1));
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
                 pc = static_cast<uint16_t>(pc + 3);
                 cyclesUsed = 6;
                 return true;
@@ -1606,6 +1698,44 @@ public:
                 setCpuZN(value);
                 pc = static_cast<uint16_t>(pc + 3);
                 cyclesUsed = 7;
+                return true;
+            }
+            case 0xDF: {
+                const uint16_t addr = static_cast<uint16_t>(read16(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 7;
+                return true;
+            }
+            case 0xDB: {
+                const uint16_t addr = static_cast<uint16_t>(read16(static_cast<uint16_t>(pc + 1)) + cpuY);
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
+                pc = static_cast<uint16_t>(pc + 3);
+                cyclesUsed = 7;
+                return true;
+            }
+            case 0xC3: {
+                const uint8_t zpPtr = static_cast<uint8_t>(read(static_cast<uint16_t>(pc + 1)) + cpuX);
+                const uint16_t addr = read16ZeroPageWrap(zpPtr);
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 8;
+                return true;
+            }
+            case 0xD3: {
+                const uint8_t zpPtr = read(static_cast<uint16_t>(pc + 1));
+                const uint16_t addr = static_cast<uint16_t>(read16ZeroPageWrap(zpPtr) + cpuY);
+                const uint8_t value = static_cast<uint8_t>(read(addr) - 1);
+                write(addr, value);
+                setCpuCompareFlags(cpuA, value);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 8;
                 return true;
             }
             case 0x48:
