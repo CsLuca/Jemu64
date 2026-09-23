@@ -90,6 +90,13 @@ Exit criteria:
 - `cap02_deferred` is not final physical promotion: rows with missing multi-capture/calibration remain blocked in `datasets/level5/manifests/level5_real20_physical_readiness_tracker.csv`.
 - Final L5 promotion requires full physical closure (`ready_for_l5_promotion=yes` on target corpus rows).
 
+## Drive CPU Micro-op Track Status
+
+- Extended micro-op compatibility track is closed at software level.
+- The current drive CPU scaffold includes broad documented and undocumented opcode-family coverage needed for Level5 software-ready gating stability.
+- Unhandled-opcode fallback telemetry is now wired in both micro-op and legacy scaffold paths for deterministic observability during future hardening.
+- Remaining open item for final physical signoff stays outside this track: complete real-capture corpus closure (`cap02`/metadata/oracle completeness).
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.

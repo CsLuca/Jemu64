@@ -4,6 +4,25 @@
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.
 
+## Drive 1541 CPU Micro-op Extended Phase (Closed)
+
+Status: closed at software level.
+
+What is now covered in the `Drive1541` micro-op execution path:
+
+- documented base opcode scaffold used by the drive execution cadence;
+- indexed and indirect addressing coverage (`zp/x/y`, `abs/x/y`, `(zp,x)`, `(zp),y`) for key load/store/ALU flows;
+- branch page-cross timing for conditional branches and indexed reads;
+- interrupt flow scaffold (`BRK`, `RTI`) and stack interactions;
+- undocumented families added for compatibility hardening:
+  - `LAX/SAX`, `DCP/ISC`, `SLO/RLA/SRE/RRA`, `ANC/ALR/ARR/AXS`;
+- fallback observability for unhandled opcodes in both micro-op and legacy scaffold paths (`cpuUnhandledOpcode*` telemetry).
+
+Out of scope for this closure:
+
+- full transistor/chip-perfect 6502 emulation inside the drive domain;
+- final physical corpus closure for Level5 promotion (`cap02`/real-capture completion).
+
 - Slot map:
   - slot `0` -> unit `8`
   - slot `1` -> unit `9`

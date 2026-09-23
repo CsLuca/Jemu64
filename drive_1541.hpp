@@ -568,6 +568,7 @@ public:
         bool active = false;
         DriveCpuMicroOpPhase phase = DriveCpuMicroOpPhase::Fetch;
         uint8_t ir = 0;
+        uint16_t fetchAddr = 0;
         uint8_t microPc = 0;
         uint8_t operandLo = 0;
         uint8_t operandHi = 0;
@@ -2394,6 +2395,7 @@ public:
         if (!driveCpuMicroOpState.active) {
             driveCpuMicroOpState.active = true;
             driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Fetch;
+            driveCpuMicroOpState.fetchAddr = pc;
             driveCpuMicroOpState.ir = read(pc);
             driveCpuMicroOpState.microPc = 0;
             driveCpuMicroOpState.cyclesConsumed = 0;
@@ -2438,11 +2440,11 @@ public:
             const uint8_t scaledConsumed = static_cast<uint8_t>((driveCpuMicroOpState.cyclesConsumed / scale) + ((driveCpuMicroOpState.cyclesConsumed % scale) ? 1 : 0));
             cpuCyclesToNext = (scaledConsumed > 0) ? static_cast<uint8_t>(scaledConsumed - 1) : 0;
             cpuLastOpcode = driveCpuMicroOpState.ir;
-            cpuLastFetchAddr = oldPc;
+            cpuLastFetchAddr = driveCpuMicroOpState.fetchAddr;
             if (!driveCpuMicroOpState.lastOpcodeHandled) {
                 cpuUnhandledOpcodeCount++;
                 cpuLastUnhandledOpcode = driveCpuMicroOpState.ir;
-                cpuLastUnhandledFetchAddr = oldPc;
+                cpuLastUnhandledFetchAddr = driveCpuMicroOpState.fetchAddr;
             }
             cpuStepCount++;
             driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Complete;
