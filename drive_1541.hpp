@@ -407,6 +407,7 @@ public:
     uint8_t iecActiveTalkChannel = 0xFF;
 
     static constexpr uint32_t IEC_SERIAL_TIMEOUT_TICKS = 256;
+    static constexpr uint32_t IEC_TIMEOUT_HYSTERESIS_TICKS = 16;
     static constexpr uint32_t IEC_EOI_TIMEOUT_TICKS = 256;
     static constexpr uint32_t IEC_ATN_ACK_TICKS = 16;
     static constexpr uint32_t IEC_RX_BYTE_ACK_TICKS = 64;
@@ -3286,7 +3287,8 @@ public:
             } else {
                 if (nextState != IecSerialState::Command) {
                     iecRxIdleTicks++;
-                    if (iecRxIdleTicks > IEC_SERIAL_TIMEOUT_TICKS) {
+                    const uint32_t rxTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + IEC_TIMEOUT_HYSTERESIS_TICKS;
+                    if (iecRxIdleTicks > rxTimeoutBudget) {
                         iecRxTimeoutCount++;
                         iecRxBitCount = 0;
                         iecRxShift = 0;
@@ -3423,7 +3425,8 @@ public:
                         iecTxIdleTicks = 0;
                     } else {
                         iecTxIdleTicks++;
-                        if (iecTxIdleTicks > IEC_SERIAL_TIMEOUT_TICKS) {
+                        const uint32_t txTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + IEC_TIMEOUT_HYSTERESIS_TICKS;
+                        if (iecTxIdleTicks > txTimeoutBudget) {
                             iecTxTimeoutCount++;
                             iecTxByteActive = false;
                             iecTxBitCount = 0;
@@ -4551,6 +4554,11 @@ public:
 
             iecListening = false;
             iecListenSecondary = 0xFF;
+            iecRxBitCount = 0;
+            iecRxShift = 0;
+            iecRxIdleTicks = 0;
+            iecRxByteAckTicks = 0;
+            iecRxByteAckPullDATA = false;
             return true;
         }
         if (cmd == 0x5F) {
@@ -4558,8 +4566,17 @@ public:
             iecTalkSecondary = 0xFF;
             iecActiveTalkChannel = 0xFF;
             iecTalkSa0Confirmed = false;
-            iecEoiPendingAck = revisionProfile.iecStrictEoiAck ? false : iecEoiPendingAck;
+            iecTxByteActive = false;
+            iecTxBitCount = 0;
+            iecTalkStartPending = false;
+            iecTalkFrameArmed = false;
+            iecTalkSawStartEdge = false;
+            iecTxCurrentIsEoi = false;
+            iecSerialPullDATA = false;
+            iecTxIdleTicks = 0;
+            iecEoiPendingAck = false;
             iecEoiAckLowSeen = false;
+            iecEoiWaitTicks = 0;
             return true;
         }
 

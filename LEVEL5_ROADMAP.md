@@ -118,6 +118,16 @@ Implementation notes:
 - Late ATN during EOI acknowledge window cancels pending EOI ack immediately to avoid stale talk-side wait state leakage.
 - Added dedicated corner-case tests covering ATN preemption during TALK and ATN-late during EOI-ack.
 
+## IEC Corner Cases (Phase 3)
+
+- `UNLISTEN` (`$3F`) now clears listener transient receive/ack state (shift/bit counter/idle and ack ticks) to avoid carry-over across command frames.
+- `UNTALK` (`$5F`) now clears talk-side transient state (active tx bitflow, pending start frame, EOI pending/ack wait, serial DATA pull) for deterministic command re-entry.
+
+## IEC Timeout Hardening (Hysteresis)
+
+- RX/TX serial timeout checks now include a small hysteresis window before raising timeout (`IEC_TIMEOUT_HYSTERESIS_TICKS`).
+- This reduces borderline edge-timing flake sensitivity while preserving timeout fault reporting once the extended budget is exceeded.
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.

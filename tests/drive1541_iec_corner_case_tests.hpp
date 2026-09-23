@@ -12,6 +12,117 @@ static void runDrive1541IecCornerCaseTests() {
         drive.iecTalking = true;
         drive.iecActiveTalkChannel = 0;
         drive.iecTalkSa0Confirmed = true;
+        drive.iecTxByteActive = true;
+        drive.iecTxBitCount = 3;
+        drive.iecTalkStartPending = true;
+        drive.iecTalkFrameArmed = true;
+        drive.iecTalkSawStartEdge = true;
+        drive.iecTxCurrentIsEoi = true;
+        drive.iecEoiPendingAck = true;
+        drive.iecEoiAckLowSeen = true;
+        drive.iecEoiWaitTicks = 12;
+        drive.iecSerialPullDATA = true;
+
+        if (!drive.processIecCommandByte(0x5Fu)) {
+            std::cerr << "[1541 IEC CORNER] FAIL: UNTALK not accepted" << std::endl;
+            assert(false);
+        }
+        if (drive.iecTalking ||
+            drive.iecTxByteActive ||
+            drive.iecTalkStartPending ||
+            drive.iecTxCurrentIsEoi ||
+            drive.iecEoiPendingAck ||
+            drive.iecEoiAckLowSeen ||
+            drive.iecEoiWaitTicks != 0 ||
+            drive.iecSerialPullDATA) {
+            std::cerr << "[1541 IEC CORNER] FAIL: UNTALK did not clear talk/EOI state" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
+        drive.iecListening = true;
+        drive.iecExpectingNameBytes = true;
+        drive.iecActiveListenChannel = 0;
+        drive.iecListenSecondary = 0;
+        drive.iecRxBitCount = 4;
+        drive.iecRxShift = 0x0Bu;
+        drive.iecRxIdleTicks = 9;
+        drive.iecRxByteAckTicks = 4;
+        drive.iecRxByteAckPullDATA = true;
+
+        if (!drive.processIecCommandByte(0x3Fu)) {
+            std::cerr << "[1541 IEC CORNER] FAIL: UNLISTEN not accepted" << std::endl;
+            assert(false);
+        }
+        if (drive.iecListening ||
+            drive.iecRxBitCount != 0 ||
+            drive.iecRxShift != 0 ||
+            drive.iecRxIdleTicks != 0 ||
+            drive.iecRxByteAckTicks != 0 ||
+            drive.iecRxByteAckPullDATA) {
+            std::cerr << "[1541 IEC CORNER] FAIL: UNLISTEN did not clear listener transient state" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
+        drive.iecListening = true;
+        drive.iecRxBitCount = 1;
+        drive.iecRxShift = 1;
+        drive.setIecLines(true, true, true);
+        drive.stepIecSerial();
+        const std::uint32_t rxBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
+        for (std::uint32_t i = 0; i < rxBudget; ++i) {
+            drive.setIecLines(true, true, true);
+            drive.stepIecSerial();
+        }
+        if (drive.iecRxTimeoutCount != 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: RX timeout tripped before hysteresis budget" << std::endl;
+            assert(false);
+        }
+        drive.setIecLines(true, true, true);
+        drive.stepIecSerial();
+        if (drive.iecRxTimeoutCount == 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: RX timeout did not trip after hysteresis budget" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
+        drive.iecTalking = true;
+        drive.iecActiveTalkChannel = 0;
+        drive.iecTalkSa0Confirmed = true;
+        drive.iecTxByteActive = true;
+        drive.iecTxShift = 0xA5u;
+        drive.iecTxBitCount = 2;
+        drive.setIecLines(true, true, true);
+        drive.stepIecSerial();
+        const std::uint32_t txBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
+        for (std::uint32_t i = 0; i < txBudget; ++i) {
+            drive.setIecLines(true, true, true);
+            drive.stepIecSerial();
+        }
+        if (drive.iecTxTimeoutCount != 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: TX timeout tripped before hysteresis budget" << std::endl;
+            assert(false);
+        }
+        drive.setIecLines(true, true, true);
+        drive.stepIecSerial();
+        if (drive.iecTxTimeoutCount == 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: TX timeout did not trip after hysteresis budget" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
+        drive.iecTalking = true;
+        drive.iecActiveTalkChannel = 0;
+        drive.iecTalkSa0Confirmed = true;
         drive.iecTxQueue.push_back(0x41u);
         drive.iecTxQueue.push_back(0x42u);
 
@@ -75,5 +186,5 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
-    std::cerr << "[1541 IEC CORNER] PASS: ATN preempts talk and EOI corner cases deterministically" << std::endl;
+    std::cerr << "[1541 IEC CORNER] PASS: ATN/UNLISTEN/UNTALK corner cases + timeout hysteresis are deterministic" << std::endl;
 }
