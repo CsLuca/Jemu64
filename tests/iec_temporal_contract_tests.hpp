@@ -101,6 +101,54 @@ static void runIecTemporalContractTests() {
         }
     }
 
+    {
+        bool sawCommitFromDrive = false;
+        bool sawCommitFromC64 = false;
+        bool sawDelayedCommit = false;
+        bool sawModeledCommit = false;
+        bool sawSampleBeforeCommit = false;
+
+        for (const IecTemporalTraceEvent &ev : referenceTrace) {
+            if (ev.phase == IecTemporalPhase::Sample) {
+                sawSampleBeforeCommit = true;
+            }
+            if (ev.phase == IecTemporalPhase::CommitEdge) {
+                if (!sawSampleBeforeCommit) {
+                    std::cerr << "[IEC TEMPORAL] FAIL: commit edge observed before any sample phase" << std::endl;
+                    assert(false);
+                }
+                if (ev.edgeOwner == IecEdgeOwner::Drive) {
+                    sawCommitFromDrive = true;
+                }
+                if (ev.edgeOwner == IecEdgeOwner::C64) {
+                    sawCommitFromC64 = true;
+                }
+                if (ev.edgeOwner == IecEdgeOwner::LineModel) {
+                    sawModeledCommit = true;
+                }
+                if (ev.effectiveDelayTicks > 0) {
+                    sawDelayedCommit = true;
+                }
+                if (ev.edgeOwner == IecEdgeOwner::None || ev.edgeCause == IecEdgeCause::None) {
+                    std::cerr << "[IEC TEMPORAL] FAIL: commit edge missing owner/cause metadata" << std::endl;
+                    assert(false);
+                }
+            }
+        }
+
+        if (!sawCommitFromDrive) {
+            std::cerr << "[IEC TEMPORAL] FAIL: missing drive-owned commit edges in trace" << std::endl;
+            assert(false);
+        }
+        if (!sawDelayedCommit) {
+            std::cerr << "[IEC TEMPORAL] FAIL: missing delayed commit edges in trace" << std::endl;
+            assert(false);
+        }
+
+        (void)sawCommitFromC64;
+        (void)sawModeledCommit;
+    }
+
     std::cerr << "[IEC TEMPORAL] PASS: deterministic phase ordering (N=20) + no double-commit" << std::endl;
 
     {
@@ -111,6 +159,8 @@ static void runIecTemporalContractTests() {
         domain.setC64DomainEnabled(false);
         domain.setDriveDomainEnabled(false);
         domain.configureLineModelForTest(true, 0, 1, 1, 0, 2, 2);
+        domain.setTemporalDebugEnabled(true);
+        domain.clearTemporalTrace();
 
         // ATN low pulse shorter than min-low must not reach high immediately.
         domain.linkC64PullATN = true;
@@ -140,6 +190,21 @@ static void runIecTemporalContractTests() {
         domain.executeTimedEventsAtNow();
         if (!domain.linkLineATNHigh) {
             std::cerr << "[IEC TEMPORAL] FAIL: ATN did not rise after min pulse/release delay" << std::endl;
+            assert(false);
+        }
+
+        bool sawLineModelCause = false;
+        for (const IecTemporalTraceEvent &ev : domain.getTemporalTrace()) {
+            if (ev.phase == IecTemporalPhase::CommitEdge &&
+                ev.edgeOwner == IecEdgeOwner::LineModel &&
+                (ev.edgeCause == IecEdgeCause::ReleaseDelay || ev.edgeCause == IecEdgeCause::MinPulse) &&
+                ev.effectiveDelayTicks > 0) {
+                sawLineModelCause = true;
+                break;
+            }
+        }
+        if (!sawLineModelCause) {
+            std::cerr << "[IEC TEMPORAL] FAIL: missing line-model commit metadata in temporal trace" << std::endl;
             assert(false);
         }
     }

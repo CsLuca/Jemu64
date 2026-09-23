@@ -50,10 +50,27 @@ enum class IecTemporalPhase : uint8_t {
     CommitEdge = 3
 };
 
+enum class IecEdgeOwner : uint8_t {
+    None = 0,
+    C64 = 1,
+    Drive = 2,
+    LineModel = 3
+};
+
+enum class IecEdgeCause : uint8_t {
+    None = 0,
+    PullChange = 1,
+    ReleaseDelay = 2,
+    MinPulse = 3
+};
+
 struct IecTemporalTraceEvent {
     uint64_t timestamp = 0;
     uint64_t sequence = 0;
     IecTemporalPhase phase = IecTemporalPhase::Sample;
+    IecEdgeOwner edgeOwner = IecEdgeOwner::None;
+    IecEdgeCause edgeCause = IecEdgeCause::None;
+    uint64_t effectiveDelayTicks = 0;
     bool atnHigh = true;
     bool clkHigh = true;
     bool dataHigh = true;
@@ -581,6 +598,9 @@ struct IecBusDomain {
     bool temporalHasLastCommitTimestamp = false;
     uint64_t temporalLastCommitTimestamp = 0;
     std::vector<IecTemporalTraceEvent> temporalTrace;
+    IecEdgeOwner pendingEdgeOwner = IecEdgeOwner::None;
+    IecEdgeCause pendingEdgeCause = IecEdgeCause::None;
+    uint64_t pendingEdgeEffectiveDelayTicks = 0;
     bool lineModelEnabled = false;
     uint64_t lineAtnReleaseDelayUnits = 0;
     uint64_t lineClkReleaseDelayUnits = 0;
@@ -695,6 +715,9 @@ struct IecBusDomain {
         temporalDoubleCommitSameTimestamp = 0;
         temporalHasLastCommitTimestamp = false;
         temporalLastCommitTimestamp = 0;
+        pendingEdgeOwner = IecEdgeOwner::None;
+        pendingEdgeCause = IecEdgeCause::None;
+        pendingEdgeEffectiveDelayTicks = 0;
     }
 
     const std::vector<IecTemporalTraceEvent> &getTemporalTrace() const {
@@ -883,13 +906,17 @@ struct IecBusDomain {
         applyIecInputsToCia(cia2, polarity, sig, lines);
     }
 
-    void scheduleRiseReeval(IecLineModelState *line, uint64_t when) {
+    void scheduleRiseReeval(IecLineModelState *line, uint64_t when, IecEdgeCause cause) {
         if (line->riseEventPending && line->riseEventWhen == when) {
             return;
         }
+        const uint64_t effectiveDelay = (when > nowUnits) ? (when - nowUnits) : 0;
         line->riseEventPending = true;
         line->riseEventWhen = when;
-        scheduleEventAtAbsolute(when, [this, line]() {
+        scheduleEventAtAbsolute(when, [this, line, cause, effectiveDelay]() {
+            pendingEdgeOwner = IecEdgeOwner::LineModel;
+            pendingEdgeCause = cause;
+            pendingEdgeEffectiveDelayTicks = effectiveDelay;
             line->riseEventPending = false;
             settleBusAndPropagateSamples();
         });
@@ -933,13 +960,18 @@ struct IecBusDomain {
             return true;
         }
 
-        scheduleRiseReeval(&line, earliestRise);
+        const bool minPulseDeferred = (minLowPulse > 0) && (nowUnits < (line.lowSince + minLowPulse));
+        const IecEdgeCause cause = minPulseDeferred ? IecEdgeCause::MinPulse : IecEdgeCause::ReleaseDelay;
+        scheduleRiseReeval(&line, earliestRise, cause);
         return false;
     }
 
     void scheduleBusSettleFromC64Pulls(bool pullATN, bool pullCLK, bool pullDATA) {
         const uint64_t delay = linkDelayWithJitter(linkLatencyC64ToBus);
-        scheduleEventAfter(delay, [this, pullATN, pullCLK, pullDATA]() {
+        scheduleEventAfter(delay, [this, pullATN, pullCLK, pullDATA, delay]() {
+            pendingEdgeOwner = IecEdgeOwner::C64;
+            pendingEdgeCause = IecEdgeCause::PullChange;
+            pendingEdgeEffectiveDelayTicks = delay;
             linkC64PullATN = pullATN;
             linkC64PullCLK = pullCLK;
             linkC64PullDATA = pullDATA;
@@ -949,14 +981,20 @@ struct IecBusDomain {
 
     void scheduleBusSettleFromDrivePulls(bool pullCLK, bool pullDATA) {
         const uint64_t delay = linkDelayWithJitter(linkLatencyDriveToBus);
-        scheduleEventAfter(delay, [this, pullCLK, pullDATA]() {
+        scheduleEventAfter(delay, [this, pullCLK, pullDATA, delay]() {
+            pendingEdgeOwner = IecEdgeOwner::Drive;
+            pendingEdgeCause = IecEdgeCause::PullChange;
+            pendingEdgeEffectiveDelayTicks = delay;
             linkDrivePullCLK = pullCLK;
             linkDrivePullDATA = pullDATA;
             settleBusAndPropagateSamples();
         });
     }
 
-    void logTemporalPhase(IecTemporalPhase phase) {
+    void logTemporalPhase(IecTemporalPhase phase,
+                          IecEdgeOwner owner = IecEdgeOwner::None,
+                          IecEdgeCause cause = IecEdgeCause::None,
+                          uint64_t effectiveDelayTicks = 0) {
         if (!temporalDebugEnabled) {
             return;
         }
@@ -964,6 +1002,9 @@ struct IecBusDomain {
             nowUnits,
             temporalPhaseSeq++,
             phase,
+            owner,
+            cause,
+            effectiveDelayTicks,
             linkLineATNHigh,
             linkLineCLKHigh,
             linkLineDATAHigh
@@ -985,7 +1026,13 @@ struct IecBusDomain {
         temporalHasLastCommitTimestamp = true;
         temporalLastCommitTimestamp = nowUnits;
         temporalCommitCount++;
-        logTemporalPhase(IecTemporalPhase::CommitEdge);
+        logTemporalPhase(IecTemporalPhase::CommitEdge,
+                         pendingEdgeOwner,
+                         pendingEdgeCause,
+                         pendingEdgeEffectiveDelayTicks);
+        pendingEdgeOwner = IecEdgeOwner::None;
+        pendingEdgeCause = IecEdgeCause::None;
+        pendingEdgeEffectiveDelayTicks = 0;
 
         const uint64_t toDrive = linkDelayWithJitter(linkLatencyBusToDrive);
         scheduleEventAfter(toDrive, [this]() {

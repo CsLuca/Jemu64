@@ -128,6 +128,12 @@ Implementation notes:
 - RX/TX serial timeout checks now include a small hysteresis window before raising timeout (`IEC_TIMEOUT_HYSTERESIS_TICKS`).
 - This reduces borderline edge-timing flake sensitivity while preserving timeout fault reporting once the extended budget is exceeded.
 
+## IEC Subcycle Hardening (Phase 4 software-ready)
+
+- Subcycle timing windows now include revision-aware RX setup/hold qualification and deterministic reject telemetry.
+- Minimal IEC line model added for open-collector release latency and minimum low-pulse behavior with profile/flag fallback to instantaneous legacy behavior.
+- Temporal trace/oracle now records commit-edge metadata (`edge_owner`, `edge_cause`, `effective_delay_ticks`) and validates sequence-level subcycle invariants beyond final pass/fail.
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.
