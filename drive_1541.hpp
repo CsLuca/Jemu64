@@ -57,14 +57,16 @@ public:
         bool iecHandshakeNeedsClockLowAck = true;
         uint32_t iecAtnAckTicksOverride = 16;
         bool iecRxAckOnAnyDataByte = false;
+        uint8_t iecRxSetupTicks = 0;
+        uint8_t iecRxHoldTicks = 0;
     };
 
     static constexpr RevisionProfile makeRevisionProfile(Revision rev) {
         return (rev == REV_1541C)
-            ? RevisionProfile{REV_1541C, 2, false, false, false, 8, true}
+            ? RevisionProfile{REV_1541C, 2, false, false, false, 8, true, 1, 1}
             : (rev == REV_1541II)
-                ? RevisionProfile{REV_1541II, 2, false, false, false, 6, true}
-            : RevisionProfile{REV_1541, 1, true, true, true, 16, false};
+                ? RevisionProfile{REV_1541II, 2, false, false, false, 6, true, 1, 0}
+            : RevisionProfile{REV_1541, 1, true, true, true, 16, false, 1, 1};
     }
 
     Revision revision = REV_1541;
@@ -386,6 +388,14 @@ public:
     bool iecCommandFrameSawTalkForDevice = false;
     bool iecCommandFrameSawListenSecondary0 = false;
     bool iecCommandFrameSawTalkSecondary0 = false;
+    bool iecEnableRxTimingWindow = false;
+    uint8_t iecRxSetupTicks = 0;
+    uint8_t iecRxHoldTicks = 0;
+    uint64_t iecSerialTickCounter = 0;
+    uint64_t iecLastDataEdgeTick = 0;
+    uint64_t iecLastAcceptedRxClockTick = 0;
+    bool iecDataEdgeSinceLastRxSample = false;
+    uint64_t iecRxTimingWindowRejectCount = 0;
 
     bool iecTxByteActive = false;
     uint8_t iecTxShift = 0;
@@ -2551,6 +2561,14 @@ public:
         iecKernelCompatAutoDirectoryOnTalk0 = false;
         iecKernelCompatForceTalkOnIcrSerial = false;
         iecKernelIgnoreAtnForTalkDataPhase = false;
+        iecEnableRxTimingWindow = level5CouplingProfile;
+        iecRxSetupTicks = revisionProfile.iecRxSetupTicks;
+        iecRxHoldTicks = revisionProfile.iecRxHoldTicks;
+        iecSerialTickCounter = 0;
+        iecLastDataEdgeTick = 0;
+        iecLastAcceptedRxClockTick = 0;
+        iecDataEdgeSinceLastRxSample = false;
+        iecRxTimingWindowRejectCount = 0;
         iecSerialState = IecSerialState::Idle;
         iecAtnAckTicks = 0;
         iecAtnAckPullDATA = false;
@@ -3087,14 +3105,21 @@ public:
     }
 
     void stepIecSerial() {
+        iecSerialTickCounter++;
         const bool currCLK = iecCLK;
         const bool currATN = iecATN;
         const bool currDATA = iecDATA;
         const bool fallingCLK = (iecPrevCLK && !currCLK);
         const bool risingCLK = (!iecPrevCLK && currCLK);
         const bool fallingATN = (iecPrevATN && !currATN);
+        const bool dataEdgeThisTick = (iecPrevDATA != currDATA);
         const bool commandPhase = !currATN;
         const bool hasClockEdge = (fallingCLK || risingCLK);
+
+        if (dataEdgeThisTick) {
+            iecLastDataEdgeTick = iecSerialTickCounter;
+            iecDataEdgeSinceLastRxSample = true;
+        }
 
         if (fallingATN) {
             iecAtnFallingSeen++;
@@ -3214,10 +3239,28 @@ public:
                 commandEdgeQualified = false;
             }
         }
-        if (rxClockEdge && (receiveData || (receiveCommand && commandEdgeQualified))) {
+        bool rxTimingWindowValid = true;
+        const bool receiveClockedByte = (receiveData || (receiveCommand && commandEdgeQualified));
+        if (rxClockEdge && receiveClockedByte && iecEnableRxTimingWindow) {
+            const uint64_t ticksSinceDataEdge = iecSerialTickCounter - iecLastDataEdgeTick;
+            const bool setupOk = (ticksSinceDataEdge >= static_cast<uint64_t>(iecRxSetupTicks));
+            bool holdOk = true;
+            if (iecDataEdgeSinceLastRxSample && iecLastAcceptedRxClockTick != 0) {
+                const uint64_t ticksSinceAcceptedClock = iecSerialTickCounter - iecLastAcceptedRxClockTick;
+                holdOk = (ticksSinceAcceptedClock > static_cast<uint64_t>(iecRxHoldTicks));
+            }
+            rxTimingWindowValid = (setupOk && holdOk);
+            if (!rxTimingWindowValid) {
+                iecRxTimingWindowRejectCount++;
+            }
+        }
+
+        if (rxClockEdge && receiveClockedByte && rxTimingWindowValid) {
             const uint8_t inBit = iecDATA ? 1 : 0;
             iecRxShift = static_cast<uint8_t>(iecRxShift | static_cast<uint8_t>(inBit << iecRxBitCount));
             iecRxBitCount++;
+            iecLastAcceptedRxClockTick = iecSerialTickCounter;
+            iecDataEdgeSinceLastRxSample = false;
             if (iecRxBitCount >= 8) {
                 const uint8_t rxByte = iecRxShift;
                 const bool looksLikeCommand = ((rxByte & 0xF0) == 0x20) ||

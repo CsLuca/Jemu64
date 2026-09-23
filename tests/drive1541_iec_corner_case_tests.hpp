@@ -9,6 +9,48 @@
 static void runDrive1541IecCornerCaseTests() {
     {
         Drive1541 drive;
+        drive.iecListening = true;
+        drive.iecEnableRxTimingWindow = true;
+        drive.iecRxSetupTicks = 1;
+        drive.iecRxHoldTicks = 0;
+
+        drive.setIecLines(true, false, true);
+        drive.stepIecSerial();
+
+        // Data edge lands on the same tick as RX clock edge: reject on setup window.
+        drive.setIecLines(true, true, false);
+        drive.stepIecSerial();
+
+        if (drive.iecRxBitCount != 0 || drive.iecRxTimingWindowRejectCount == 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: expected setup-window reject on same-tick data/clock edge" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
+        drive.iecListening = true;
+        drive.iecEnableRxTimingWindow = true;
+        drive.iecRxSetupTicks = 1;
+        drive.iecRxHoldTicks = 0;
+
+        drive.setIecLines(true, false, true);
+        drive.stepIecSerial();
+
+        // Data settles one tick before RX clock edge: sample must be accepted.
+        drive.setIecLines(true, false, false);
+        drive.stepIecSerial();
+        drive.setIecLines(true, true, false);
+        drive.stepIecSerial();
+
+        if (drive.iecRxBitCount != 1 || drive.iecRxTimingWindowRejectCount != 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: expected setup-window accept with one-tick settle" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
         drive.iecTalking = true;
         drive.iecActiveTalkChannel = 0;
         drive.iecTalkSa0Confirmed = true;
@@ -182,5 +224,5 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
-    std::cerr << "[1541 IEC CORNER] PASS: ATN/UNLISTEN/UNTALK corner cases + timeout hysteresis are deterministic" << std::endl;
+    std::cerr << "[1541 IEC CORNER] PASS: ATN/UNLISTEN/UNTALK + setup/hold windows + timeout hysteresis are deterministic" << std::endl;
 }
