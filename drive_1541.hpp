@@ -3115,6 +3115,25 @@ public:
         }
         const bool enteringCommandState = (iecSerialState != IecSerialState::Command && nextState == IecSerialState::Command);
         const bool enteringTalkData = (iecSerialState != IecSerialState::TalkData && nextState == IecSerialState::TalkData);
+        const bool atnPreemptsTalkFlow = commandPhase &&
+            (iecSerialState == IecSerialState::TalkData ||
+             iecSerialState == IecSerialState::TalkEoiAck ||
+             iecTxByteActive ||
+             iecTalkStartPending ||
+             iecEoiPendingAck);
+
+        if (atnPreemptsTalkFlow) {
+            iecTxByteActive = false;
+            iecTxBitCount = 0;
+            iecTalkStartPending = false;
+            iecTalkFrameArmed = false;
+            iecTalkSawStartEdge = false;
+            iecTxCurrentIsEoi = false;
+            iecEoiPendingAck = false;
+            iecEoiAckLowSeen = false;
+            iecEoiWaitTicks = 0;
+            iecSerialPullDATA = false;
+        }
 
         if (!iecEnableAtnAck) {
             iecAtnAckPullDATA = false;
@@ -3282,6 +3301,11 @@ public:
 
         if (nextState == IecSerialState::TalkEoiAck) {
             iecSerialPullDATA = false;
+            if (!currATN && !iecKernelIgnoreAtnForTalkDataPhase) {
+                iecEoiPendingAck = false;
+                iecEoiAckLowSeen = false;
+                iecEoiWaitTicks = 0;
+            }
             if (!currDATA) {
                 iecEoiAckLowSeen = true;
             }

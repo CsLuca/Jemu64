@@ -112,6 +112,12 @@ Implementation notes:
 - Optional debug trace can emit phase + timestamp sequencing for deterministic replay checks.
 - Guard metric tracks and rejects double-commit on the same timestamp.
 
+## IEC Corner Cases (Phase 2)
+
+- ATN assertion now preempts active TALK flow deterministically (data shift, start-pending, and EOI-ack state are dropped on command re-entry).
+- Late ATN during EOI acknowledge window cancels pending EOI ack immediately to avoid stale talk-side wait state leakage.
+- Added dedicated corner-case tests covering ATN preemption during TALK and ATN-late during EOI-ack.
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.
