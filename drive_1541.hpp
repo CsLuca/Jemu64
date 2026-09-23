@@ -2936,6 +2936,9 @@ public:
                 break;
             }
             default:
+                cpuUnhandledOpcodeCount++;
+                cpuLastUnhandledOpcode = op;
+                cpuLastUnhandledFetchAddr = oldPC;
                 pc = static_cast<uint16_t>(pc + 1);
                 cyclesUsed = 2;
                 break;
@@ -3027,6 +3030,9 @@ public:
             }
             default:
                 // Unknown opcode in scaffold: advance by one to keep forward progress.
+                cpuUnhandledOpcodeCount++;
+                cpuLastUnhandledOpcode = op;
+                cpuLastUnhandledFetchAddr = oldPC;
                 pc = static_cast<uint16_t>(pc + 1);
                 break;
         }
