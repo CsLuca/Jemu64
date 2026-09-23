@@ -156,7 +156,9 @@ static void runDrive1541TimingBattery(CIA6526 &cia2) {
     drive.iecSerialPullDATA = true;
     drive.setIecLines(true, true, true);
     const uint64_t txToBefore = drive.iecTxTimeoutCount;
-    for (uint32_t i = 0; i < (Drive1541::IEC_SERIAL_TIMEOUT_TICKS + 12); ++i) {
+    const uint32_t txTimeoutBudget =
+        Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS + 12;
+    for (uint32_t i = 0; i < txTimeoutBudget; ++i) {
         drive.tickIecHalfCycle();
     }
     if (drive.iecTxTimeoutCount <= txToBefore) {

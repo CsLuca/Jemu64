@@ -1,0 +1,4 @@
+"gate","pass","exit_code","issue"
+"level5_power_matrix_gate","1","0","ok"
+"level5_diff_oracle_gate","1","0","ok"
+"level5_chaos_soak_gate","1","0","ok"

@@ -72,8 +72,6 @@ static void runDrive1541IecCornerCaseTests() {
         drive.iecListening = true;
         drive.iecRxBitCount = 1;
         drive.iecRxShift = 1;
-        drive.setIecLines(true, true, true);
-        drive.stepIecSerial();
         const std::uint32_t rxBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
         for (std::uint32_t i = 0; i < rxBudget; ++i) {
             drive.setIecLines(true, true, true);
@@ -99,8 +97,6 @@ static void runDrive1541IecCornerCaseTests() {
         drive.iecTxByteActive = true;
         drive.iecTxShift = 0xA5u;
         drive.iecTxBitCount = 2;
-        drive.setIecLines(true, true, true);
-        drive.stepIecSerial();
         const std::uint32_t txBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
         for (std::uint32_t i = 0; i < txBudget; ++i) {
             drive.setIecLines(true, true, true);

@@ -1,0 +1,3 @@
+"gate","pass","exit_code","issue"
+"level5_power_matrix_gate","1","0","ok"
+"level5_diff_oracle_gate","0","1","Level4 write roundtrip runtime failed (exit=-1073740791)"

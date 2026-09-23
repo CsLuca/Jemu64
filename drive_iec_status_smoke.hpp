@@ -20,7 +20,9 @@ static void runDrive1541IecStatusTimeoutSmoke(CIA6526 &cia2) {
     drive.iecEoiAckLowSeen = false;
     drive.setIecLines(true, true, true);
 
-    for (uint32_t i = 0; i < (Drive1541::IEC_SERIAL_TIMEOUT_TICKS + 8); ++i) {
+    const uint32_t serialTimeoutBudget =
+        Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS + 8;
+    for (uint32_t i = 0; i < serialTimeoutBudget; ++i) {
         drive.tick();
     }
     for (uint32_t i = 0; i < (Drive1541::IEC_EOI_TIMEOUT_TICKS + 8); ++i) {
