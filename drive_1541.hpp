@@ -528,6 +528,9 @@ public:
     uint64_t cpuStepCount = 0;
     uint8_t cpuCyclesToNext = 0;
     bool cpuReadyEdge = false;
+    uint64_t cpuUnhandledOpcodeCount = 0;
+    uint8_t cpuLastUnhandledOpcode = 0;
+    uint16_t cpuLastUnhandledFetchAddr = 0;
 
     uint64_t iecCommandDispatchCount = 0;
     uint64_t iecDataDispatchCount = 0;
@@ -574,6 +577,7 @@ public:
         uint64_t microOpsExecuted = 0;
         uint64_t busCyclesExecuted = 0;
         uint8_t cyclesConsumed = 0;
+        bool lastOpcodeHandled = false;
     };
 
     bool driveCpuUseMicroOpEngine = false;
@@ -2414,6 +2418,7 @@ public:
         if (driveCpuMicroOpState.phase == DriveCpuMicroOpPhase::Execute) {
             uint8_t cyclesUsed = 2;
             const bool handled = executeDriveCpuMicroOpBaseOpcode(driveCpuMicroOpState.ir, cyclesUsed);
+            driveCpuMicroOpState.lastOpcodeHandled = handled;
             if (!handled) {
                 pc = static_cast<uint16_t>(pc + 1);
                 cyclesUsed = 2;
@@ -2434,6 +2439,11 @@ public:
             cpuCyclesToNext = (scaledConsumed > 0) ? static_cast<uint8_t>(scaledConsumed - 1) : 0;
             cpuLastOpcode = driveCpuMicroOpState.ir;
             cpuLastFetchAddr = oldPc;
+            if (!driveCpuMicroOpState.lastOpcodeHandled) {
+                cpuUnhandledOpcodeCount++;
+                cpuLastUnhandledOpcode = driveCpuMicroOpState.ir;
+                cpuLastUnhandledFetchAddr = oldPc;
+            }
             cpuStepCount++;
             driveCpuMicroOpState.phase = DriveCpuMicroOpPhase::Complete;
             driveCpuMicroOpState.microPc++;
@@ -2492,6 +2502,9 @@ public:
         cpuLastOpcode = 0;
         cpuLastFetchAddr = pc;
         cpuStepCount = 0;
+        cpuUnhandledOpcodeCount = 0;
+        cpuLastUnhandledOpcode = 0;
+        cpuLastUnhandledFetchAddr = pc;
         cpuCyclesToNext = 0;
         cpuReadyEdge = false;
         cpuA = 0;
