@@ -97,6 +97,21 @@ Exit criteria:
 - Unhandled-opcode fallback telemetry is now wired in both micro-op and legacy scaffold paths for deterministic observability during future hardening.
 - Remaining open item for final physical signoff stays outside this track: complete real-capture corpus closure (`cap02`/metadata/oracle completeness).
 
+## IEC Temporal Contract (Phase 1)
+
+The IEC bridge now follows an explicit temporal phase contract for each subcycle/tick:
+
+- `Sample`
+- `DriveUpdate`
+- `HostUpdate`
+- `CommitEdge`
+
+Implementation notes:
+
+- A single source-of-truth bus transition path applies resolved IEC line updates and propagation scheduling.
+- Optional debug trace can emit phase + timestamp sequencing for deterministic replay checks.
+- Guard metric tracks and rejects double-commit on the same timestamp.
+
 ## KPI Targets
 
 - Protected real corpus pass rate: 100%.

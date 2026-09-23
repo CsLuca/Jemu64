@@ -43,6 +43,22 @@ struct IecResolvedLines {
     bool dataHigh = true;
 };
 
+enum class IecTemporalPhase : uint8_t {
+    Sample = 0,
+    DriveUpdate = 1,
+    HostUpdate = 2,
+    CommitEdge = 3
+};
+
+struct IecTemporalTraceEvent {
+    uint64_t timestamp = 0;
+    uint64_t sequence = 0;
+    IecTemporalPhase phase = IecTemporalPhase::Sample;
+    bool atnHigh = true;
+    bool clkHigh = true;
+    bool dataHigh = true;
+};
+
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity) {
     IecC64Signals s;
 
@@ -551,6 +567,13 @@ struct IecBusDomain {
     uint32_t linkJitterSeed = 0;
     bool c64DomainEnabled = true;
     bool driveDomainEnabled = true;
+    bool temporalDebugEnabled = false;
+    uint64_t temporalPhaseSeq = 0;
+    uint64_t temporalCommitCount = 0;
+    uint64_t temporalDoubleCommitSameTimestamp = 0;
+    bool temporalHasLastCommitTimestamp = false;
+    uint64_t temporalLastCommitTimestamp = 0;
+    std::vector<IecTemporalTraceEvent> temporalTrace;
 
     bool linkC64PullATN = false;
     bool linkC64PullCLK = false;
@@ -607,8 +630,39 @@ struct IecBusDomain {
         if (const char *v = std::getenv("IEC_LINK_SEED")) {
             linkJitterSeed = static_cast<uint32_t>(std::strtoul(v, nullptr, 10));
         }
+        if (std::getenv("IEC_TEMPORAL_DEBUG") != nullptr) {
+            temporalDebugEnabled = true;
+        }
 
         bootstrapIecLink();
+    }
+
+    void setTemporalDebugEnabled(bool enabled) {
+        temporalDebugEnabled = enabled;
+        if (!enabled) {
+            temporalTrace.clear();
+        }
+    }
+
+    void clearTemporalTrace() {
+        temporalTrace.clear();
+        temporalPhaseSeq = 0;
+        temporalCommitCount = 0;
+        temporalDoubleCommitSameTimestamp = 0;
+        temporalHasLastCommitTimestamp = false;
+        temporalLastCommitTimestamp = 0;
+    }
+
+    const std::vector<IecTemporalTraceEvent> &getTemporalTrace() const {
+        return temporalTrace;
+    }
+
+    uint64_t getTemporalCommitCount() const {
+        return temporalCommitCount;
+    }
+
+    uint64_t getTemporalDoubleCommitSameTimestampCount() const {
+        return temporalDoubleCommitSameTimestamp;
     }
 
     void attachDrive(IIecDevice &drive) {
@@ -782,12 +836,21 @@ struct IecBusDomain {
         });
     }
 
-    void settleBusAndPropagateSamples() {
-        const IecResolvedLines lines = resolveIecLinesFromPulls(linkC64PullATN,
-                                                                linkC64PullCLK,
-                                                                linkC64PullDATA,
-                                                                linkDrivePullCLK,
-                                                                linkDrivePullDATA);
+    void logTemporalPhase(IecTemporalPhase phase) {
+        if (!temporalDebugEnabled) {
+            return;
+        }
+        temporalTrace.push_back(IecTemporalTraceEvent{
+            nowUnits,
+            temporalPhaseSeq++,
+            phase,
+            linkLineATNHigh,
+            linkLineCLKHigh,
+            linkLineDATAHigh
+        });
+    }
+
+    void applyTemporalBusContract(const IecResolvedLines &lines) {
         if (lines.atnHigh == linkLineATNHigh && lines.clkHigh == linkLineCLKHigh && lines.dataHigh == linkLineDATAHigh) {
             return;
         }
@@ -795,6 +858,14 @@ struct IecBusDomain {
         linkLineATNHigh = lines.atnHigh;
         linkLineCLKHigh = lines.clkHigh;
         linkLineDATAHigh = lines.dataHigh;
+
+        if (temporalHasLastCommitTimestamp && temporalLastCommitTimestamp == nowUnits) {
+            temporalDoubleCommitSameTimestamp++;
+        }
+        temporalHasLastCommitTimestamp = true;
+        temporalLastCommitTimestamp = nowUnits;
+        temporalCommitCount++;
+        logTemporalPhase(IecTemporalPhase::CommitEdge);
 
         const uint64_t toDrive = linkDelayWithJitter(linkLatencyBusToDrive);
         scheduleEventAfter(toDrive, [this]() {
@@ -807,6 +878,15 @@ struct IecBusDomain {
             const IecResolvedLines linesNow = {linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh};
             applyIecInputsToCia(cia2, polarity, sigNow, linesNow);
         });
+    }
+
+    void settleBusAndPropagateSamples() {
+        const IecResolvedLines lines = resolveIecLinesFromPulls(linkC64PullATN,
+                                                                linkC64PullCLK,
+                                                                linkC64PullDATA,
+                                                                linkDrivePullCLK,
+                                                                linkDrivePullDATA);
+        applyTemporalBusContract(lines);
     }
 
     void executeTimedEventsAtNow() {
@@ -880,13 +960,16 @@ struct IecBusDomain {
 
             nowUnits = nextTime;
             executeTimedEventsAtNow();
+            logTemporalPhase(IecTemporalPhase::Sample);
 
             if (nextDriveUnits == nowUnits) {
+                logTemporalPhase(IecTemporalPhase::DriveUpdate);
                 tickDriveDomainOnce();
                 executeTimedEventsAtNow();
             }
 
             if (nextC64Units == nowUnits) {
+                logTemporalPhase(IecTemporalPhase::HostUpdate);
                 tickC64DomainOnce();
                 executeTimedEventsAtNow();
             }
