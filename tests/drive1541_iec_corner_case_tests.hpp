@@ -9,6 +9,29 @@
 static void runDrive1541IecCornerCaseTests() {
     {
         Drive1541 drive;
+        drive.iecEnableDriveReleaseDelayModel = true;
+
+        bool pull = false;
+        std::uint8_t countdown = 0;
+        drive.applyDriveOpenCollectorReleaseModel(true, pull, 1, countdown);
+        if (!pull || countdown != 1) {
+            std::cerr << "[1541 IEC CORNER] FAIL: release-delay model did not latch low drive pull" << std::endl;
+            assert(false);
+        }
+        drive.applyDriveOpenCollectorReleaseModel(false, pull, 1, countdown);
+        if (!pull || countdown != 0) {
+            std::cerr << "[1541 IEC CORNER] FAIL: release-delay model released too early" << std::endl;
+            assert(false);
+        }
+        drive.applyDriveOpenCollectorReleaseModel(false, pull, 1, countdown);
+        if (pull) {
+            std::cerr << "[1541 IEC CORNER] FAIL: release-delay model did not release after delay" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        Drive1541 drive;
         drive.iecListening = true;
         drive.iecEnableRxTimingWindow = true;
         drive.iecRxSetupTicks = 1;
@@ -51,6 +74,8 @@ static void runDrive1541IecCornerCaseTests() {
 
     {
         Drive1541 drive;
+        drive.iecEnableDriveReleaseDelayModel = true;
+        drive.iecDriveDataReleaseDelayTicks = 1;
         drive.iecTalking = true;
         drive.iecActiveTalkChannel = 0;
         drive.iecTalkSa0Confirmed = true;

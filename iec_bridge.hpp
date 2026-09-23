@@ -59,6 +59,13 @@ struct IecTemporalTraceEvent {
     bool dataHigh = true;
 };
 
+struct IecLineModelState {
+    bool levelHigh = true;
+    uint64_t lowSince = 0;
+    bool riseEventPending = false;
+    uint64_t riseEventWhen = 0;
+};
+
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity) {
     IecC64Signals s;
 
@@ -574,6 +581,16 @@ struct IecBusDomain {
     bool temporalHasLastCommitTimestamp = false;
     uint64_t temporalLastCommitTimestamp = 0;
     std::vector<IecTemporalTraceEvent> temporalTrace;
+    bool lineModelEnabled = false;
+    uint64_t lineAtnReleaseDelayUnits = 0;
+    uint64_t lineClkReleaseDelayUnits = 0;
+    uint64_t lineDataReleaseDelayUnits = 0;
+    uint64_t lineAtnMinLowPulseUnits = 0;
+    uint64_t lineClkMinLowPulseUnits = 0;
+    uint64_t lineDataMinLowPulseUnits = 0;
+    IecLineModelState atnModel;
+    IecLineModelState clkModel;
+    IecLineModelState dataModel;
 
     bool linkC64PullATN = false;
     bool linkC64PullCLK = false;
@@ -633,6 +650,33 @@ struct IecBusDomain {
         if (std::getenv("IEC_TEMPORAL_DEBUG") != nullptr) {
             temporalDebugEnabled = true;
         }
+        if (std::getenv("IEC_SUBCYCLE_LINE_MODEL") != nullptr) {
+            lineModelEnabled = true;
+            lineAtnReleaseDelayUnits = 1;
+            lineClkReleaseDelayUnits = 1;
+            lineDataReleaseDelayUnits = 1;
+            lineAtnMinLowPulseUnits = 1;
+            lineClkMinLowPulseUnits = 1;
+            lineDataMinLowPulseUnits = 1;
+        }
+        if (const char *v = std::getenv("IEC_LINE_ATN_RELEASE_DELAY_UNITS")) {
+            lineAtnReleaseDelayUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINE_CLK_RELEASE_DELAY_UNITS")) {
+            lineClkReleaseDelayUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINE_DATA_RELEASE_DELAY_UNITS")) {
+            lineDataReleaseDelayUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINE_ATN_MIN_LOW_UNITS")) {
+            lineAtnMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINE_CLK_MIN_LOW_UNITS")) {
+            lineClkMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_LINE_DATA_MIN_LOW_UNITS")) {
+            lineDataMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
 
         bootstrapIecLink();
     }
@@ -690,6 +734,25 @@ struct IecBusDomain {
         driveDriftPpm = driftPpmValue;
         ditherSeed = seed;
         ditherAmplitude = (amp < 0) ? 0 : amp;
+    }
+
+    void configureLineModelForTest(bool enabled,
+                                   uint64_t atnReleaseDelay,
+                                   uint64_t clkReleaseDelay,
+                                   uint64_t dataReleaseDelay,
+                                   uint64_t atnMinLow,
+                                   uint64_t clkMinLow,
+                                   uint64_t dataMinLow) {
+        lineModelEnabled = enabled;
+        lineAtnReleaseDelayUnits = atnReleaseDelay;
+        lineClkReleaseDelayUnits = clkReleaseDelay;
+        lineDataReleaseDelayUnits = dataReleaseDelay;
+        lineAtnMinLowPulseUnits = atnMinLow;
+        lineClkMinLowPulseUnits = clkMinLow;
+        lineDataMinLowPulseUnits = dataMinLow;
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0};
     }
 
     uint64_t getCurrentTimeUnits() const {
@@ -813,8 +876,65 @@ struct IecBusDomain {
         linkLineATNHigh = lines.atnHigh;
         linkLineCLKHigh = lines.clkHigh;
         linkLineDATAHigh = lines.dataHigh;
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0};
         propagateLinesToDrives();
         applyIecInputsToCia(cia2, polarity, sig, lines);
+    }
+
+    void scheduleRiseReeval(IecLineModelState *line, uint64_t when) {
+        if (line->riseEventPending && line->riseEventWhen == when) {
+            return;
+        }
+        line->riseEventPending = true;
+        line->riseEventWhen = when;
+        scheduleEventAtAbsolute(when, [this, line]() {
+            line->riseEventPending = false;
+            settleBusAndPropagateSamples();
+        });
+    }
+
+    bool applyLineTimingModel(bool desiredHigh,
+                              IecLineModelState &line,
+                              uint64_t releaseDelay,
+                              uint64_t minLowPulse) {
+        if (!lineModelEnabled) {
+            line.levelHigh = desiredHigh;
+            if (!desiredHigh) {
+                line.lowSince = nowUnits;
+            }
+            return desiredHigh;
+        }
+
+        if (!desiredHigh) {
+            line.riseEventPending = false;
+            if (line.levelHigh) {
+                line.levelHigh = false;
+                line.lowSince = nowUnits;
+            }
+            return false;
+        }
+
+        if (line.levelHigh) {
+            return true;
+        }
+
+        uint64_t earliestRise = line.lowSince;
+        if (minLowPulse > 0) {
+            earliestRise += minLowPulse;
+        }
+        if (releaseDelay > 0) {
+            earliestRise += releaseDelay;
+        }
+        if (nowUnits >= earliestRise) {
+            line.levelHigh = true;
+            line.riseEventPending = false;
+            return true;
+        }
+
+        scheduleRiseReeval(&line, earliestRise);
+        return false;
     }
 
     void scheduleBusSettleFromC64Pulls(bool pullATN, bool pullCLK, bool pullDATA) {
@@ -881,12 +1001,16 @@ struct IecBusDomain {
     }
 
     void settleBusAndPropagateSamples() {
-        const IecResolvedLines lines = resolveIecLinesFromPulls(linkC64PullATN,
-                                                                linkC64PullCLK,
-                                                                linkC64PullDATA,
-                                                                linkDrivePullCLK,
-                                                                linkDrivePullDATA);
-        applyTemporalBusContract(lines);
+        const IecResolvedLines desired = resolveIecLinesFromPulls(linkC64PullATN,
+                                                                  linkC64PullCLK,
+                                                                  linkC64PullDATA,
+                                                                  linkDrivePullCLK,
+                                                                  linkDrivePullDATA);
+        IecResolvedLines modeled = desired;
+        modeled.atnHigh = applyLineTimingModel(desired.atnHigh, atnModel, lineAtnReleaseDelayUnits, lineAtnMinLowPulseUnits);
+        modeled.clkHigh = applyLineTimingModel(desired.clkHigh, clkModel, lineClkReleaseDelayUnits, lineClkMinLowPulseUnits);
+        modeled.dataHigh = applyLineTimingModel(desired.dataHigh, dataModel, lineDataReleaseDelayUnits, lineDataMinLowPulseUnits);
+        applyTemporalBusContract(modeled);
     }
 
     void executeTimedEventsAtNow() {

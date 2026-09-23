@@ -336,6 +336,11 @@ public:
     // Lines pulled low by the drive (open-collector model).
     bool iecDrivePullCLK = false;
     bool iecDrivePullDATA = false;
+    bool iecEnableDriveReleaseDelayModel = false;
+    uint8_t iecDriveClkReleaseDelayTicks = 0;
+    uint8_t iecDriveDataReleaseDelayTicks = 0;
+    uint8_t iecDriveClkReleaseCountdown = 0;
+    uint8_t iecDriveDataReleaseCountdown = 0;
 
     // Minimal IEC command state (LISTEN/TALK subset)
     uint8_t iecDeviceAddress = 8;
@@ -2552,6 +2557,11 @@ public:
         iecPrevATN = true;
         iecPrevDATA = true;
         const bool level5CouplingProfile = (physicalProfile == PhysicalProfile::Level5Coupling);
+        iecEnableDriveReleaseDelayModel = level5CouplingProfile;
+        iecDriveClkReleaseDelayTicks = level5CouplingProfile ? 1 : 0;
+        iecDriveDataReleaseDelayTicks = level5CouplingProfile ? 1 : 0;
+        iecDriveClkReleaseCountdown = 0;
+        iecDriveDataReleaseCountdown = 0;
         iecEnableAtnAck = level5CouplingProfile;
         iecEnableListenerByteAck = level5CouplingProfile;
         iecKernelCompatSampleBothClockEdges = level5CouplingProfile;
@@ -2707,6 +2717,32 @@ public:
         tickIecHalfCycle();
     }
 
+    void applyDriveOpenCollectorReleaseModel(bool targetPull,
+                                             bool &effectivePull,
+                                             uint8_t delayTicks,
+                                             uint8_t &releaseCountdown) {
+        if (!iecEnableDriveReleaseDelayModel || delayTicks == 0) {
+            effectivePull = targetPull;
+            releaseCountdown = 0;
+            return;
+        }
+        if (targetPull) {
+            effectivePull = true;
+            releaseCountdown = delayTicks;
+            return;
+        }
+        if (!effectivePull) {
+            releaseCountdown = 0;
+            return;
+        }
+        if (releaseCountdown > 0) {
+            releaseCountdown = static_cast<uint8_t>(releaseCountdown - 1);
+            effectivePull = true;
+            return;
+        }
+        effectivePull = false;
+    }
+
     void tickIecHalfCycle() override {
         const bool wasPoweredOn = powerController.isOn();
         const drive1541_physical::IecLines hostLinesBefore = resolveHostLinesForPowerMatrix(iecATN, iecCLK, iecDATA);
@@ -2774,8 +2810,16 @@ public:
             viaPullDATA = false;
         }
 
-        iecDrivePullCLK = viaPullCLK;
-        iecDrivePullDATA = (viaPullDATA || iecSerialPullDATA || iecAtnAckPullDATA || iecRxByteAckPullDATA);
+        const bool driveTargetPullCLK = viaPullCLK;
+        const bool driveTargetPullDATA = (viaPullDATA || iecSerialPullDATA || iecAtnAckPullDATA || iecRxByteAckPullDATA);
+        applyDriveOpenCollectorReleaseModel(driveTargetPullCLK,
+                                            iecDrivePullCLK,
+                                            iecDriveClkReleaseDelayTicks,
+                                            iecDriveClkReleaseCountdown);
+        applyDriveOpenCollectorReleaseModel(driveTargetPullDATA,
+                                            iecDrivePullDATA,
+                                            iecDriveDataReleaseDelayTicks,
+                                            iecDriveDataReleaseCountdown);
 
         const drive1541_physical::IecLines driveOut = {
             true,

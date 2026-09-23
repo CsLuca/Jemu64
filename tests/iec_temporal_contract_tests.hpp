@@ -102,4 +102,45 @@ static void runIecTemporalContractTests() {
     }
 
     std::cerr << "[IEC TEMPORAL] PASS: deterministic phase ordering (N=20) + no double-commit" << std::endl;
+
+    {
+        CIA6526 cia2;
+        TestIecDevice drive;
+        IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
+        IecBusDomain domain(cia2, drive, polarity);
+        domain.setC64DomainEnabled(false);
+        domain.setDriveDomainEnabled(false);
+        domain.configureLineModelForTest(true, 0, 1, 1, 0, 2, 2);
+
+        // ATN low pulse shorter than min-low must not reach high immediately.
+        domain.linkC64PullATN = true;
+        domain.linkC64PullCLK = false;
+        domain.linkC64PullDATA = false;
+        domain.linkDrivePullCLK = false;
+        domain.linkDrivePullDATA = false;
+        domain.settleBusAndPropagateSamples();
+        if (domain.linkLineATNHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: ATN expected low after pull assert" << std::endl;
+            assert(false);
+        }
+
+        domain.linkC64PullATN = false;
+        domain.settleBusAndPropagateSamples();
+        if (domain.linkLineATNHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: ATN rose before min pulse/release delay" << std::endl;
+            assert(false);
+        }
+        domain.nowUnits += 1;
+        domain.executeTimedEventsAtNow();
+        if (domain.linkLineATNHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: ATN rose too early with line model" << std::endl;
+            assert(false);
+        }
+        domain.nowUnits += 1;
+        domain.executeTimedEventsAtNow();
+        if (!domain.linkLineATNHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: ATN did not rise after min pulse/release delay" << std::endl;
+            assert(false);
+        }
+    }
 }
