@@ -666,6 +666,32 @@ public:
         setCpuZN(cpuA);
     }
 
+    void setCpuCarryFromBit7(uint8_t value) {
+        if ((value & 0x80) != 0) {
+            cpuP |= 0x01;
+        } else {
+            cpuP &= static_cast<uint8_t>(~0x01);
+        }
+    }
+
+    void setCpuCarryFromBit6(uint8_t value) {
+        if ((value & 0x40) != 0) {
+            cpuP |= 0x01;
+        } else {
+            cpuP &= static_cast<uint8_t>(~0x01);
+        }
+    }
+
+    void setCpuOverflowFromBit6XorBit5(uint8_t value) {
+        const bool bit6 = (value & 0x40) != 0;
+        const bool bit5 = (value & 0x20) != 0;
+        if (bit6 ^ bit5) {
+            cpuP |= 0x40;
+        } else {
+            cpuP &= static_cast<uint8_t>(~0x40);
+        }
+    }
+
     uint16_t read16ZeroPageWrap(uint8_t zpAddr) {
         const uint8_t lo = read(zpAddr);
         const uint8_t hi = read(static_cast<uint8_t>(zpAddr + 1));
@@ -1209,6 +1235,14 @@ public:
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 2;
                 return true;
+            case 0x0B:
+            case 0x2B:
+                cpuA = static_cast<uint8_t>(cpuA & read(static_cast<uint16_t>(pc + 1)));
+                setCpuZN(cpuA);
+                setCpuCarryFromBit7(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
             case 0x25:
                 cpuA = static_cast<uint8_t>(cpuA & read(read(static_cast<uint16_t>(pc + 1))));
                 setCpuZN(cpuA);
@@ -1389,6 +1423,16 @@ public:
                 pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 2;
                 return true;
+            case 0xCB: {
+                const uint8_t imm = read(static_cast<uint16_t>(pc + 1));
+                const uint8_t ax = static_cast<uint8_t>(cpuA & cpuX);
+                cpuX = static_cast<uint8_t>(ax - imm);
+                setCpuCompareFlags(ax, imm);
+                setCpuZN(cpuX);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
+            }
             case 0xE4:
                 setCpuCompareFlags(cpuX, read(read(static_cast<uint16_t>(pc + 1))));
                 pc = static_cast<uint16_t>(pc + 2);
@@ -1520,6 +1564,12 @@ public:
             case 0x4A:
                 cpuA = opLsrValue(cpuA);
                 pc = static_cast<uint16_t>(pc + 1);
+                cyclesUsed = 2;
+                return true;
+            case 0x4B:
+                cpuA = static_cast<uint8_t>(cpuA & read(static_cast<uint16_t>(pc + 1)));
+                cpuA = opLsrValue(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
                 cyclesUsed = 2;
                 return true;
             case 0x46: {
@@ -1718,6 +1768,18 @@ public:
                 pc = static_cast<uint16_t>(pc + 1);
                 cyclesUsed = 2;
                 return true;
+            case 0x6B: {
+                const uint8_t imm = read(static_cast<uint16_t>(pc + 1));
+                cpuA = static_cast<uint8_t>(cpuA & imm);
+                const uint8_t carryIn = ((cpuP & 0x01) != 0) ? 0x80 : 0;
+                cpuA = static_cast<uint8_t>((cpuA >> 1) | carryIn);
+                setCpuZN(cpuA);
+                setCpuCarryFromBit6(cpuA);
+                setCpuOverflowFromBit6XorBit5(cpuA);
+                pc = static_cast<uint16_t>(pc + 2);
+                cyclesUsed = 2;
+                return true;
+            }
             case 0x66: {
                 const uint16_t addr = read(static_cast<uint16_t>(pc + 1));
                 write(addr, opRorValue(read(addr)));
