@@ -20946,7 +20946,10 @@ struct EmulatorConsoleState {
     SID *sid = nullptr;
     CPU6510 *cpu = nullptr;
     std::array<Drive1541, 4> drives;
-    std::array<bool, 4> cableConnected{{true, true, true, true}};
+    bool cableCreated = false;
+    std::string cableName = "";
+    bool cableHostConnected = false;
+    std::array<bool, 4> cableDriveConnected{{false, false, false, false}};
     bool c64PoweredOn = false;
     bool lastVicHadBus = false;
     uint64_t stepCount = 0;
@@ -20972,11 +20975,12 @@ static bool initializeEmulatorConsoleDrives(EmulatorConsoleState &st) {
 }
 
 static void syncConsoleIecBus(EmulatorConsoleState &st) {
-    const IecC64Signals sig = deriveIecC64Signals(*st.cia2, st.polarity);
+    const bool hostLinked = st.cableCreated && st.cableHostConnected;
+    const IecC64Signals sig = hostLinked ? deriveIecC64Signals(*st.cia2, st.polarity) : IecC64Signals{};
     bool pullClk = false;
     bool pullData = false;
     for (size_t i = 0; i < st.drives.size(); ++i) {
-        if (!st.cableConnected[i]) {
+        if (!st.cableCreated || !st.cableDriveConnected[i]) {
             continue;
         }
         pullClk = (pullClk || st.drives[i].getIecDrivePullCLK());
@@ -20984,13 +20988,14 @@ static void syncConsoleIecBus(EmulatorConsoleState &st) {
     }
     const IecResolvedLines lines = resolveIecLinesFromPulls(sig.c64PullATN, sig.c64PullCLK, sig.c64PullDATA, pullClk, pullData);
     for (size_t i = 0; i < st.drives.size(); ++i) {
-        if (st.cableConnected[i]) {
+        if (st.cableCreated && st.cableDriveConnected[i]) {
             st.drives[i].setIecLines(lines.atnHigh, lines.clkHigh, lines.dataHigh);
         } else {
             st.drives[i].setIecLines(true, true, true);
         }
     }
-    applyIecInputsToCia(*st.cia2, st.polarity, sig, lines);
+    const IecResolvedLines linesToHost = hostLinked ? lines : IecResolvedLines{true, true, true};
+    applyIecInputsToCia(*st.cia2, st.polarity, sig, linesToHost);
 }
 
 static void tickConsoleHalfCycle(EmulatorConsoleState &st) {
@@ -21016,9 +21021,10 @@ static void printConsoleDriveState(const EmulatorConsoleState &st, int unit) {
     const size_t idx = static_cast<size_t>(unit - 8);
     const Drive1541 &d = st.drives[idx];
     const Drive1541::PowerMatrixState matrix = d.getPowerMatrixState();
+    const bool cableLinked = st.cableCreated && st.cableDriveConnected[idx];
     std::cout << std::dec
               << "DRIVE " << unit
-              << " cable=" << (st.cableConnected[idx] ? "ON" : "OFF")
+              << " cable=" << (cableLinked ? "ON" : "OFF")
               << " power=" << drivePowerStateText(d.getPowerState())
               << " c64_power=" << c64PowerStateText(matrix.c64)
               << " pmatrix=" << powerMatrixModeText(matrix.mode)
@@ -21028,6 +21034,20 @@ static void printConsoleDriveState(const EmulatorConsoleState &st, int unit) {
         std::cout << " format=" << d.mountedImageFormat
                   << " path=\"" << d.mountedImagePath << "\""
                   << " exists=" << (d.mountedImageExists ? "YES" : "NO");
+    }
+    std::cout << std::endl;
+}
+
+static void printConsoleCableState(const EmulatorConsoleState &st) {
+    if (!st.cableCreated) {
+        std::cout << "CABLE state=NOT_CREATED" << std::endl;
+        return;
+    }
+    std::cout << "CABLE " << st.cableName
+              << " host=" << (st.cableHostConnected ? "C64" : "DISCONNECTED");
+    for (int unit = 8; unit <= 11; ++unit) {
+        const size_t idx = static_cast<size_t>(unit - 8);
+        std::cout << " d" << unit << "=" << (st.cableDriveConnected[idx] ? "CONNECTED" : "DISCONNECTED");
     }
     std::cout << std::endl;
 }
@@ -21046,7 +21066,7 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
     }
 
     std::cout << "[CONSOLE] Emulator control console enabled (feature flag JEMU_EMULATOR_CONSOLE=1)." << std::endl;
-    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
+    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, CABLE CREATE <name>|<name> CONNECT HOST C64|CONNECT DRIVE <unit>|DISCONNECT HOST C64|DISCONNECT DRIVE <unit>|STATE, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
 
     std::string line;
     while (true) {
@@ -21072,6 +21092,12 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
             std::cout << "DRIVE <unit> CABLE ON|OFF" << std::endl;
             std::cout << "DRIVE <unit> POWER ON|OFF|RESET" << std::endl;
             std::cout << "DRIVE <unit> STATE" << std::endl;
+            std::cout << "CABLE CREATE <name>" << std::endl;
+            std::cout << "CABLE <name> CONNECT HOST C64" << std::endl;
+            std::cout << "CABLE <name> CONNECT DRIVE <8|9|10|11>" << std::endl;
+            std::cout << "CABLE <name> DISCONNECT HOST C64" << std::endl;
+            std::cout << "CABLE <name> DISCONNECT DRIVE <8|9|10|11>" << std::endl;
+            std::cout << "CABLE <name> STATE" << std::endl;
             std::cout << "PMATRIX STATE" << std::endl;
             std::cout << "STEP <n>" << std::endl;
             std::cout << "STATUS" << std::endl;
@@ -21080,6 +21106,91 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
         }
         if (cmd == "QUIT" || cmd == "EXIT") {
             break;
+        }
+
+        if (cmd == "CABLE") {
+            std::string arg1;
+            iss >> arg1;
+            arg1 = toUpperAscii(arg1);
+            if (arg1 == "CREATE") {
+                std::string name;
+                iss >> name;
+                name = toUpperAscii(name);
+                if (name.empty()) {
+                    std::cout << "ERR: expected CABLE CREATE <name>" << std::endl;
+                    continue;
+                }
+                if (st.cableCreated) {
+                    std::cout << "ERR: cable already created: " << st.cableName << std::endl;
+                    continue;
+                }
+                st.cableCreated = true;
+                st.cableName = name;
+                st.cableHostConnected = false;
+                st.cableDriveConnected.fill(false);
+                std::cout << "OK: CABLE CREATE " << st.cableName << std::endl;
+                continue;
+            }
+
+            if (arg1 == "STATE") {
+                printConsoleCableState(st);
+                continue;
+            }
+
+            const std::string cableName = arg1;
+            if (!st.cableCreated) {
+                std::cout << "ERR: no cable created. Use CABLE CREATE <name>" << std::endl;
+                continue;
+            }
+            if (cableName != st.cableName) {
+                std::cout << "ERR: unknown cable: " << cableName << " (expected " << st.cableName << ")" << std::endl;
+                continue;
+            }
+
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+            if (op == "STATE") {
+                printConsoleCableState(st);
+                continue;
+            }
+
+            if (op != "CONNECT" && op != "DISCONNECT") {
+                std::cout << "ERR: expected CONNECT|DISCONNECT|STATE" << std::endl;
+                continue;
+            }
+            const bool connect = (op == "CONNECT");
+
+            std::string endpoint;
+            iss >> endpoint;
+            endpoint = toUpperAscii(endpoint);
+            if (endpoint == "HOST") {
+                std::string hostName;
+                iss >> hostName;
+                hostName = toUpperAscii(hostName);
+                if (hostName != "C64") {
+                    std::cout << "ERR: expected HOST C64" << std::endl;
+                    continue;
+                }
+                st.cableHostConnected = connect;
+                std::cout << "OK: CABLE " << st.cableName << ' ' << op << " HOST C64" << std::endl;
+                continue;
+            }
+            if (endpoint == "DRIVE") {
+                int unit = 0;
+                iss >> unit;
+                if (unit < 8 || unit > 11) {
+                    std::cout << "ERR: drive unit must be 8..11" << std::endl;
+                    continue;
+                }
+                const size_t idx = static_cast<size_t>(unit - 8);
+                st.cableDriveConnected[idx] = connect;
+                std::cout << "OK: CABLE " << st.cableName << ' ' << op << " DRIVE " << unit << std::endl;
+                continue;
+            }
+
+            std::cout << "ERR: expected HOST C64 or DRIVE <8..11>" << std::endl;
+            continue;
         }
 
         if (cmd == "C64") {
@@ -21193,12 +21304,16 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
                 std::string v;
                 iss >> v;
                 v = toUpperAscii(v);
+                if (!st.cableCreated) {
+                    std::cout << "ERR: no cable created. Use CABLE CREATE <name>" << std::endl;
+                    continue;
+                }
                 if (v == "ON") {
-                    st.cableConnected[idx] = true;
-                    std::cout << "OK: DRIVE " << unit << " CABLE ON" << std::endl;
+                    st.cableDriveConnected[idx] = true;
+                    std::cout << "OK: DRIVE " << unit << " CABLE ON (" << st.cableName << ")" << std::endl;
                 } else if (v == "OFF") {
-                    st.cableConnected[idx] = false;
-                    std::cout << "OK: DRIVE " << unit << " CABLE OFF" << std::endl;
+                    st.cableDriveConnected[idx] = false;
+                    std::cout << "OK: DRIVE " << unit << " CABLE OFF (" << st.cableName << ")" << std::endl;
                 } else {
                     std::cout << "ERR: expected CABLE ON|OFF" << std::endl;
                 }
@@ -21246,6 +21361,7 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
                       << " steps=" << st.stepCount
                       << " pc=$" << std::hex << std::setw(4) << std::setfill('0') << cpu.getRegisters().PC
                       << std::dec << std::setfill(' ') << std::endl;
+            printConsoleCableState(st);
             for (int unit = 8; unit <= 11; ++unit) {
                 printConsoleDriveState(st, unit);
             }
