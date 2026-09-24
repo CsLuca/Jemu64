@@ -79,3 +79,20 @@ One-command gate (calibrate + run physical-l6 with calibrated profile):
 Default output folder:
 
 - `datasets/level6/quality_reports/calibration_gate/`
+
+## Hardening Gate (Final)
+
+One-command hardening run (calibration gate + profile drift budgets):
+
+```powershell
+& ".\run_level6_hardening_gate.ps1"
+```
+
+Default output folder:
+
+- `datasets/level6/quality_reports/hardening_gate/`
+
+Produced artifacts:
+
+- `level6_hardening_gate_metrics.json`
+- `level6_hardening_gate_runtime.csv`

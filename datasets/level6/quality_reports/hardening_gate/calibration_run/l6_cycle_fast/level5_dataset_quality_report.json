@@ -1,0 +1,81 @@
+{
+    "generated_at_utc":  "2026-09-24T16:33:30.3934880Z",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "pass":  8,
+    "total":  8,
+    "pass_rate":  1,
+    "rows":  [
+                 {
+                     "title_id":  "l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap02",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA_gw_cap02_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA_cap02.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_billbudgepinballconstructionsetcommodore64_sideA.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_transylvania_c_64_atari_sideA_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_transylvania_c_64_atari_sideA_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_transylvania_c_64_atari_sideA_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_transylvania_c_64_atari_sideA.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_transylvania_c_64_atari_sideB_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_transylvania_c_64_atari_sideB_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_transylvania_c_64_atari_sideB_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_transylvania_c_64_atari_sideB.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_kane_human_race_sideA_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_kane_human_race_sideA_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_kane_human_race_sideA_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_kane_human_race_sideA.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_kane_human_race_sideB_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_kane_human_race_sideB_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_kane_human_race_sideB_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_kane_human_race_sideB.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_aztec_challenge_c64_sideA_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_aztec_challenge_c64_sideA_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_aztec_challenge_c64_sideA_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_aztec_challenge_c64_sideA.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 },
+                 {
+                     "title_id":  "l5_archive_aztec_challenge_c64_sideB_cap01",
+                     "format":  "raw",
+                     "flux_path":  "C:\\dev\\Jemu64\\datasets\\level5\\raw_flux\\l5_archive_aztec_challenge_c64_sideB_gw_cap01_25000000hz.raw",
+                     "metadata_path":  "C:\\dev\\Jemu64\\datasets\\level5\\metadata\\l5_archive_aztec_challenge_c64_sideB_cap01.metadata.json",
+                     "oracle_path":  "C:\\dev\\Jemu64\\datasets\\level5\\oracles\\l5_archive_aztec_challenge_c64_sideB.oracle.json",
+                     "pass":  1,
+                     "issues":  "ok"
+                 }
+             ]
+}

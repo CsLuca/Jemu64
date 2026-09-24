@@ -1,0 +1,17 @@
+{
+    "generated_at_utc":  "2026-09-24T16:37:04.1089487Z",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "iec_model_mode":  "physical-l6",
+    "iec_profile":  "baseline_1541",
+    "metrics":  {
+                    "cycle_fast_dataset_pass_rate":  1,
+                    "cycle_fast_kernel_repeat":  2,
+                    "cycle_fast_kernel_max_halfcycles":  700000,
+                    "cycle_strict_runtime_work_ratio_vs_fast":  1
+                },
+    "budgets":  {
+                    "cycle_fast_dataset_min_pass_rate":  1,
+                    "max_runtime_multiplier_vs_fast":  2
+                },
+    "overall_pass":  true
+}

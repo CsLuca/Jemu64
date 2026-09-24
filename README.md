@@ -266,6 +266,26 @@ Outputs:
 - `datasets/level6/quality_reports/calibration_gate/level6_calibration_gate_metrics.json`
 - `datasets/level6/quality_reports/calibration_gate/level6_calibration_gate_runtime.csv`
 
+## Level6 Hardening Gate (Final Phase)
+
+- Script: `run_level6_hardening_gate.ps1`
+- Purpose:
+  - run calibration gate,
+  - compare newly calibrated profile against previous snapshot,
+  - enforce drift budgets for line/tau/threshold parameters,
+  - emit final hardening pass/fail metrics.
+
+Example:
+
+```powershell
+& ".\run_level6_hardening_gate.ps1" -CalibrationManifest "datasets/level6/manifests/level6_capture_calibration_manifest_sample.json" -BaseProfile "config/iec_profiles/baseline_1541.json" -CalibratedProfileOut "config/iec_profiles/calibrated_synthetic_1541.json" -CalibratedProfileId "calibrated_synthetic_1541" -OutputDir "datasets/level6/quality_reports/hardening_gate" -MaxRuntimeMultiplier 2.0 -MaxDriftLineTicks 2 -MaxDriftTauTicks 2 -MaxDriftThresholdMilli 80
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/hardening_gate/level6_hardening_gate_metrics.json`
+- `datasets/level6/quality_reports/hardening_gate/level6_hardening_gate_runtime.csv`
+
 ## Level6 Daily Check (One Command)
 
 - Script: `run_level6_daily_check.ps1`
