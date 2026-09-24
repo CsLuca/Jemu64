@@ -20948,6 +20948,13 @@ struct EmulatorConsoleState {
         uint64_t minLowPulseTicks = 1;
     };
 
+    struct DelayedLineState {
+        IecResolvedLines current = {true, true, true};
+        IecResolvedLines target = {true, true, true};
+        uint64_t remaining = 0;
+        bool pending = false;
+    };
+
     Bus *bus = nullptr;
     VICII *vic = nullptr;
     CIA6526 *cia1 = nullptr;
@@ -20957,6 +20964,8 @@ struct EmulatorConsoleState {
     std::array<Drive1541, 4> drives;
     std::vector<CableSegment> cables;
     std::string defaultCableName = "";
+    std::array<DelayedLineState, 4> driveLineDelay;
+    DelayedLineState hostLineDelay;
     bool c64PoweredOn = false;
     bool lastVicHadBus = false;
     uint64_t stepCount = 0;
@@ -21004,52 +21013,128 @@ static void applyCableProfileDefaults(EmulatorConsoleState::CableSegment &segmen
     }
 }
 
-static bool hostReachableToDriveIndex(const EmulatorConsoleState &st, size_t targetDriveIdx) {
+static uint64_t cableEdgeWeight(const EmulatorConsoleState::CableSegment &cable) {
+    const uint64_t w = cable.releaseDelayTicks + cable.minLowPulseTicks;
+    return (w == 0) ? 1 : w;
+}
+
+static uint64_t shortestPathWeightHostToDriveIndex(const EmulatorConsoleState &st, size_t targetDriveIdx) {
     const size_t nodeHost = 0;
     const size_t nodeDriveBase = 1;
     const size_t nodeCableBase = 5;
     const size_t totalNodes = nodeCableBase + st.cables.size();
     if (targetDriveIdx >= 4 || totalNodes <= nodeCableBase) {
-        return false;
+        return static_cast<uint64_t>(-1);
     }
 
-    std::vector<std::vector<size_t>> adj(totalNodes);
+    struct WeightedEdge {
+        size_t to = 0;
+        uint64_t w = 1;
+    };
+    std::vector<std::vector<WeightedEdge>> adj(totalNodes);
     for (size_t ci = 0; ci < st.cables.size(); ++ci) {
         const auto &cable = st.cables[ci];
+        const uint64_t w = cableEdgeWeight(cable);
         const size_t cableNode = nodeCableBase + ci;
         if (cable.hostConnected) {
-            adj[nodeHost].push_back(cableNode);
-            adj[cableNode].push_back(nodeHost);
+            adj[nodeHost].push_back(WeightedEdge{cableNode, w});
+            adj[cableNode].push_back(WeightedEdge{nodeHost, w});
         }
         for (size_t di = 0; di < cable.driveConnected.size(); ++di) {
             if (!cable.driveConnected[di]) {
                 continue;
             }
             const size_t driveNode = nodeDriveBase + di;
-            adj[driveNode].push_back(cableNode);
-            adj[cableNode].push_back(driveNode);
+            adj[driveNode].push_back(WeightedEdge{cableNode, w});
+            adj[cableNode].push_back(WeightedEdge{driveNode, w});
         }
     }
 
-    const size_t targetNode = nodeDriveBase + targetDriveIdx;
-    std::vector<uint8_t> visited(totalNodes, 0);
-    std::queue<size_t> q;
-    visited[nodeHost] = 1;
-    q.push(nodeHost);
-    while (!q.empty()) {
-        const size_t node = q.front();
-        q.pop();
-        if (node == targetNode) {
-            return true;
+    const uint64_t INF = static_cast<uint64_t>(-1);
+    std::vector<uint64_t> dist(totalNodes, INF);
+    std::vector<uint8_t> used(totalNodes, 0);
+    dist[nodeHost] = 0;
+
+    for (size_t it = 0; it < totalNodes; ++it) {
+        size_t v = totalNodes;
+        for (size_t i = 0; i < totalNodes; ++i) {
+            if (!used[i] && dist[i] != INF && (v == totalNodes || dist[i] < dist[v])) {
+                v = i;
+            }
         }
-        for (size_t next : adj[node]) {
-            if (!visited[next]) {
-                visited[next] = 1;
-                q.push(next);
+        if (v == totalNodes) {
+            break;
+        }
+        used[v] = 1;
+        for (const WeightedEdge &e : adj[v]) {
+            if (dist[v] != INF) {
+                const uint64_t cand = dist[v] + e.w;
+                if (dist[e.to] == INF || cand < dist[e.to]) {
+                    dist[e.to] = cand;
+                }
             }
         }
     }
-    return false;
+
+    return dist[nodeDriveBase + targetDriveIdx];
+}
+
+static bool hostReachableToDriveIndex(const EmulatorConsoleState &st, size_t targetDriveIdx) {
+    return shortestPathWeightHostToDriveIndex(st, targetDriveIdx) != static_cast<uint64_t>(-1);
+}
+
+static uint64_t minHostToAnyDriveDelay(const EmulatorConsoleState &st) {
+    uint64_t best = static_cast<uint64_t>(-1);
+    for (size_t i = 0; i < 4; ++i) {
+        const uint64_t d = shortestPathWeightHostToDriveIndex(st, i);
+        if (d == static_cast<uint64_t>(-1)) {
+            continue;
+        }
+        if (best == static_cast<uint64_t>(-1) || d < best) {
+            best = d;
+        }
+    }
+    if (best == static_cast<uint64_t>(-1)) {
+        return 0;
+    }
+    return best;
+}
+
+static void applyDelayedLineState(EmulatorConsoleState::DelayedLineState &state,
+                                  const IecResolvedLines &nextLines,
+                                  uint64_t delayTicks) {
+    const bool changed = (state.current.atnHigh != nextLines.atnHigh) ||
+                         (state.current.clkHigh != nextLines.clkHigh) ||
+                         (state.current.dataHigh != nextLines.dataHigh);
+    if (!changed) {
+        state.pending = false;
+        state.remaining = 0;
+        return;
+    }
+
+    if (delayTicks == 0) {
+        state.current = nextLines;
+        state.pending = false;
+        state.remaining = 0;
+        return;
+    }
+
+    if (!state.pending ||
+        state.target.atnHigh != nextLines.atnHigh ||
+        state.target.clkHigh != nextLines.clkHigh ||
+        state.target.dataHigh != nextLines.dataHigh) {
+        state.target = nextLines;
+        state.remaining = delayTicks;
+        state.pending = true;
+    }
+
+    if (state.remaining > 0) {
+        state.remaining--;
+    }
+    if (state.remaining == 0 && state.pending) {
+        state.current = state.target;
+        state.pending = false;
+    }
 }
 
 static bool initializeEmulatorConsoleDrives(EmulatorConsoleState &st) {
@@ -21091,13 +21176,21 @@ static void syncConsoleIecBus(EmulatorConsoleState &st) {
     const IecResolvedLines lines = resolveIecLinesFromPulls(sig.c64PullATN, sig.c64PullCLK, sig.c64PullDATA, pullClk, pullData);
     for (size_t i = 0; i < st.drives.size(); ++i) {
         if (hostReachableToDriveIndex(st, i)) {
-            st.drives[i].setIecLines(lines.atnHigh, lines.clkHigh, lines.dataHigh);
+            const uint64_t delay = shortestPathWeightHostToDriveIndex(st, i);
+            applyDelayedLineState(st.driveLineDelay[i], lines, delay);
+            const IecResolvedLines &applied = st.driveLineDelay[i].current;
+            st.drives[i].setIecLines(applied.atnHigh, applied.clkHigh, applied.dataHigh);
         } else {
+            st.driveLineDelay[i].current = IecResolvedLines{true, true, true};
+            st.driveLineDelay[i].pending = false;
+            st.driveLineDelay[i].remaining = 0;
             st.drives[i].setIecLines(true, true, true);
         }
     }
-    const IecResolvedLines linesToHost = hostLinked ? lines : IecResolvedLines{true, true, true};
-    applyIecInputsToCia(*st.cia2, st.polarity, sig, linesToHost);
+    const IecResolvedLines linesToHostRaw = hostLinked ? lines : IecResolvedLines{true, true, true};
+    const uint64_t hostDelay = minHostToAnyDriveDelay(st);
+    applyDelayedLineState(st.hostLineDelay, linesToHostRaw, hostDelay);
+    applyIecInputsToCia(*st.cia2, st.polarity, sig, st.hostLineDelay.current);
 }
 
 static void tickConsoleHalfCycle(EmulatorConsoleState &st) {
@@ -21320,7 +21413,19 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
             }
 
             if (op != "CONNECT" && op != "DISCONNECT") {
-                std::cout << "ERR: expected CONNECT|DISCONNECT|STATE" << std::endl;
+                if (op == "PROFILE") {
+                    std::string p;
+                    iss >> p;
+                    p = toUpperAscii(p);
+                    if (p.empty()) {
+                        std::cout << "ERR: expected PROFILE <PROFILE_SHORT|PROFILE_MEDIUM|PROFILE_LONG>" << std::endl;
+                        continue;
+                    }
+                    applyCableProfileDefaults(*cable, p);
+                    std::cout << "OK: CABLE " << cable->name << " PROFILE " << cable->profile << std::endl;
+                    continue;
+                }
+                std::cout << "ERR: expected CONNECT|DISCONNECT|PROFILE|STATE" << std::endl;
                 continue;
             }
             const bool connect = (op == "CONNECT");
