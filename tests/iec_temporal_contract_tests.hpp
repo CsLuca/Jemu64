@@ -264,6 +264,29 @@ static void runIecTemporalContractTests() {
         }
     }
 
+    {
+        TestIecHostEndpoint host;
+        TestIecDeviceEndpoint device;
+        IecCable cable;
+        cable.connectHost(host);
+        cable.connectDeviceEndpoint(device);
+        if (!cable.isConnected() || cable.bus() == nullptr) {
+            std::cerr << "[IEC TEMPORAL] FAIL: cable did not connect host/device endpoints" << std::endl;
+            assert(false);
+        }
+
+        cable.bus()->setTemporalDebugEnabled(true);
+        cable.bus()->clearTemporalTrace();
+        cable.bus()->configureDomainRatesForTest(985248u, 985248u, 0, 0u, 0);
+        for (int i = 0; i < 40; ++i) {
+            cable.tickHalfCycle();
+        }
+        if (cable.bus()->getTemporalTrace().empty()) {
+            std::cerr << "[IEC TEMPORAL] FAIL: cable temporal trace empty after ticking" << std::endl;
+            assert(false);
+        }
+    }
+
     std::cerr << "[IEC TEMPORAL] PASS: deterministic phase ordering (N=20) + no double-commit" << std::endl;
 
     {

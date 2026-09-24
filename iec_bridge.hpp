@@ -1259,3 +1259,78 @@ struct IecBusDomain {
         }
     }
 };
+
+struct IecCable {
+    IecBridgePolarity polarity;
+    IIecHostEndpoint *hostEndpoint = nullptr;
+    IIecDeviceEndpoint *primaryDeviceEndpoint = nullptr;
+    std::vector<IIecDeviceEndpoint *> deferredDeviceEndpoints;
+    std::unique_ptr<IIecHostEndpoint> ownedHostEndpoint;
+    std::vector<std::unique_ptr<IIecDeviceEndpoint>> ownedDeviceEndpoints;
+    std::unique_ptr<IecBusDomain> busDomain;
+
+    explicit IecCable(const IecBridgePolarity &p = makeRuntimeDefaultIecPolarity())
+        : polarity(p) {}
+
+    void connectHost(CIA6526 &cia2) {
+        ownedHostEndpoint = std::unique_ptr<IIecHostEndpoint>(new CiaIecHostEndpoint(cia2));
+        hostEndpoint = ownedHostEndpoint.get();
+        ensureConnected();
+    }
+
+    void connectHost(IIecHostEndpoint &host) {
+        ownedHostEndpoint.reset();
+        hostEndpoint = &host;
+        ensureConnected();
+    }
+
+    void connectDevice(IIecDevice &device) {
+        ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(device)));
+        connectDeviceEndpoint(*ownedDeviceEndpoints.back());
+    }
+
+    void connectDeviceEndpoint(IIecDeviceEndpoint &device) {
+        if (busDomain) {
+            busDomain->attachDeviceEndpoint(device);
+            return;
+        }
+        if (primaryDeviceEndpoint == nullptr) {
+            primaryDeviceEndpoint = &device;
+        } else {
+            deferredDeviceEndpoints.push_back(&device);
+        }
+        ensureConnected();
+    }
+
+    bool isConnected() const {
+        return busDomain != nullptr;
+    }
+
+    IecBusDomain *bus() {
+        return busDomain.get();
+    }
+
+    const IecBusDomain *bus() const {
+        return busDomain.get();
+    }
+
+    void tickHalfCycle() {
+        if (busDomain) {
+            busDomain->tickHalfCycle();
+        }
+    }
+
+private:
+    void ensureConnected() {
+        if (busDomain || hostEndpoint == nullptr || primaryDeviceEndpoint == nullptr) {
+            return;
+        }
+        busDomain = std::unique_ptr<IecBusDomain>(new IecBusDomain(*hostEndpoint, *primaryDeviceEndpoint, polarity));
+        for (IIecDeviceEndpoint *device : deferredDeviceEndpoints) {
+            if (device != nullptr) {
+                busDomain->attachDeviceEndpoint(*device);
+            }
+        }
+        deferredDeviceEndpoints.clear();
+    }
+};
