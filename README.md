@@ -117,6 +117,25 @@ Outputs:
 - `datasets/level6/quality_reports/level6_profile_matrix_metrics.json`
 - `datasets/level6/quality_reports/level6_profile_matrix_runtime.csv`
 
+## Level6 Synthetic Envelope Gate (No Real Captures Yet)
+
+- Script: `run_level6_synthetic_envelope_gate.ps1`
+- Manifest-driven profile sweep for synthetic pre-calibration hardening:
+  - reads `datasets/level6/manifests/level6_synthetic_profiles_manifest.json`
+  - runs `run_level6_physical_gate.ps1` for each listed profile
+  - emits consolidated synthetic envelope reports.
+
+Example:
+
+```powershell
+& ".\run_level6_synthetic_envelope_gate.ps1" -Manifest "datasets/level6/manifests/level6_synthetic_profiles_manifest.json" -Level5Manifest "datasets/level5/manifests/level5_official_testset_v1_manifest.json" -OutputDir "datasets/level6/quality_reports" -MaxRuntimeMultiplier 2.0
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/level6_synthetic_envelope_metrics.json`
+- `datasets/level6/quality_reports/level6_synthetic_envelope_runtime.csv`
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.

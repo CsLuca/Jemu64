@@ -1,0 +1,17 @@
+{
+  "profile_id": "candidate_long_cable",
+  "base": "baseline_1541",
+  "model_mode": "physical-l6",
+  "line": {
+    "atn": { "release_delay_ticks": 2, "min_low_pulse_ticks": 2 },
+    "clk": { "release_delay_ticks": 3, "min_low_pulse_ticks": 3 },
+    "data": { "release_delay_ticks": 3, "min_low_pulse_ticks": 3 }
+  },
+  "rx": {
+    "setup_ticks": 2,
+    "hold_ticks": 1
+  },
+  "timeout": {
+    "hysteresis_ticks": 24
+  }
+}

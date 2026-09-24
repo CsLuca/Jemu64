@@ -1,0 +1,15 @@
+{
+  "manifest_id": "level6_synthetic_profiles_manifest_v1",
+  "description": "Synthetic IEC profile matrix used before direct hardware measurements are available.",
+  "profiles": [
+    "baseline_1541",
+    "baseline_1541c",
+    "baseline_1541ii",
+    "candidate_long_cable",
+    "candidate_weak_pullup",
+    "candidate_noisy_bus"
+  ],
+  "runtime_budget": {
+    "max_runtime_multiplier_vs_fast": 2.0
+  }
+}

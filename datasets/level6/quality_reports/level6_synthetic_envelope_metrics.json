@@ -1,0 +1,11 @@
+{
+    "generated_at_utc":  "2026-09-24T10:29:47.6852430Z",
+    "synthetic_manifest":  "C:\\dev\\Jemu64\\datasets\\level6\\manifests\\level6_synthetic_profiles_manifest.json",
+    "level5_manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "profile_count":  6,
+    "metrics":  {
+                    "pass_count":  6,
+                    "runtime_ratio_budget":  2
+                },
+    "overall_pass":  true
+}
