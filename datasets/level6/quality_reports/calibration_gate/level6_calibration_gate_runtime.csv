@@ -1,0 +1,4 @@
+"metric","value","budget","pass"
+"captures_used","2","1","1"
+"cycle_fast_dataset_pass_rate","1","1","1"
+"runtime_multiplier_vs_fast","1","2","1"

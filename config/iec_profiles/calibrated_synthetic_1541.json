@@ -44,7 +44,7 @@
                             }
                },
     "calibration_meta":  {
-                             "generated_at_utc":  "2026-09-24T15:26:19.5728654Z",
+                             "generated_at_utc":  "2026-09-24T15:39:53.7706001Z",
                              "manifest":  "C:\\dev\\Jemu64\\datasets\\level6\\manifests\\level6_capture_calibration_manifest_sample.json",
                              "captures_used":  2,
                              "blend_with_base":  0.35

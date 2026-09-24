@@ -67,3 +67,15 @@ Current fitter behavior:
 - weighted-average fit over capture metrics,
 - optional base-profile blending (`-BlendWithBase`) for conservative convergence,
 - emits line + analog + node-level skew/tau calibration values.
+
+## Calibration Gate
+
+One-command gate (calibrate + run physical-l6 with calibrated profile):
+
+```powershell
+& ".\run_level6_calibration_gate.ps1"
+```
+
+Default output folder:
+
+- `datasets/level6/quality_reports/calibration_gate/`

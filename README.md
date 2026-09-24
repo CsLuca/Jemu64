@@ -245,6 +245,27 @@ $env:IEC_PROFILE="config/iec_profiles/calibrated_synthetic_1541.json"
 .\c64_11.exe
 ```
 
+## Level6 Calibration Gate
+
+- Script: `run_level6_calibration_gate.ps1`
+- Purpose:
+  - run calibrator from capture manifest,
+  - apply calibrated profile to physical-l6 gate,
+  - emit consolidated calibration gate metrics.
+
+Example:
+
+```powershell
+& ".\run_level6_calibration_gate.ps1" -CalibrationManifest "datasets/level6/manifests/level6_capture_calibration_manifest_sample.json" -BaseProfile "config/iec_profiles/baseline_1541.json" -CalibratedProfileOut "config/iec_profiles/calibrated_synthetic_1541.json" -CalibratedProfileId "calibrated_synthetic_1541" -Level5Manifest "datasets/level5/manifests/level5_official_testset_v1_manifest.json" -OutputDir "datasets/level6/quality_reports/calibration_gate" -MaxRuntimeMultiplier 2.0
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/calibration_gate/level6_calibration_fit_metrics.json`
+- `datasets/level6/quality_reports/calibration_gate/level6_physical_gate_metrics.json`
+- `datasets/level6/quality_reports/calibration_gate/level6_calibration_gate_metrics.json`
+- `datasets/level6/quality_reports/calibration_gate/level6_calibration_gate_runtime.csv`
+
 ## Level6 Daily Check (One Command)
 
 - Script: `run_level6_daily_check.ps1`

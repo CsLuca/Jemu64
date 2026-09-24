@@ -1,0 +1,45 @@
+{
+    "generated_at_utc":  "2026-09-24T15:39:53.7966015Z",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level6\\manifests\\level6_capture_calibration_manifest_sample.json",
+    "base_profile":  "C:\\dev\\Jemu64\\config\\iec_profiles\\baseline_1541.json",
+    "output_profile":  "C:\\dev\\Jemu64\\config\\iec_profiles\\calibrated_synthetic_1541.json",
+    "profile_id":  "calibrated_synthetic_1541",
+    "captures_used":  2,
+    "blend_with_base":  0.35,
+    "fitted":  {
+                   "line":  {
+                                "atn":  {
+                                            "release_delay_ticks":  1,
+                                            "min_low_pulse_ticks":  1
+                                        },
+                                "clk":  {
+                                            "release_delay_ticks":  1,
+                                            "min_low_pulse_ticks":  2
+                                        },
+                                "data":  {
+                                             "release_delay_ticks":  1,
+                                             "min_low_pulse_ticks":  2
+                                         }
+                            },
+                   "analog":  {
+                                  "enabled":  true,
+                                  "vdd_milli":  1000,
+                                  "rise_threshold_milli":  634,
+                                  "fall_threshold_milli":  366,
+                                  "rise_tau_ticks":  2,
+                                  "fall_tau_ticks":  1,
+                                  "node":  {
+                                               "host":  {
+                                                            "skew_ticks":  0,
+                                                            "rise_tau_ticks":  2,
+                                                            "fall_tau_ticks":  1
+                                                        },
+                                               "drive":  {
+                                                             "skew_ticks":  1,
+                                                             "rise_tau_ticks":  3,
+                                                             "fall_tau_ticks":  1
+                                                         }
+                                           }
+                              }
+               }
+}
