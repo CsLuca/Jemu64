@@ -7,6 +7,7 @@
 #include "../drive_1541.hpp"
 
 static void runDrive1541IecCornerCaseTests() {
+    // Procedure A: release-delay model keeps line low for configured countdown.
     {
         Drive1541 drive;
         drive.iecEnableDriveReleaseDelayModel = true;
@@ -30,6 +31,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure B: RX setup window rejects same-tick data/clock sampling.
     {
         Drive1541 drive;
         drive.iecListening = true;
@@ -50,6 +52,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure C: RX setup window accepts one-tick data settle before clock.
     {
         Drive1541 drive;
         drive.iecListening = true;
@@ -72,6 +75,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure D: UNTALK clears talk path and all EOI-related transient state.
     {
         Drive1541 drive;
         drive.iecEnableDriveReleaseDelayModel = true;
@@ -107,6 +111,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure E: UNLISTEN clears listener transient state.
     {
         Drive1541 drive;
         drive.iecListening = true;
@@ -134,6 +139,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure F: RX timeout trips only after timeout+hysteresis budget.
     {
         Drive1541 drive;
         drive.iecListening = true;
@@ -156,6 +162,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure G: TX timeout trips only after timeout+hysteresis budget.
     {
         Drive1541 drive;
         drive.iecTalking = true;
@@ -181,6 +188,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure H: ATN assert preempts active talk flow deterministically.
     {
         Drive1541 drive;
         drive.iecTalking = true;
@@ -213,6 +221,7 @@ static void runDrive1541IecCornerCaseTests() {
         }
     }
 
+    // Procedure I: late ATN during EOI-ack clears pending ack immediately.
     {
         Drive1541 drive;
         drive.iecTalking = true;

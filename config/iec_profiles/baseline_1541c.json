@@ -7,6 +7,19 @@
     "clk": { "release_delay_ticks": 1, "min_low_pulse_ticks": 1 },
     "data": { "release_delay_ticks": 1, "min_low_pulse_ticks": 1 }
   },
+  "timing": {
+    "controller_bit_hold_ticks": 20,
+    "device_bit_hold_ticks": 60,
+    "controller_between_bytes_ticks": 100,
+    "device_between_bytes_ticks": 100,
+    "atn_response_timeout_ticks": 1000,
+    "device_not_present_timeout_ticks": 256,
+    "sender_timeout_ticks": 512,
+    "receiver_timeout_ticks": 1000,
+    "eoi_signal_min_ticks": 200,
+    "eoi_signal_max_ticks": 512,
+    "empty_stream_timeout_ticks": 512
+  },
   "rx": {
     "setup_ticks": 1,
     "hold_ticks": 1

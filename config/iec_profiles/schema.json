@@ -39,6 +39,23 @@
             "min_low_pulse_ticks": { "type": "integer", "minimum": 0 }
           }
         }
+      },
+      "additionalProperties": true
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "controller_bit_hold_ticks": { "type": "integer", "minimum": 0 },
+        "device_bit_hold_ticks": { "type": "integer", "minimum": 0 },
+        "controller_between_bytes_ticks": { "type": "integer", "minimum": 0 },
+        "device_between_bytes_ticks": { "type": "integer", "minimum": 0 },
+        "atn_response_timeout_ticks": { "type": "integer", "minimum": 0 },
+        "device_not_present_timeout_ticks": { "type": "integer", "minimum": 0 },
+        "sender_timeout_ticks": { "type": "integer", "minimum": 0 },
+        "receiver_timeout_ticks": { "type": "integer", "minimum": 0 },
+        "eoi_signal_min_ticks": { "type": "integer", "minimum": 0 },
+        "eoi_signal_max_ticks": { "type": "integer", "minimum": 0 },
+        "empty_stream_timeout_ticks": { "type": "integer", "minimum": 0 }
       }
     },
     "rx": {

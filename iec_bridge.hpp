@@ -109,6 +109,17 @@ struct IecProfileConfig {
     uint64_t rxSetupTicks = 0;
     uint64_t rxHoldTicks = 0;
     uint64_t timeoutHysteresisTicks = 0;
+    uint64_t controllerBitHoldTicks = 0;
+    uint64_t deviceBitHoldTicks = 0;
+    uint64_t controllerBetweenBytesTicks = 0;
+    uint64_t deviceBetweenBytesTicks = 0;
+    uint64_t atnResponseTimeoutTicks = 0;
+    uint64_t deviceNotPresentTimeoutTicks = 0;
+    uint64_t senderTimeoutTicks = 0;
+    uint64_t receiverTimeoutTicks = 0;
+    uint64_t eoiSignalMinTicks = 0;
+    uint64_t eoiSignalMaxTicks = 0;
+    uint64_t emptyStreamTimeoutTicks = 0;
     bool analogEnabled = false;
     uint64_t analogVddMilli = 1000;
     uint64_t analogRiseThresholdMilli = 632;
@@ -283,6 +294,20 @@ static bool loadIecProfileFromJsonFile(const std::string &path, IecProfileConfig
     std::string timeoutObj;
     if (iecJsonExtractObjectSlice(json, "timeout", timeoutObj)) {
         iecJsonExtractUInt(timeoutObj, "hysteresis_ticks", cfg.timeoutHysteresisTicks);
+    }
+    std::string timingObj;
+    if (iecJsonExtractObjectSlice(json, "timing", timingObj)) {
+        iecJsonExtractUInt(timingObj, "controller_bit_hold_ticks", cfg.controllerBitHoldTicks);
+        iecJsonExtractUInt(timingObj, "device_bit_hold_ticks", cfg.deviceBitHoldTicks);
+        iecJsonExtractUInt(timingObj, "controller_between_bytes_ticks", cfg.controllerBetweenBytesTicks);
+        iecJsonExtractUInt(timingObj, "device_between_bytes_ticks", cfg.deviceBetweenBytesTicks);
+        iecJsonExtractUInt(timingObj, "atn_response_timeout_ticks", cfg.atnResponseTimeoutTicks);
+        iecJsonExtractUInt(timingObj, "device_not_present_timeout_ticks", cfg.deviceNotPresentTimeoutTicks);
+        iecJsonExtractUInt(timingObj, "sender_timeout_ticks", cfg.senderTimeoutTicks);
+        iecJsonExtractUInt(timingObj, "receiver_timeout_ticks", cfg.receiverTimeoutTicks);
+        iecJsonExtractUInt(timingObj, "eoi_signal_min_ticks", cfg.eoiSignalMinTicks);
+        iecJsonExtractUInt(timingObj, "eoi_signal_max_ticks", cfg.eoiSignalMaxTicks);
+        iecJsonExtractUInt(timingObj, "empty_stream_timeout_ticks", cfg.emptyStreamTimeoutTicks);
     }
 
     std::string analogObj;
@@ -962,6 +987,17 @@ struct IecBusDomain {
     uint64_t profileRxSetupTicks = 0;
     uint64_t profileRxHoldTicks = 0;
     uint64_t profileTimeoutHysteresisTicks = 0;
+    uint64_t profileControllerBitHoldTicks = 0;
+    uint64_t profileDeviceBitHoldTicks = 0;
+    uint64_t profileControllerBetweenBytesTicks = 0;
+    uint64_t profileDeviceBetweenBytesTicks = 0;
+    uint64_t profileAtnResponseTimeoutTicks = 0;
+    uint64_t profileDeviceNotPresentTimeoutTicks = 0;
+    uint64_t profileSenderTimeoutTicks = 0;
+    uint64_t profileReceiverTimeoutTicks = 0;
+    uint64_t profileEoiSignalMinTicks = 0;
+    uint64_t profileEoiSignalMaxTicks = 0;
+    uint64_t profileEmptyStreamTimeoutTicks = 0;
 
     IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
         : polarity(p) {
@@ -1094,6 +1130,17 @@ struct IecBusDomain {
                 profileRxSetupTicks = cfg.rxSetupTicks;
                 profileRxHoldTicks = cfg.rxHoldTicks;
                 profileTimeoutHysteresisTicks = cfg.timeoutHysteresisTicks;
+                profileControllerBitHoldTicks = cfg.controllerBitHoldTicks;
+                profileDeviceBitHoldTicks = cfg.deviceBitHoldTicks;
+                profileControllerBetweenBytesTicks = cfg.controllerBetweenBytesTicks;
+                profileDeviceBetweenBytesTicks = cfg.deviceBetweenBytesTicks;
+                profileAtnResponseTimeoutTicks = cfg.atnResponseTimeoutTicks;
+                profileDeviceNotPresentTimeoutTicks = cfg.deviceNotPresentTimeoutTicks;
+                profileSenderTimeoutTicks = cfg.senderTimeoutTicks;
+                profileReceiverTimeoutTicks = cfg.receiverTimeoutTicks;
+                profileEoiSignalMinTicks = cfg.eoiSignalMinTicks;
+                profileEoiSignalMaxTicks = cfg.eoiSignalMaxTicks;
+                profileEmptyStreamTimeoutTicks = cfg.emptyStreamTimeoutTicks;
                 continuousLineSolverEnabled = cfg.analogEnabled;
                 analogVddMilli = cfg.analogVddMilli;
                 analogRiseThresholdMilli = cfg.analogRiseThresholdMilli;
@@ -1204,12 +1251,34 @@ struct IecBusDomain {
     }
 
     void applyLegacyProfileConfigToDevice(IIecDevice &device) {
-        if (profileRxSetupTicks == 0 && profileRxHoldTicks == 0 && profileTimeoutHysteresisTicks == 0) {
-            return;
+        if (!(profileRxSetupTicks == 0 && profileRxHoldTicks == 0 && profileTimeoutHysteresisTicks == 0)) {
+            device.configureIecPhysicalProfile(profileRxSetupTicks,
+                                               profileRxHoldTicks,
+                                               profileTimeoutHysteresisTicks);
         }
-        device.configureIecPhysicalProfile(profileRxSetupTicks,
-                                           profileRxHoldTicks,
-                                           profileTimeoutHysteresisTicks);
+        if (!(profileControllerBitHoldTicks == 0 &&
+              profileDeviceBitHoldTicks == 0 &&
+              profileControllerBetweenBytesTicks == 0 &&
+              profileDeviceBetweenBytesTicks == 0 &&
+              profileAtnResponseTimeoutTicks == 0 &&
+              profileDeviceNotPresentTimeoutTicks == 0 &&
+              profileSenderTimeoutTicks == 0 &&
+              profileReceiverTimeoutTicks == 0 &&
+              profileEoiSignalMinTicks == 0 &&
+              profileEoiSignalMaxTicks == 0 &&
+              profileEmptyStreamTimeoutTicks == 0)) {
+            device.configureIecProtocolTiming(profileControllerBitHoldTicks,
+                                              profileDeviceBitHoldTicks,
+                                              profileControllerBetweenBytesTicks,
+                                              profileDeviceBetweenBytesTicks,
+                                              profileAtnResponseTimeoutTicks,
+                                              profileDeviceNotPresentTimeoutTicks,
+                                              profileSenderTimeoutTicks,
+                                              profileReceiverTimeoutTicks,
+                                              profileEoiSignalMinTicks,
+                                              profileEoiSignalMaxTicks,
+                                              profileEmptyStreamTimeoutTicks);
+        }
     }
 
     void setTemporalDebugEnabled(bool enabled) {
@@ -1269,6 +1338,7 @@ struct IecBusDomain {
         }
         ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(drive)));
         attachedDevices.push_back(ownedDeviceEndpoints.back().get());
+        applyLegacyProfileConfigToDevice(drive);
         ownedDeviceEndpoints.back()->setLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
         scheduleBusSettleFromDrivePulls(anyDrivePullCLK(), anyDrivePullDATA());
     }

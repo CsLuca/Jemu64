@@ -429,10 +429,25 @@ public:
     uint32_t iecRxIdleTicks = 0;
     uint32_t iecTxIdleTicks = 0;
     uint32_t iecEoiWaitTicks = 0;
+    uint32_t iecAtnResponseWaitTicks = 0;
+    uint32_t iecDeviceNotPresentWaitTicks = 0;
     uint32_t iecSerialTimeoutHysteresisTicks = IEC_TIMEOUT_HYSTERESIS_TICKS;
+    uint32_t iecControllerBitHoldTicks = 20;
+    uint32_t iecDeviceBitHoldTicks = 60;
+    uint32_t iecControllerBetweenBytesTicks = 100;
+    uint32_t iecDeviceBetweenBytesTicks = 100;
+    uint32_t iecAtnResponseTimeoutTicks = 1000;
+    uint32_t iecDeviceNotPresentTimeoutTicks = IEC_SERIAL_TIMEOUT_TICKS;
+    uint32_t iecSenderTimeoutTicks = IEC_EOI_TIMEOUT_TICKS;
+    uint32_t iecReceiverTimeoutTicks = 1000;
+    uint32_t iecEoiSignalMinTicks = 200;
+    uint32_t iecEoiSignalMaxTicks = 512;
+    uint32_t iecEmptyStreamTimeoutTicks = 512;
     uint64_t iecRxTimeoutCount = 0;
     uint64_t iecTxTimeoutCount = 0;
     uint64_t iecEoiTimeoutCount = 0;
+    uint64_t iecAtnResponseTimeoutCount = 0;
+    uint64_t iecDeviceNotPresentTimeoutCount = 0;
 
     std::string iecStatusLine = "00,OK,00,00";
     std::vector<uint8_t> iecCommandChannelBuffer;
@@ -2618,9 +2633,13 @@ public:
         iecRxIdleTicks = 0;
         iecTxIdleTicks = 0;
         iecEoiWaitTicks = 0;
+        iecAtnResponseWaitTicks = 0;
+        iecDeviceNotPresentWaitTicks = 0;
         iecRxTimeoutCount = 0;
         iecTxTimeoutCount = 0;
         iecEoiTimeoutCount = 0;
+        iecAtnResponseTimeoutCount = 0;
+        iecDeviceNotPresentTimeoutCount = 0;
 
         iecStatusLine = "00,OK,00,00";
         iecCommandChannelBuffer.clear();
@@ -3128,6 +3147,30 @@ public:
         iecSerialTimeoutHysteresisTicks = static_cast<uint32_t>((timeoutHysteresisTicks > 4096ULL) ? 4096ULL : timeoutHysteresisTicks);
     }
 
+    void configureIecProtocolTiming(uint64_t controllerBitHoldTicks,
+                                    uint64_t deviceBitHoldTicks,
+                                    uint64_t controllerBetweenBytesTicks,
+                                    uint64_t deviceBetweenBytesTicks,
+                                    uint64_t atnResponseTimeoutTicks,
+                                    uint64_t deviceNotPresentTimeoutTicks,
+                                    uint64_t senderTimeoutTicks,
+                                    uint64_t receiverTimeoutTicks,
+                                    uint64_t eoiSignalMinTicks,
+                                    uint64_t eoiSignalMaxTicks,
+                                    uint64_t emptyStreamTimeoutTicks) override {
+        iecControllerBitHoldTicks = static_cast<uint32_t>((controllerBitHoldTicks > 4096ULL) ? 4096ULL : controllerBitHoldTicks);
+        iecDeviceBitHoldTicks = static_cast<uint32_t>((deviceBitHoldTicks > 4096ULL) ? 4096ULL : deviceBitHoldTicks);
+        iecControllerBetweenBytesTicks = static_cast<uint32_t>((controllerBetweenBytesTicks > 8192ULL) ? 8192ULL : controllerBetweenBytesTicks);
+        iecDeviceBetweenBytesTicks = static_cast<uint32_t>((deviceBetweenBytesTicks > 8192ULL) ? 8192ULL : deviceBetweenBytesTicks);
+        iecAtnResponseTimeoutTicks = static_cast<uint32_t>((atnResponseTimeoutTicks > 65535ULL) ? 65535ULL : atnResponseTimeoutTicks);
+        iecDeviceNotPresentTimeoutTicks = static_cast<uint32_t>((deviceNotPresentTimeoutTicks > 65535ULL) ? 65535ULL : deviceNotPresentTimeoutTicks);
+        iecSenderTimeoutTicks = static_cast<uint32_t>((senderTimeoutTicks > 65535ULL) ? 65535ULL : senderTimeoutTicks);
+        iecReceiverTimeoutTicks = static_cast<uint32_t>((receiverTimeoutTicks > 65535ULL) ? 65535ULL : receiverTimeoutTicks);
+        iecEoiSignalMinTicks = static_cast<uint32_t>((eoiSignalMinTicks > 65535ULL) ? 65535ULL : eoiSignalMinTicks);
+        iecEoiSignalMaxTicks = static_cast<uint32_t>((eoiSignalMaxTicks > 65535ULL) ? 65535ULL : eoiSignalMaxTicks);
+        iecEmptyStreamTimeoutTicks = static_cast<uint32_t>((emptyStreamTimeoutTicks > 65535ULL) ? 65535ULL : emptyStreamTimeoutTicks);
+    }
+
     bool getIecDrivePullCLK() const override {
         return iecDrivePullCLK;
     }
@@ -3202,6 +3245,32 @@ public:
              iecTalkStartPending ||
              iecEoiPendingAck);
 
+        if (commandPhase && iecListening) {
+            iecAtnResponseWaitTicks++;
+            const uint32_t atnResponseBudget = (iecAtnResponseTimeoutTicks == 0) ? 1000u : iecAtnResponseTimeoutTicks;
+            if (iecAtnResponseWaitTicks > atnResponseBudget && iecAtnHandshakeActive) {
+                iecAtnResponseTimeoutCount++;
+                iecAtnHandshakeActive = false;
+                iecAtnAckPullDATA = false;
+                iecAtnAckTicks = 0;
+                iecStatusLine = "74,DRIVE NOT READY,00,00";
+            }
+        } else {
+            iecAtnResponseWaitTicks = 0;
+        }
+
+        if (nextState == IecSerialState::TalkData && !iecTxByteActive && !iecTalkStartPending && iecTxQueue.empty()) {
+            iecDeviceNotPresentWaitTicks++;
+            const uint32_t notPresentBudget = (iecDeviceNotPresentTimeoutTicks == 0) ? IEC_SERIAL_TIMEOUT_TICKS : iecDeviceNotPresentTimeoutTicks;
+            if (iecDeviceNotPresentWaitTicks > notPresentBudget) {
+                iecDeviceNotPresentTimeoutCount++;
+                iecStatusLine = "74,DRIVE NOT READY,00,00";
+                iecDeviceNotPresentWaitTicks = 0;
+            }
+        } else {
+            iecDeviceNotPresentWaitTicks = 0;
+        }
+
         if (atnPreemptsTalkFlow) {
             iecTxByteActive = false;
             iecTxBitCount = 0;
@@ -3220,17 +3289,20 @@ public:
             iecAtnAckTicks = 0;
             iecAtnHandshakeActive = false;
             iecAtnAckSawClockLow = false;
+            iecAtnResponseWaitTicks = 0;
         } else {
             if (fallingATN || enteringCommandState) {
                 iecAtnAckTicks = revisionProfile.iecAtnAckTicksOverride;
                 iecAtnHandshakeActive = true;
                 iecAtnAckSawClockLow = false;
+                iecAtnResponseWaitTicks = 0;
             }
             if (nextState != IecSerialState::Command) {
                 iecAtnAckTicks = 0;
                 iecAtnAckPullDATA = false;
                 iecAtnHandshakeActive = false;
                 iecAtnAckSawClockLow = false;
+                iecAtnResponseWaitTicks = 0;
             } else if (iecAtnHandshakeActive) {
                 // ATN handshake: listener keeps DATA low until controller pulls CLK low once.
                 if (!currCLK && revisionProfile.iecHandshakeNeedsClockLowAck) {
@@ -3384,7 +3456,8 @@ public:
             } else {
                 if (nextState != IecSerialState::Command) {
                     iecRxIdleTicks++;
-                    const uint32_t rxTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + iecSerialTimeoutHysteresisTicks;
+                    const uint32_t rxTimeoutBase = (iecReceiverTimeoutTicks == 0) ? IEC_SERIAL_TIMEOUT_TICKS : iecReceiverTimeoutTicks;
+                    const uint32_t rxTimeoutBudget = rxTimeoutBase + iecSerialTimeoutHysteresisTicks;
                     if (iecRxIdleTicks > rxTimeoutBudget) {
                         iecRxTimeoutCount++;
                         iecRxBitCount = 0;
@@ -3416,7 +3489,8 @@ public:
             }
             if (!iecEoiAckLowSeen) {
                 iecEoiWaitTicks++;
-                if (iecEoiWaitTicks > IEC_EOI_TIMEOUT_TICKS) {
+                const uint32_t eoiTimeoutBudget = (iecSenderTimeoutTicks == 0) ? IEC_EOI_TIMEOUT_TICKS : iecSenderTimeoutTicks;
+                if (iecEoiWaitTicks > eoiTimeoutBudget) {
                     iecEoiPendingAck = false;
                     iecEoiWaitTicks = 0;
                     iecEoiTimeoutCount++;
@@ -3522,7 +3596,8 @@ public:
                         iecTxIdleTicks = 0;
                     } else {
                         iecTxIdleTicks++;
-                        const uint32_t txTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + iecSerialTimeoutHysteresisTicks;
+                        const uint32_t txTimeoutBase = (iecSenderTimeoutTicks == 0) ? IEC_SERIAL_TIMEOUT_TICKS : iecSenderTimeoutTicks;
+                        const uint32_t txTimeoutBudget = txTimeoutBase + iecSerialTimeoutHysteresisTicks;
                         if (iecTxIdleTicks > txTimeoutBudget) {
                             iecTxTimeoutCount++;
                             iecTxByteActive = false;

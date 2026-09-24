@@ -16,4 +16,28 @@ public:
         (void)rxHoldTicks;
         (void)timeoutHysteresisTicks;
     }
+
+    virtual void configureIecProtocolTiming(uint64_t controllerBitHoldTicks,
+                                            uint64_t deviceBitHoldTicks,
+                                            uint64_t controllerBetweenBytesTicks,
+                                            uint64_t deviceBetweenBytesTicks,
+                                            uint64_t atnResponseTimeoutTicks,
+                                            uint64_t deviceNotPresentTimeoutTicks,
+                                            uint64_t senderTimeoutTicks,
+                                            uint64_t receiverTimeoutTicks,
+                                            uint64_t eoiSignalMinTicks,
+                                            uint64_t eoiSignalMaxTicks,
+                                            uint64_t emptyStreamTimeoutTicks) {
+        (void)controllerBitHoldTicks;
+        (void)deviceBitHoldTicks;
+        (void)controllerBetweenBytesTicks;
+        (void)deviceBetweenBytesTicks;
+        (void)atnResponseTimeoutTicks;
+        (void)deviceNotPresentTimeoutTicks;
+        (void)senderTimeoutTicks;
+        (void)receiverTimeoutTicks;
+        (void)eoiSignalMinTicks;
+        (void)eoiSignalMaxTicks;
+        (void)emptyStreamTimeoutTicks;
+    }
 };
