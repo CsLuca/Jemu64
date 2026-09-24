@@ -1,0 +1,14 @@
+{
+  "manifest_id": "level6_capture_calibration_manifest_sample_v1",
+  "description": "Synthetic placeholder captures for calibration pipeline scaffolding before real hardware traces.",
+  "captures": [
+    {
+      "path": "datasets/level6/captures/normalized/sample_capture_1541_short.json",
+      "weight": 1.0
+    },
+    {
+      "path": "datasets/level6/captures/normalized/sample_capture_1541_long.json",
+      "weight": 1.0
+    }
+  ]
+}

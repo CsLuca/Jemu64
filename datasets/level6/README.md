@@ -32,3 +32,38 @@ Required metadata for future captures:
 - probe/tool model and sample rate,
 - temperature range during acquisition,
 - scenario id (`load_dir`, `atn_toggle`, `eoi_ack`, `hotplug`, etc.).
+
+## Calibration Scaffolding (Phase 3)
+
+Calibration script:
+
+- `run_level6_calibrate_profile.ps1`
+
+Inputs:
+
+- capture calibration manifest (example):
+  - `datasets/level6/manifests/level6_capture_calibration_manifest_sample.json`
+- normalized capture metric files (example placeholders):
+  - `datasets/level6/captures/normalized/sample_capture_1541_short.json`
+  - `datasets/level6/captures/normalized/sample_capture_1541_long.json`
+
+Example:
+
+```powershell
+& ".\run_level6_calibrate_profile.ps1" `
+  -Manifest "datasets/level6/manifests/level6_capture_calibration_manifest_sample.json" `
+  -BaseProfile "config/iec_profiles/baseline_1541.json" `
+  -OutputProfile "config/iec_profiles/calibrated_synthetic_1541.json" `
+  -ProfileId "calibrated_synthetic_1541"
+```
+
+Outputs:
+
+- calibrated profile JSON (default): `config/iec_profiles/calibrated_synthetic_1541.json`
+- fit report (default): `datasets/level6/quality_reports/level6_calibration_fit_metrics.json`
+
+Current fitter behavior:
+
+- weighted-average fit over capture metrics,
+- optional base-profile blending (`-BlendWithBase`) for conservative convergence,
+- emits line + analog + node-level skew/tau calibration values.

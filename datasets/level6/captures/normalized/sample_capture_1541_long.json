@@ -1,0 +1,39 @@
+{
+  "capture_id": "sample_capture_1541_long",
+  "source": "synthetic_placeholder",
+  "metrics": {
+    "line": {
+      "atn": {
+        "release_delay_ticks": 2,
+        "min_low_pulse_ticks": 2
+      },
+      "clk": {
+        "release_delay_ticks": 2,
+        "min_low_pulse_ticks": 3
+      },
+      "data": {
+        "release_delay_ticks": 2,
+        "min_low_pulse_ticks": 3
+      }
+    },
+    "analog": {
+      "vdd_milli": 1000,
+      "rise_threshold_milli": 640,
+      "fall_threshold_milli": 360,
+      "rise_tau_ticks": 3,
+      "fall_tau_ticks": 1,
+      "node": {
+        "host": {
+          "skew_ticks": 0,
+          "rise_tau_ticks": 2,
+          "fall_tau_ticks": 1
+        },
+        "drive": {
+          "skew_ticks": 2,
+          "rise_tau_ticks": 4,
+          "fall_tau_ticks": 1
+        }
+      }
+    }
+  }
+}

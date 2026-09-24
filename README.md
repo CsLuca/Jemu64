@@ -223,6 +223,28 @@ Outputs:
 - `datasets/level6/quality_reports/level6_synthetic_envelope_metrics.json`
 - `datasets/level6/quality_reports/level6_synthetic_envelope_runtime.csv`
 
+## Level6 Profile Calibration (Phase 3 Scaffold)
+
+- Script: `run_level6_calibrate_profile.ps1`
+- Purpose:
+  - fit line/analog/node parameters from normalized capture metrics,
+  - generate calibrated profile JSON compatible with `IEC_PROFILE` loader,
+  - emit calibration fit report JSON.
+
+Example:
+
+```powershell
+& ".\run_level6_calibrate_profile.ps1" -Manifest "datasets/level6/manifests/level6_capture_calibration_manifest_sample.json" -BaseProfile "config/iec_profiles/baseline_1541.json" -OutputProfile "config/iec_profiles/calibrated_synthetic_1541.json" -ProfileId "calibrated_synthetic_1541"
+```
+
+Then run with calibrated profile:
+
+```powershell
+$env:IEC_MODEL_MODE="physical-l6"
+$env:IEC_PROFILE="config/iec_profiles/calibrated_synthetic_1541.json"
+.\c64_11.exe
+```
+
 ## Level6 Daily Check (One Command)
 
 - Script: `run_level6_daily_check.ps1`
