@@ -3,10 +3,12 @@
 #include <cstdint>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <string>
 #include <memory>
 #include <queue>
+#include <sstream>
 #include <vector>
 
 #include "iec_device.hpp"
@@ -91,6 +93,162 @@ struct IecRuntimeTelemetry {
     uint64_t commitEdges = 0;
     IecModelMode modelMode = IecModelMode::Fast;
 };
+
+struct IecProfileConfig {
+    bool loaded = false;
+    std::string profileId;
+    IecModelMode modelMode = IecModelMode::Fast;
+    uint64_t atnReleaseDelay = 0;
+    uint64_t clkReleaseDelay = 0;
+    uint64_t dataReleaseDelay = 0;
+    uint64_t atnMinLow = 0;
+    uint64_t clkMinLow = 0;
+    uint64_t dataMinLow = 0;
+    uint64_t rxSetupTicks = 0;
+    uint64_t rxHoldTicks = 0;
+    uint64_t timeoutHysteresisTicks = 0;
+};
+
+static bool iecJsonExtractString(const std::string &json, const std::string &key, std::string &out) {
+    const std::string needle = "\"" + key + "\"";
+    const std::size_t keyPos = json.find(needle);
+    if (keyPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t colonPos = json.find(':', keyPos + needle.size());
+    if (colonPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t quoteStart = json.find('"', colonPos + 1);
+    if (quoteStart == std::string::npos) {
+        return false;
+    }
+    const std::size_t quoteEnd = json.find('"', quoteStart + 1);
+    if (quoteEnd == std::string::npos || quoteEnd <= quoteStart) {
+        return false;
+    }
+    out = json.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+    return true;
+}
+
+static bool iecJsonExtractUInt(const std::string &json, const std::string &key, uint64_t &out) {
+    const std::string needle = "\"" + key + "\"";
+    const std::size_t keyPos = json.find(needle);
+    if (keyPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t colonPos = json.find(':', keyPos + needle.size());
+    if (colonPos == std::string::npos) {
+        return false;
+    }
+    std::size_t idx = colonPos + 1;
+    while (idx < json.size() && std::isspace(static_cast<unsigned char>(json[idx])) != 0) {
+        idx++;
+    }
+    if (idx >= json.size()) {
+        return false;
+    }
+    std::size_t end = idx;
+    while (end < json.size() && std::isdigit(static_cast<unsigned char>(json[end])) != 0) {
+        end++;
+    }
+    if (end == idx) {
+        return false;
+    }
+    out = static_cast<uint64_t>(std::strtoull(json.substr(idx, end - idx).c_str(), nullptr, 10));
+    return true;
+}
+
+static bool iecJsonExtractObjectSlice(const std::string &json, const std::string &objectKey, std::string &slice) {
+    const std::string needle = "\"" + objectKey + "\"";
+    const std::size_t keyPos = json.find(needle);
+    if (keyPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t colonPos = json.find(':', keyPos + needle.size());
+    if (colonPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t objStart = json.find('{', colonPos + 1);
+    if (objStart == std::string::npos) {
+        return false;
+    }
+    int depth = 0;
+    for (std::size_t i = objStart; i < json.size(); ++i) {
+        if (json[i] == '{') {
+            depth++;
+        } else if (json[i] == '}') {
+            depth--;
+            if (depth == 0) {
+                slice = json.substr(objStart, i - objStart + 1);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static bool loadIecProfileFromJsonFile(const std::string &path, IecProfileConfig &cfg) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+    std::ostringstream oss;
+    oss << in.rdbuf();
+    const std::string json = oss.str();
+    if (json.empty()) {
+        return false;
+    }
+
+    std::string profileId;
+    if (!iecJsonExtractString(json, "profile_id", profileId)) {
+        return false;
+    }
+    cfg.profileId = profileId;
+
+    std::string mode;
+    if (iecJsonExtractString(json, "model_mode", mode)) {
+        for (char &c : mode) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        cfg.modelMode = (mode == "strict") ? IecModelMode::Strict : ((mode == "physical-l6") ? IecModelMode::PhysicalL6 : IecModelMode::Fast);
+    }
+
+    std::string lineObj;
+    if (!iecJsonExtractObjectSlice(json, "line", lineObj)) {
+        return false;
+    }
+    std::string atnObj;
+    std::string clkObj;
+    std::string dataObj;
+    if (!iecJsonExtractObjectSlice(lineObj, "atn", atnObj) ||
+        !iecJsonExtractObjectSlice(lineObj, "clk", clkObj) ||
+        !iecJsonExtractObjectSlice(lineObj, "data", dataObj)) {
+        return false;
+    }
+
+    if (!iecJsonExtractUInt(atnObj, "release_delay_ticks", cfg.atnReleaseDelay) ||
+        !iecJsonExtractUInt(atnObj, "min_low_pulse_ticks", cfg.atnMinLow) ||
+        !iecJsonExtractUInt(clkObj, "release_delay_ticks", cfg.clkReleaseDelay) ||
+        !iecJsonExtractUInt(clkObj, "min_low_pulse_ticks", cfg.clkMinLow) ||
+        !iecJsonExtractUInt(dataObj, "release_delay_ticks", cfg.dataReleaseDelay) ||
+        !iecJsonExtractUInt(dataObj, "min_low_pulse_ticks", cfg.dataMinLow)) {
+        return false;
+    }
+
+    std::string rxObj;
+    if (iecJsonExtractObjectSlice(json, "rx", rxObj)) {
+        iecJsonExtractUInt(rxObj, "setup_ticks", cfg.rxSetupTicks);
+        iecJsonExtractUInt(rxObj, "hold_ticks", cfg.rxHoldTicks);
+    }
+    std::string timeoutObj;
+    if (iecJsonExtractObjectSlice(json, "timeout", timeoutObj)) {
+        iecJsonExtractUInt(timeoutObj, "hysteresis_ticks", cfg.timeoutHysteresisTicks);
+    }
+
+    cfg.loaded = true;
+    return true;
+}
 
 struct IecLineModelState {
     bool levelHigh = true;
@@ -714,6 +872,9 @@ struct IecBusDomain {
     std::string activeIecProfile = "default";
     uint64_t runtimeTickCalls = 0;
     uint64_t runtimeExecutedTimedEvents = 0;
+    uint64_t profileRxSetupTicks = 0;
+    uint64_t profileRxHoldTicks = 0;
+    uint64_t profileTimeoutHysteresisTicks = 0;
 
     IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
         : polarity(p) {
@@ -722,6 +883,7 @@ struct IecBusDomain {
         ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(primaryDrive)));
         attachedDevices.push_back(ownedDeviceEndpoints.back().get());
         initializeFromEnvironment();
+        applyLegacyProfileConfigToDevice(primaryDrive);
         bootstrapIecLink();
     }
 
@@ -730,6 +892,7 @@ struct IecBusDomain {
         ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(primaryDrive)));
         attachedDevices.push_back(ownedDeviceEndpoints.back().get());
         initializeFromEnvironment();
+        applyLegacyProfileConfigToDevice(primaryDrive);
         bootstrapIecLink();
     }
 
@@ -825,37 +988,24 @@ struct IecBusDomain {
 
         if (const char *profileEnv = std::getenv("IEC_PROFILE")) {
             std::string profile = profileEnv;
-            std::string key = profile;
-            for (char &c : key) {
-                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            std::string path = profile;
+            if (path.find(".json") == std::string::npos) {
+                path = std::string("config/iec_profiles/") + profile + ".json";
             }
-            if (key == "baseline_1541") {
-                activeIecProfile = "baseline_1541";
+            IecProfileConfig cfg;
+            if (loadIecProfileFromJsonFile(path, cfg)) {
+                activeIecProfile = cfg.profileId;
+                modelMode = cfg.modelMode;
                 lineModelEnabled = true;
-                lineAtnReleaseDelayUnits = 1;
-                lineClkReleaseDelayUnits = 1;
-                lineDataReleaseDelayUnits = 1;
-                lineAtnMinLowPulseUnits = 1;
-                lineClkMinLowPulseUnits = 2;
-                lineDataMinLowPulseUnits = 2;
-            } else if (key == "baseline_1541c") {
-                activeIecProfile = "baseline_1541c";
-                lineModelEnabled = true;
-                lineAtnReleaseDelayUnits = 1;
-                lineClkReleaseDelayUnits = 1;
-                lineDataReleaseDelayUnits = 1;
-                lineAtnMinLowPulseUnits = 1;
-                lineClkMinLowPulseUnits = 1;
-                lineDataMinLowPulseUnits = 1;
-            } else if (key == "baseline_1541ii") {
-                activeIecProfile = "baseline_1541ii";
-                lineModelEnabled = true;
-                lineAtnReleaseDelayUnits = 1;
-                lineClkReleaseDelayUnits = 1;
-                lineDataReleaseDelayUnits = 1;
-                lineAtnMinLowPulseUnits = 1;
-                lineClkMinLowPulseUnits = 1;
-                lineDataMinLowPulseUnits = 1;
+                lineAtnReleaseDelayUnits = cfg.atnReleaseDelay;
+                lineClkReleaseDelayUnits = cfg.clkReleaseDelay;
+                lineDataReleaseDelayUnits = cfg.dataReleaseDelay;
+                lineAtnMinLowPulseUnits = cfg.atnMinLow;
+                lineClkMinLowPulseUnits = cfg.clkMinLow;
+                lineDataMinLowPulseUnits = cfg.dataMinLow;
+                profileRxSetupTicks = cfg.rxSetupTicks;
+                profileRxHoldTicks = cfg.rxHoldTicks;
+                profileTimeoutHysteresisTicks = cfg.timeoutHysteresisTicks;
             }
         }
 
@@ -886,6 +1036,15 @@ struct IecBusDomain {
         if (const char *v = std::getenv("IEC_LINE_DATA_MIN_LOW_UNITS")) {
             lineDataMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
         }
+    }
+
+    void applyLegacyProfileConfigToDevice(IIecDevice &device) {
+        if (profileRxSetupTicks == 0 && profileRxHoldTicks == 0 && profileTimeoutHysteresisTicks == 0) {
+            return;
+        }
+        device.configureIecPhysicalProfile(profileRxSetupTicks,
+                                           profileRxHoldTicks,
+                                           profileTimeoutHysteresisTicks);
     }
 
     void setTemporalDebugEnabled(bool enabled) {

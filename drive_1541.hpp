@@ -429,6 +429,7 @@ public:
     uint32_t iecRxIdleTicks = 0;
     uint32_t iecTxIdleTicks = 0;
     uint32_t iecEoiWaitTicks = 0;
+    uint32_t iecSerialTimeoutHysteresisTicks = IEC_TIMEOUT_HYSTERESIS_TICKS;
     uint64_t iecRxTimeoutCount = 0;
     uint64_t iecTxTimeoutCount = 0;
     uint64_t iecEoiTimeoutCount = 0;
@@ -3118,6 +3119,15 @@ public:
         iecDATA = applied.data;
     }
 
+    void configureIecPhysicalProfile(uint64_t rxSetupTicks,
+                                     uint64_t rxHoldTicks,
+                                     uint64_t timeoutHysteresisTicks) override {
+        iecEnableRxTimingWindow = true;
+        iecRxSetupTicks = static_cast<uint8_t>((rxSetupTicks > 255ULL) ? 255ULL : rxSetupTicks);
+        iecRxHoldTicks = static_cast<uint8_t>((rxHoldTicks > 255ULL) ? 255ULL : rxHoldTicks);
+        iecSerialTimeoutHysteresisTicks = static_cast<uint32_t>((timeoutHysteresisTicks > 4096ULL) ? 4096ULL : timeoutHysteresisTicks);
+    }
+
     bool getIecDrivePullCLK() const override {
         return iecDrivePullCLK;
     }
@@ -3374,7 +3384,7 @@ public:
             } else {
                 if (nextState != IecSerialState::Command) {
                     iecRxIdleTicks++;
-                    const uint32_t rxTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + IEC_TIMEOUT_HYSTERESIS_TICKS;
+                    const uint32_t rxTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + iecSerialTimeoutHysteresisTicks;
                     if (iecRxIdleTicks > rxTimeoutBudget) {
                         iecRxTimeoutCount++;
                         iecRxBitCount = 0;
@@ -3512,7 +3522,7 @@ public:
                         iecTxIdleTicks = 0;
                     } else {
                         iecTxIdleTicks++;
-                        const uint32_t txTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + IEC_TIMEOUT_HYSTERESIS_TICKS;
+                        const uint32_t txTimeoutBudget = IEC_SERIAL_TIMEOUT_TICKS + iecSerialTimeoutHysteresisTicks;
                         if (iecTxIdleTicks > txTimeoutBudget) {
                             iecTxTimeoutCount++;
                             iecTxByteActive = false;

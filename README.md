@@ -66,11 +66,16 @@ Environment variables:
 - `IEC_MODEL_MODE=fast|strict|physical-l6`
 - `IEC_PROFILE=baseline_1541|baseline_1541c|baseline_1541ii`
 
+`IEC_PROFILE` can be either:
+
+- a profile id (resolved as `config/iec_profiles/<id>.json`), or
+- a direct JSON file path.
+
 Notes:
 
 - `physical-l6` enables the minimal line model path (release/min-pulse behavior) with conservative defaults.
 - `IEC_PROFILE` selects baseline line/timing presets (schema and baseline JSON files are under `config/iec_profiles/`).
-- Current baseline loader supports profile-id selection; unknown profile ids fall back to default runtime behavior.
+- Current loader applies line parameters + rx setup/hold + timeout hysteresis when profile data is available.
 
 ## Multi-Drive 1541 Slot Configuration
 
