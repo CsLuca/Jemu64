@@ -57,6 +57,34 @@ Notes:
 - Legacy command `DRIVE <unit> CABLE ON|OFF` is still available.
 - Recommended workflow is `CABLE ... CONNECT/DISCONNECT` for explicit host/device cable semantics.
 
+### Multi-Segment Topology Commands
+
+The console now supports multiple named cable segments and explicit wiring topology.
+
+Segment-style commands:
+
+```text
+CABLE CREATE TRUNK0
+CABLE TRUNK0 CONNECT HOST C64
+CABLE TRUNK0 CONNECT DRIVE 8
+CABLE CREATE SEG1
+CABLE SEG1 CONNECT DRIVE 8
+CABLE SEG1 CONNECT DRIVE 9
+```
+
+Wire shorthand commands:
+
+```text
+WIRE C64 DRIVE8 PROFILE_SHORT
+WIRE DRIVE8 DRIVE9 PROFILE_LONG
+```
+
+Supported wire profiles:
+
+- `PROFILE_SHORT`
+- `PROFILE_MEDIUM`
+- `PROFILE_LONG`
+
 ## IEC Level6 Profile Baseline (Config-Driven)
 
 The IEC stack now supports config-driven baseline profile selection and model mode toggles.
