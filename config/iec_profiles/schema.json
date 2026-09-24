@@ -53,6 +53,17 @@
       "properties": {
         "hysteresis_ticks": { "type": "integer", "minimum": 0 }
       }
+    },
+    "analog": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "vdd_milli": { "type": "integer", "minimum": 1 },
+        "rise_threshold_milli": { "type": "integer", "minimum": 0 },
+        "fall_threshold_milli": { "type": "integer", "minimum": 0 },
+        "rise_tau_ticks": { "type": "integer", "minimum": 1 },
+        "fall_tau_ticks": { "type": "integer", "minimum": 1 }
+      }
     }
   }
 }

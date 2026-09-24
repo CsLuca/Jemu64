@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <cmath>
 #include <string>
 #include <memory>
 #include <queue>
@@ -66,7 +67,8 @@ enum class IecEdgeCause : uint8_t {
     None = 0,
     PullChange = 1,
     ReleaseDelay = 2,
-    MinPulse = 3
+    MinPulse = 3,
+    AnalogSlew = 4
 };
 
 enum class IecModelMode : uint8_t {
@@ -107,7 +109,38 @@ struct IecProfileConfig {
     uint64_t rxSetupTicks = 0;
     uint64_t rxHoldTicks = 0;
     uint64_t timeoutHysteresisTicks = 0;
+    bool analogEnabled = false;
+    uint64_t analogVddMilli = 1000;
+    uint64_t analogRiseThresholdMilli = 632;
+    uint64_t analogFallThresholdMilli = 368;
+    uint64_t analogRiseTauTicks = 1;
+    uint64_t analogFallTauTicks = 1;
 };
+
+static bool iecJsonExtractBool(const std::string &json, const std::string &key, bool &out) {
+    const std::string needle = "\"" + key + "\"";
+    const std::size_t keyPos = json.find(needle);
+    if (keyPos == std::string::npos) {
+        return false;
+    }
+    const std::size_t colonPos = json.find(':', keyPos + needle.size());
+    if (colonPos == std::string::npos) {
+        return false;
+    }
+    std::size_t idx = colonPos + 1;
+    while (idx < json.size() && std::isspace(static_cast<unsigned char>(json[idx])) != 0) {
+        idx++;
+    }
+    if (idx + 4 <= json.size() && json.compare(idx, 4, "true") == 0) {
+        out = true;
+        return true;
+    }
+    if (idx + 5 <= json.size() && json.compare(idx, 5, "false") == 0) {
+        out = false;
+        return true;
+    }
+    return false;
+}
 
 static bool iecJsonExtractString(const std::string &json, const std::string &key, std::string &out) {
     const std::string needle = "\"" + key + "\"";
@@ -246,6 +279,16 @@ static bool loadIecProfileFromJsonFile(const std::string &path, IecProfileConfig
         iecJsonExtractUInt(timeoutObj, "hysteresis_ticks", cfg.timeoutHysteresisTicks);
     }
 
+    std::string analogObj;
+    if (iecJsonExtractObjectSlice(json, "analog", analogObj)) {
+        iecJsonExtractBool(analogObj, "enabled", cfg.analogEnabled);
+        iecJsonExtractUInt(analogObj, "vdd_milli", cfg.analogVddMilli);
+        iecJsonExtractUInt(analogObj, "rise_threshold_milli", cfg.analogRiseThresholdMilli);
+        iecJsonExtractUInt(analogObj, "fall_threshold_milli", cfg.analogFallThresholdMilli);
+        iecJsonExtractUInt(analogObj, "rise_tau_ticks", cfg.analogRiseTauTicks);
+        iecJsonExtractUInt(analogObj, "fall_tau_ticks", cfg.analogFallTauTicks);
+    }
+
     cfg.loaded = true;
     return true;
 }
@@ -255,6 +298,9 @@ struct IecLineModelState {
     uint64_t lowSince = 0;
     bool riseEventPending = false;
     uint64_t riseEventWhen = 0;
+    uint64_t riseEventGeneration = 0;
+    double analogVoltageMilli = 1000.0;
+    uint64_t analogLastUpdateUnits = 0;
 };
 
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity);
@@ -854,6 +900,12 @@ struct IecBusDomain {
     IecEdgeCause pendingEdgeCause = IecEdgeCause::None;
     uint64_t pendingEdgeEffectiveDelayTicks = 0;
     bool lineModelEnabled = false;
+    bool continuousLineSolverEnabled = false;
+    uint64_t analogVddMilli = 1000;
+    uint64_t analogRiseThresholdMilli = 632;
+    uint64_t analogFallThresholdMilli = 368;
+    uint64_t analogRiseTauUnits = 1;
+    uint64_t analogFallTauUnits = 1;
     uint64_t lineAtnReleaseDelayUnits = 0;
     uint64_t lineClkReleaseDelayUnits = 0;
     uint64_t lineDataReleaseDelayUnits = 0;
@@ -972,6 +1024,7 @@ struct IecBusDomain {
 
         if (modelMode == IecModelMode::PhysicalL6) {
             lineModelEnabled = true;
+            continuousLineSolverEnabled = true;
             if (lineAtnReleaseDelayUnits == 0) {
                 lineAtnReleaseDelayUnits = 1;
             }
@@ -1012,6 +1065,12 @@ struct IecBusDomain {
                 profileRxSetupTicks = cfg.rxSetupTicks;
                 profileRxHoldTicks = cfg.rxHoldTicks;
                 profileTimeoutHysteresisTicks = cfg.timeoutHysteresisTicks;
+                continuousLineSolverEnabled = cfg.analogEnabled;
+                analogVddMilli = cfg.analogVddMilli;
+                analogRiseThresholdMilli = cfg.analogRiseThresholdMilli;
+                analogFallThresholdMilli = cfg.analogFallThresholdMilli;
+                analogRiseTauUnits = cfg.analogRiseTauTicks;
+                analogFallTauUnits = cfg.analogFallTauTicks;
             }
         }
 
@@ -1041,6 +1100,41 @@ struct IecBusDomain {
         }
         if (const char *v = std::getenv("IEC_LINE_DATA_MIN_LOW_UNITS")) {
             lineDataMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_CONTINUOUS_LINE_SOLVER")) {
+            const int enabled = std::atoi(v);
+            continuousLineSolverEnabled = (enabled != 0);
+        }
+        if (const char *v = std::getenv("IEC_ANALOG_VDD_MILLI")) {
+            analogVddMilli = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_ANALOG_RISE_THRESHOLD_MILLI")) {
+            analogRiseThresholdMilli = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_ANALOG_FALL_THRESHOLD_MILLI")) {
+            analogFallThresholdMilli = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_ANALOG_RISE_TAU_UNITS")) {
+            analogRiseTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_ANALOG_FALL_TAU_UNITS")) {
+            analogFallTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+
+        if (analogVddMilli == 0) {
+            analogVddMilli = 1000;
+        }
+        if (analogRiseThresholdMilli > analogVddMilli) {
+            analogRiseThresholdMilli = analogVddMilli;
+        }
+        if (analogFallThresholdMilli > analogVddMilli) {
+            analogFallThresholdMilli = analogVddMilli;
+        }
+        if (analogRiseTauUnits == 0) {
+            analogRiseTauUnits = 1;
+        }
+        if (analogFallTauUnits == 0) {
+            analogFallTauUnits = 1;
         }
     }
 
@@ -1155,9 +1249,29 @@ struct IecBusDomain {
         lineAtnMinLowPulseUnits = atnMinLow;
         lineClkMinLowPulseUnits = clkMinLow;
         lineDataMinLowPulseUnits = dataMinLow;
-        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0};
-        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0};
-        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0};
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+    }
+
+    void configureContinuousLineSolverForTest(bool enabled,
+                                              uint64_t vddMilli,
+                                              uint64_t riseThresholdMilli,
+                                              uint64_t fallThresholdMilli,
+                                              uint64_t riseTauUnits,
+                                              uint64_t fallTauUnits) {
+        continuousLineSolverEnabled = enabled;
+        analogVddMilli = (vddMilli == 0) ? 1000 : vddMilli;
+        analogRiseThresholdMilli = (riseThresholdMilli > analogVddMilli) ? analogVddMilli : riseThresholdMilli;
+        analogFallThresholdMilli = (fallThresholdMilli > analogVddMilli) ? analogVddMilli : fallThresholdMilli;
+        analogRiseTauUnits = (riseTauUnits == 0) ? 1 : riseTauUnits;
+        analogFallTauUnits = (fallTauUnits == 0) ? 1 : fallTauUnits;
+        atnModel.analogVoltageMilli = linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0;
+        clkModel.analogVoltageMilli = linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0;
+        dataModel.analogVoltageMilli = linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0;
+        atnModel.analogLastUpdateUnits = nowUnits;
+        clkModel.analogLastUpdateUnits = nowUnits;
+        dataModel.analogLastUpdateUnits = nowUnits;
     }
 
     uint64_t getCurrentTimeUnits() const {
@@ -1281,9 +1395,9 @@ struct IecBusDomain {
         linkLineATNHigh = lines.atnHigh;
         linkLineCLKHigh = lines.clkHigh;
         linkLineDATAHigh = lines.dataHigh;
-        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0};
-        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0};
-        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0};
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
         propagateLinesToDrives();
         if (hostEndpoint) {
             hostEndpoint->applyInputs(polarity, sig, lines);
@@ -1297,13 +1411,28 @@ struct IecBusDomain {
         const uint64_t effectiveDelay = (when > nowUnits) ? (when - nowUnits) : 0;
         line->riseEventPending = true;
         line->riseEventWhen = when;
-        scheduleEventAtAbsolute(when, [this, line, cause, effectiveDelay]() {
+        line->riseEventGeneration++;
+        const uint64_t generation = line->riseEventGeneration;
+        scheduleEventAtAbsolute(when, [this, line, cause, effectiveDelay, generation]() {
+            if (!line->riseEventPending || line->riseEventGeneration != generation) {
+                return;
+            }
             pendingEdgeOwner = IecEdgeOwner::LineModel;
             pendingEdgeCause = cause;
             pendingEdgeEffectiveDelayTicks = effectiveDelay;
             line->riseEventPending = false;
             settleBusAndPropagateSamples();
         });
+    }
+
+    static double decayToward(double current, double target, uint64_t deltaUnits, uint64_t tauUnits) {
+        if (tauUnits == 0 || deltaUnits == 0) {
+            return (deltaUnits == 0) ? current : target;
+        }
+        const double dt = static_cast<double>(deltaUnits);
+        const double tau = static_cast<double>(tauUnits);
+        const double k = std::exp(-dt / tau);
+        return target + (current - target) * k;
     }
 
     bool applyLineTimingModel(bool desiredHigh,
@@ -1320,9 +1449,15 @@ struct IecBusDomain {
 
         if (!desiredHigh) {
             line.riseEventPending = false;
+            line.riseEventGeneration++;
             if (line.levelHigh) {
                 line.levelHigh = false;
                 line.lowSince = nowUnits;
+            }
+            if (continuousLineSolverEnabled) {
+                const uint64_t delta = (nowUnits > line.analogLastUpdateUnits) ? (nowUnits - line.analogLastUpdateUnits) : 0;
+                line.analogVoltageMilli = decayToward(line.analogVoltageMilli, 0.0, delta, analogFallTauUnits);
+                line.analogLastUpdateUnits = nowUnits;
             }
             return false;
         }
@@ -1339,9 +1474,47 @@ struct IecBusDomain {
             earliestRise += releaseDelay;
         }
         if (nowUnits >= earliestRise) {
-            line.levelHigh = true;
-            line.riseEventPending = false;
-            return true;
+            if (!continuousLineSolverEnabled) {
+                line.levelHigh = true;
+                line.riseEventPending = false;
+                return true;
+            }
+            const uint64_t delta = (nowUnits > line.analogLastUpdateUnits) ? (nowUnits - line.analogLastUpdateUnits) : 0;
+            line.analogVoltageMilli = decayToward(line.analogVoltageMilli,
+                                                  static_cast<double>(analogVddMilli),
+                                                  delta,
+                                                  analogRiseTauUnits);
+            line.analogLastUpdateUnits = nowUnits;
+
+            if (line.analogVoltageMilli >= static_cast<double>(analogRiseThresholdMilli)) {
+                line.levelHigh = true;
+                line.riseEventPending = false;
+                return true;
+            }
+
+            const double vdd = static_cast<double>(analogVddMilli);
+            const double threshold = static_cast<double>(analogRiseThresholdMilli);
+            const double current = line.analogVoltageMilli;
+            const double denom = vdd - current;
+            const double numer = vdd - threshold;
+            if (denom <= 1e-9 || numer <= 1e-9) {
+                line.levelHigh = true;
+                line.riseEventPending = false;
+                return true;
+            }
+            double ratio = numer / denom;
+            if (ratio <= 0.0) {
+                ratio = 1e-9;
+            }
+            if (ratio >= 1.0) {
+                ratio = 0.999999;
+            }
+            uint64_t tCross = static_cast<uint64_t>(std::ceil(-static_cast<double>(analogRiseTauUnits) * std::log(ratio)));
+            if (tCross == 0) {
+                tCross = 1;
+            }
+            scheduleRiseReeval(&line, nowUnits + tCross, IecEdgeCause::AnalogSlew);
+            return false;
         }
 
         const bool minPulseDeferred = (minLowPulse > 0) && (nowUnits < (line.lowSince + minLowPulse));

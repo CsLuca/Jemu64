@@ -335,7 +335,7 @@ static void runIecTemporalContractTests() {
         for (const IecTemporalTraceEvent &ev : domain.getTemporalTrace()) {
             if (ev.phase == IecTemporalPhase::CommitEdge &&
                 ev.edgeOwner == IecEdgeOwner::LineModel &&
-                (ev.edgeCause == IecEdgeCause::ReleaseDelay || ev.edgeCause == IecEdgeCause::MinPulse) &&
+                (ev.edgeCause == IecEdgeCause::ReleaseDelay || ev.edgeCause == IecEdgeCause::MinPulse || ev.edgeCause == IecEdgeCause::AnalogSlew) &&
                 ev.effectiveDelayTicks > 0) {
                 sawLineModelCause = true;
                 break;
@@ -343,6 +343,60 @@ static void runIecTemporalContractTests() {
         }
         if (!sawLineModelCause) {
             std::cerr << "[IEC TEMPORAL] FAIL: missing line-model commit metadata in temporal trace" << std::endl;
+            assert(false);
+        }
+    }
+
+    {
+        CIA6526 cia2;
+        TestIecDevice drive;
+        IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
+        IecBusDomain domain(cia2, drive, polarity);
+        domain.setC64DomainEnabled(false);
+        domain.setDriveDomainEnabled(false);
+        domain.configureLineModelForTest(true, 0, 1, 1, 0, 0, 0);
+        domain.configureContinuousLineSolverForTest(true, 1000, 700, 300, 4, 1);
+        domain.setTemporalDebugEnabled(true);
+        domain.clearTemporalTrace();
+
+        domain.linkC64PullCLK = true;
+        domain.settleBusAndPropagateSamples();
+        if (domain.linkLineCLKHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: CLK expected low after pull assert in analog solver test" << std::endl;
+            assert(false);
+        }
+
+        domain.linkC64PullCLK = false;
+        domain.settleBusAndPropagateSamples();
+        if (domain.linkLineCLKHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: CLK rose too early before analog slew settles" << std::endl;
+            assert(false);
+        }
+
+        bool sawAnalogSlewCommit = false;
+        for (int i = 0; i < 16; ++i) {
+            domain.nowUnits += 1;
+            domain.executeTimedEventsAtNow();
+            if (domain.linkLineCLKHigh) {
+                break;
+            }
+        }
+        if (!domain.linkLineCLKHigh) {
+            std::cerr << "[IEC TEMPORAL] FAIL: CLK did not rise after analog slew budget" << std::endl;
+            assert(false);
+        }
+
+        for (const IecTemporalTraceEvent &ev : domain.getTemporalTrace()) {
+            if (ev.phase == IecTemporalPhase::CommitEdge &&
+                ev.edgeOwner == IecEdgeOwner::LineModel &&
+                ev.edgeCause == IecEdgeCause::AnalogSlew &&
+                ev.effectiveDelayTicks > 0) {
+                sawAnalogSlewCommit = true;
+                break;
+            }
+        }
+        if (!sawAnalogSlewCommit) {
+            std::cerr << "[IEC TEMPORAL] FAIL: missing AnalogSlew commit metadata in analog solver test" << std::endl;
             assert(false);
         }
     }

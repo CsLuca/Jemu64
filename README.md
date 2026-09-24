@@ -160,6 +160,8 @@ Notes:
 - `physical-l6` enables the minimal line model path (release/min-pulse behavior) with conservative defaults.
 - `IEC_PROFILE` selects baseline line/timing presets (schema and baseline JSON files are under `config/iec_profiles/`).
 - Current loader applies line parameters + rx setup/hold + timeout hysteresis when profile data is available.
+- Phase1 continuous solver (physical-l6): profile `analog` block can enable a lightweight RC-style continuous edge slew model (`rise_tau_ticks`/`fall_tau_ticks` + hysteretic thresholds).
+- Runtime overrides for analog solver: `IEC_CONTINUOUS_LINE_SOLVER`, `IEC_ANALOG_VDD_MILLI`, `IEC_ANALOG_RISE_THRESHOLD_MILLI`, `IEC_ANALOG_FALL_THRESHOLD_MILLI`, `IEC_ANALOG_RISE_TAU_UNITS`, `IEC_ANALOG_FALL_TAU_UNITS`.
 
 ## Level6 Physical Gate (Experimental)
 

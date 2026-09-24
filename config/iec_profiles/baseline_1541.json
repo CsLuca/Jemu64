@@ -12,5 +12,13 @@
   },
   "timeout": {
     "hysteresis_ticks": 16
+  },
+  "analog": {
+    "enabled": true,
+    "vdd_milli": 1000,
+    "rise_threshold_milli": 632,
+    "fall_threshold_milli": 368,
+    "rise_tau_ticks": 2,
+    "fall_tau_ticks": 1
   }
 }
