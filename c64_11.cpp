@@ -6308,6 +6308,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/iec_turnaround_arbitration_tests.hpp"
 
+#include "tests/iec_multilistener_between_bytes_tests.hpp"
+
 #include "drive1541_physical/drive_via_domain.cpp"
 #include "drive1541_physical/gcr_codec.cpp"
 #include "drive1541_physical/bitcell_timing_model.cpp"
@@ -8716,6 +8718,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runIecTopologyPropagationTests();
     runIecSpecTimingWindowTests();
     runIecTurnaroundArbitrationTests();
+    runIecMultiListenerBetweenBytesTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

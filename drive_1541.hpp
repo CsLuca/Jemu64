@@ -429,6 +429,7 @@ public:
     uint32_t iecRxIdleTicks = 0;
     uint32_t iecTxIdleTicks = 0;
     uint32_t iecEoiWaitTicks = 0;
+    uint32_t iecTalkBetweenBytesReadyTicks = 0;
     uint32_t iecAtnResponseWaitTicks = 0;
     uint32_t iecDeviceNotPresentWaitTicks = 0;
     uint32_t iecSerialTimeoutHysteresisTicks = IEC_TIMEOUT_HYSTERESIS_TICKS;
@@ -2633,6 +2634,7 @@ public:
         iecRxIdleTicks = 0;
         iecTxIdleTicks = 0;
         iecEoiWaitTicks = 0;
+        iecTalkBetweenBytesReadyTicks = 0;
         iecAtnResponseWaitTicks = 0;
         iecDeviceNotPresentWaitTicks = 0;
         iecRxTimeoutCount = 0;
@@ -3281,6 +3283,7 @@ public:
             iecEoiPendingAck = false;
             iecEoiAckLowSeen = false;
             iecEoiWaitTicks = 0;
+            iecTalkBetweenBytesReadyTicks = 0;
             iecSerialPullDATA = false;
         }
 
@@ -3507,6 +3510,7 @@ public:
             iecTxCurrentIsEoi = false;
             iecEoiPendingAck = false;
             iecEoiAckLowSeen = false;
+            iecTalkBetweenBytesReadyTicks = 0;
         } else {
             if (enteringTalkData) {
                 iecTalkFrameArmed = true;
@@ -3520,11 +3524,19 @@ public:
                 iecTalkStartByte = iecTxQueue.front();
                 iecTalkStartIsEoi = (iecTxQueue.size() == 1);
                 iecSerialPullDATA = false;
+                iecTalkBetweenBytesReadyTicks = 0;
             }
             if (!iecTalkStartPending && !iecTxByteActive && !iecEoiPendingAck && !iecTxQueue.empty() && talkChannelConfirmed) {
-                iecTalkStartPending = true;
-                iecTalkStartByte = iecTxQueue.front();
-                iecTalkStartIsEoi = (iecTxQueue.size() == 1);
+                const uint32_t betweenBytesBudget = (iecDeviceBetweenBytesTicks == 0) ? 1u : iecDeviceBetweenBytesTicks;
+                if (iecTalkBetweenBytesReadyTicks < betweenBytesBudget) {
+                    iecTalkBetweenBytesReadyTicks++;
+                }
+                if (iecTalkBetweenBytesReadyTicks >= betweenBytesBudget) {
+                    iecTalkStartPending = true;
+                    iecTalkStartByte = iecTxQueue.front();
+                    iecTalkStartIsEoi = (iecTxQueue.size() == 1);
+                    iecTalkBetweenBytesReadyTicks = 0;
+                }
             }
             if (iecKernelCompatForceTalkOnIcrSerial && enteringTalkData && iecTxQueue.empty() && iecDirectoryStubPrepared) {
                 buildDirectoryStubPayload();
@@ -3549,6 +3561,7 @@ public:
                             iecTxBitCount = 0;
                             iecTxByteActive = true;
                             iecTxCurrentIsEoi = lastByte;
+                            iecTalkBetweenBytesReadyTicks = 0;
                             startedTxOnFalling = true;
                         } else {
                             iecSerialPullDATA = false;
@@ -3563,6 +3576,7 @@ public:
                         iecTxBitCount = 0;
                         iecTxByteActive = true;
                         iecTxCurrentIsEoi = lastByte;
+                        iecTalkBetweenBytesReadyTicks = 0;
                         startedTxOnFalling = true;
                     }
 
