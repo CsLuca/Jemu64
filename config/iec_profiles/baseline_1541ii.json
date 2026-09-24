@@ -1,0 +1,17 @@
+{
+  "profile_id": "baseline_1541ii",
+  "base": "baseline_1541c",
+  "model_mode": "physical-l6",
+  "line": {
+    "atn": { "release_delay_ticks": 1, "min_low_pulse_ticks": 1 },
+    "clk": { "release_delay_ticks": 1, "min_low_pulse_ticks": 1 },
+    "data": { "release_delay_ticks": 1, "min_low_pulse_ticks": 1 }
+  },
+  "rx": {
+    "setup_ticks": 1,
+    "hold_ticks": 0
+  },
+  "timeout": {
+    "hysteresis_ticks": 16
+  }
+}

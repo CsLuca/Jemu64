@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jemu64.local/schemas/iec_profile.schema.json",
+  "title": "Jemu64 IEC Physical Profile",
+  "type": "object",
+  "required": ["profile_id", "line", "model_mode"],
+  "properties": {
+    "profile_id": { "type": "string", "minLength": 1 },
+    "base": { "type": "string" },
+    "model_mode": {
+      "type": "string",
+      "enum": ["fast", "strict", "physical-l6"]
+    },
+    "line": {
+      "type": "object",
+      "required": ["atn", "clk", "data"],
+      "properties": {
+        "atn": {
+          "type": "object",
+          "required": ["release_delay_ticks", "min_low_pulse_ticks"],
+          "properties": {
+            "release_delay_ticks": { "type": "integer", "minimum": 0 },
+            "min_low_pulse_ticks": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "clk": {
+          "type": "object",
+          "required": ["release_delay_ticks", "min_low_pulse_ticks"],
+          "properties": {
+            "release_delay_ticks": { "type": "integer", "minimum": 0 },
+            "min_low_pulse_ticks": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "data": {
+          "type": "object",
+          "required": ["release_delay_ticks", "min_low_pulse_ticks"],
+          "properties": {
+            "release_delay_ticks": { "type": "integer", "minimum": 0 },
+            "min_low_pulse_ticks": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "rx": {
+      "type": "object",
+      "properties": {
+        "setup_ticks": { "type": "integer", "minimum": 0 },
+        "hold_ticks": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "timeout": {
+      "type": "object",
+      "properties": {
+        "hysteresis_ticks": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

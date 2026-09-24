@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <cctype>
 #include <cstdlib>
 #include <functional>
+#include <string>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -65,6 +67,12 @@ enum class IecEdgeCause : uint8_t {
     MinPulse = 3
 };
 
+enum class IecModelMode : uint8_t {
+    Fast = 0,
+    Strict = 1,
+    PhysicalL6 = 2
+};
+
 struct IecTemporalTraceEvent {
     uint64_t timestamp = 0;
     uint64_t sequence = 0;
@@ -75,6 +83,13 @@ struct IecTemporalTraceEvent {
     bool atnHigh = true;
     bool clkHigh = true;
     bool dataHigh = true;
+};
+
+struct IecRuntimeTelemetry {
+    uint64_t tickCalls = 0;
+    uint64_t executedTimedEvents = 0;
+    uint64_t commitEdges = 0;
+    IecModelMode modelMode = IecModelMode::Fast;
 };
 
 struct IecLineModelState {
@@ -695,6 +710,10 @@ struct IecBusDomain {
     bool linkLineDATAHigh = true;
 
     std::priority_queue<TimedEvent, std::vector<TimedEvent>, TimedEventCompare> events;
+    IecModelMode modelMode = IecModelMode::Fast;
+    std::string activeIecProfile = "default";
+    uint64_t runtimeTickCalls = 0;
+    uint64_t runtimeExecutedTimedEvents = 0;
 
     IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
         : polarity(p) {
@@ -722,6 +741,20 @@ struct IecBusDomain {
     }
 
     void initializeFromEnvironment() {
+        if (const char *v = std::getenv("IEC_MODEL_MODE")) {
+            std::string mode = v;
+            for (char &c : mode) {
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            if (mode == "strict") {
+                modelMode = IecModelMode::Strict;
+            } else if (mode == "physical-l6" || mode == "physical_l6" || mode == "physical") {
+                modelMode = IecModelMode::PhysicalL6;
+            } else {
+                modelMode = IecModelMode::Fast;
+            }
+        }
+
         if (const char *driveHzEnv = std::getenv("IEC_DRIVE_HALF_HZ")) {
             const unsigned long long parsed = std::strtoull(driveHzEnv, nullptr, 10);
             if (parsed > 0ULL) {
@@ -767,6 +800,65 @@ struct IecBusDomain {
         if (std::getenv("IEC_TEMPORAL_DEBUG") != nullptr) {
             temporalDebugEnabled = true;
         }
+
+        if (modelMode == IecModelMode::PhysicalL6) {
+            lineModelEnabled = true;
+            if (lineAtnReleaseDelayUnits == 0) {
+                lineAtnReleaseDelayUnits = 1;
+            }
+            if (lineClkReleaseDelayUnits == 0) {
+                lineClkReleaseDelayUnits = 1;
+            }
+            if (lineDataReleaseDelayUnits == 0) {
+                lineDataReleaseDelayUnits = 1;
+            }
+            if (lineAtnMinLowPulseUnits == 0) {
+                lineAtnMinLowPulseUnits = 1;
+            }
+            if (lineClkMinLowPulseUnits == 0) {
+                lineClkMinLowPulseUnits = 1;
+            }
+            if (lineDataMinLowPulseUnits == 0) {
+                lineDataMinLowPulseUnits = 1;
+            }
+        }
+
+        if (const char *profileEnv = std::getenv("IEC_PROFILE")) {
+            std::string profile = profileEnv;
+            std::string key = profile;
+            for (char &c : key) {
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            if (key == "baseline_1541") {
+                activeIecProfile = "baseline_1541";
+                lineModelEnabled = true;
+                lineAtnReleaseDelayUnits = 1;
+                lineClkReleaseDelayUnits = 1;
+                lineDataReleaseDelayUnits = 1;
+                lineAtnMinLowPulseUnits = 1;
+                lineClkMinLowPulseUnits = 2;
+                lineDataMinLowPulseUnits = 2;
+            } else if (key == "baseline_1541c") {
+                activeIecProfile = "baseline_1541c";
+                lineModelEnabled = true;
+                lineAtnReleaseDelayUnits = 1;
+                lineClkReleaseDelayUnits = 1;
+                lineDataReleaseDelayUnits = 1;
+                lineAtnMinLowPulseUnits = 1;
+                lineClkMinLowPulseUnits = 1;
+                lineDataMinLowPulseUnits = 1;
+            } else if (key == "baseline_1541ii") {
+                activeIecProfile = "baseline_1541ii";
+                lineModelEnabled = true;
+                lineAtnReleaseDelayUnits = 1;
+                lineClkReleaseDelayUnits = 1;
+                lineDataReleaseDelayUnits = 1;
+                lineAtnMinLowPulseUnits = 1;
+                lineClkMinLowPulseUnits = 1;
+                lineDataMinLowPulseUnits = 1;
+            }
+        }
+
         if (std::getenv("IEC_SUBCYCLE_LINE_MODEL") != nullptr) {
             lineModelEnabled = true;
             lineAtnReleaseDelayUnits = 1;
@@ -825,6 +917,23 @@ struct IecBusDomain {
 
     uint64_t getTemporalDoubleCommitSameTimestampCount() const {
         return temporalDoubleCommitSameTimestamp;
+    }
+
+    IecModelMode getModelMode() const {
+        return modelMode;
+    }
+
+    const std::string &getActiveIecProfile() const {
+        return activeIecProfile;
+    }
+
+    IecRuntimeTelemetry getRuntimeTelemetry() const {
+        IecRuntimeTelemetry t;
+        t.tickCalls = runtimeTickCalls;
+        t.executedTimedEvents = runtimeExecutedTimedEvents;
+        t.commitEdges = temporalCommitCount;
+        t.modelMode = modelMode;
+        return t;
     }
 
     void attachDrive(IIecDevice &drive) {
@@ -1177,6 +1286,7 @@ struct IecBusDomain {
         while (!events.empty() && events.top().when <= nowUnits) {
             const TimedEvent ev = events.top();
             events.pop();
+            runtimeExecutedTimedEvents++;
             if (ev.callback) {
                 ev.callback();
             }
@@ -1231,6 +1341,7 @@ struct IecBusDomain {
     }
 
     void tickHalfCycle() {
+        runtimeTickCalls++;
         const uint64_t targetC64Tick = c64HalfTicks + 1;
         while (c64HalfTicks < targetC64Tick) {
             uint64_t nextTime = nextC64Units;
