@@ -1,5 +1,62 @@
 # Jemu64
 
+## Emulator Console: Real-World IEC Cable Workflow
+
+The emulator console now supports an explicit cable-first workflow matching physical setup:
+
+1. create the IEC cable object,
+2. connect host side (C64),
+3. connect one or more drive endpoints,
+4. power on and run steps.
+
+Enable the console in PowerShell:
+
+```powershell
+$env:JEMU_EMULATOR_CONSOLE = "1"
+.\c64_11.exe
+```
+
+Then run this script inside `jemu>`:
+
+```text
+CABLE CREATE IEC0
+CABLE IEC0 CONNECT HOST C64
+CABLE IEC0 CONNECT DRIVE 8
+DRIVE 8 ATTACH "C:\path\to\disk.d64"
+DRIVE 8 POWER ON
+C64 ON
+STEP 5000
+CABLE IEC0 STATE
+DRIVE 8 STATE
+STATUS
+```
+
+Hotplug example:
+
+```text
+CABLE IEC0 DISCONNECT DRIVE 8
+STEP 500
+CABLE IEC0 CONNECT DRIVE 8
+STEP 2000
+STATUS
+```
+
+Orderly shutdown:
+
+```text
+C64 OFF
+DRIVE 8 POWER OFF
+CABLE IEC0 DISCONNECT DRIVE 8
+CABLE IEC0 DISCONNECT HOST C64
+CABLE IEC0 STATE
+QUIT
+```
+
+Notes:
+
+- Legacy command `DRIVE <unit> CABLE ON|OFF` is still available.
+- Recommended workflow is `CABLE ... CONNECT/DISCONNECT` for explicit host/device cable semantics.
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.
