@@ -62,7 +62,28 @@
         "rise_threshold_milli": { "type": "integer", "minimum": 0 },
         "fall_threshold_milli": { "type": "integer", "minimum": 0 },
         "rise_tau_ticks": { "type": "integer", "minimum": 1 },
-        "fall_tau_ticks": { "type": "integer", "minimum": 1 }
+        "fall_tau_ticks": { "type": "integer", "minimum": 1 },
+        "node": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "object",
+              "properties": {
+                "skew_ticks": { "type": "integer", "minimum": 0 },
+                "rise_tau_ticks": { "type": "integer", "minimum": 1 },
+                "fall_tau_ticks": { "type": "integer", "minimum": 1 }
+              }
+            },
+            "drive": {
+              "type": "object",
+              "properties": {
+                "skew_ticks": { "type": "integer", "minimum": 0 },
+                "rise_tau_ticks": { "type": "integer", "minimum": 1 },
+                "fall_tau_ticks": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
       }
     }
   }

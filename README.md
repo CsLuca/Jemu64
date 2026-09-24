@@ -162,6 +162,7 @@ Notes:
 - Current loader applies line parameters + rx setup/hold + timeout hysteresis when profile data is available.
 - Phase1 continuous solver (physical-l6): profile `analog` block can enable a lightweight RC-style continuous edge slew model (`rise_tau_ticks`/`fall_tau_ticks` + hysteretic thresholds).
 - Runtime overrides for analog solver: `IEC_CONTINUOUS_LINE_SOLVER`, `IEC_ANALOG_VDD_MILLI`, `IEC_ANALOG_RISE_THRESHOLD_MILLI`, `IEC_ANALOG_FALL_THRESHOLD_MILLI`, `IEC_ANALOG_RISE_TAU_UNITS`, `IEC_ANALOG_FALL_TAU_UNITS`.
+- Phase2 node-level skew/edge-shape: `analog.node.host` and `analog.node.drive` can set per-node `skew_ticks` and `rise_tau_ticks`/`fall_tau_ticks` (with runtime overrides `IEC_NODE_HOST_SKEW_UNITS`, `IEC_NODE_DRIVE_SKEW_UNITS`, `IEC_NODE_HOST_RISE_TAU_UNITS`, `IEC_NODE_HOST_FALL_TAU_UNITS`, `IEC_NODE_DRIVE_RISE_TAU_UNITS`, `IEC_NODE_DRIVE_FALL_TAU_UNITS`).
 
 ## Level6 Physical Gate (Experimental)
 

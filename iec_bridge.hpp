@@ -115,6 +115,12 @@ struct IecProfileConfig {
     uint64_t analogFallThresholdMilli = 368;
     uint64_t analogRiseTauTicks = 1;
     uint64_t analogFallTauTicks = 1;
+    uint64_t hostSkewTicks = 0;
+    uint64_t driveSkewTicks = 0;
+    uint64_t hostRiseTauTicks = 1;
+    uint64_t hostFallTauTicks = 1;
+    uint64_t driveRiseTauTicks = 1;
+    uint64_t driveFallTauTicks = 1;
 };
 
 static bool iecJsonExtractBool(const std::string &json, const std::string &key, bool &out) {
@@ -287,6 +293,22 @@ static bool loadIecProfileFromJsonFile(const std::string &path, IecProfileConfig
         iecJsonExtractUInt(analogObj, "fall_threshold_milli", cfg.analogFallThresholdMilli);
         iecJsonExtractUInt(analogObj, "rise_tau_ticks", cfg.analogRiseTauTicks);
         iecJsonExtractUInt(analogObj, "fall_tau_ticks", cfg.analogFallTauTicks);
+
+        std::string nodeObj;
+        if (iecJsonExtractObjectSlice(analogObj, "node", nodeObj)) {
+            std::string hostObj;
+            if (iecJsonExtractObjectSlice(nodeObj, "host", hostObj)) {
+                iecJsonExtractUInt(hostObj, "skew_ticks", cfg.hostSkewTicks);
+                iecJsonExtractUInt(hostObj, "rise_tau_ticks", cfg.hostRiseTauTicks);
+                iecJsonExtractUInt(hostObj, "fall_tau_ticks", cfg.hostFallTauTicks);
+            }
+            std::string driveObj;
+            if (iecJsonExtractObjectSlice(nodeObj, "drive", driveObj)) {
+                iecJsonExtractUInt(driveObj, "skew_ticks", cfg.driveSkewTicks);
+                iecJsonExtractUInt(driveObj, "rise_tau_ticks", cfg.driveRiseTauTicks);
+                iecJsonExtractUInt(driveObj, "fall_tau_ticks", cfg.driveFallTauTicks);
+            }
+        }
     }
 
     cfg.loaded = true;
@@ -301,6 +323,7 @@ struct IecLineModelState {
     uint64_t riseEventGeneration = 0;
     double analogVoltageMilli = 1000.0;
     uint64_t analogLastUpdateUnits = 0;
+    IecEdgeOwner sourceOwner = IecEdgeOwner::None;
 };
 
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity);
@@ -906,6 +929,12 @@ struct IecBusDomain {
     uint64_t analogFallThresholdMilli = 368;
     uint64_t analogRiseTauUnits = 1;
     uint64_t analogFallTauUnits = 1;
+    uint64_t nodeHostSkewUnits = 0;
+    uint64_t nodeDriveSkewUnits = 0;
+    uint64_t nodeHostRiseTauUnits = 1;
+    uint64_t nodeHostFallTauUnits = 1;
+    uint64_t nodeDriveRiseTauUnits = 1;
+    uint64_t nodeDriveFallTauUnits = 1;
     uint64_t lineAtnReleaseDelayUnits = 0;
     uint64_t lineClkReleaseDelayUnits = 0;
     uint64_t lineDataReleaseDelayUnits = 0;
@@ -1071,6 +1100,12 @@ struct IecBusDomain {
                 analogFallThresholdMilli = cfg.analogFallThresholdMilli;
                 analogRiseTauUnits = cfg.analogRiseTauTicks;
                 analogFallTauUnits = cfg.analogFallTauTicks;
+                nodeHostSkewUnits = cfg.hostSkewTicks;
+                nodeDriveSkewUnits = cfg.driveSkewTicks;
+                nodeHostRiseTauUnits = cfg.hostRiseTauTicks;
+                nodeHostFallTauUnits = cfg.hostFallTauTicks;
+                nodeDriveRiseTauUnits = cfg.driveRiseTauTicks;
+                nodeDriveFallTauUnits = cfg.driveFallTauTicks;
             }
         }
 
@@ -1120,6 +1155,24 @@ struct IecBusDomain {
         if (const char *v = std::getenv("IEC_ANALOG_FALL_TAU_UNITS")) {
             analogFallTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
         }
+        if (const char *v = std::getenv("IEC_NODE_HOST_SKEW_UNITS")) {
+            nodeHostSkewUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_NODE_DRIVE_SKEW_UNITS")) {
+            nodeDriveSkewUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_NODE_HOST_RISE_TAU_UNITS")) {
+            nodeHostRiseTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_NODE_HOST_FALL_TAU_UNITS")) {
+            nodeHostFallTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_NODE_DRIVE_RISE_TAU_UNITS")) {
+            nodeDriveRiseTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
+        if (const char *v = std::getenv("IEC_NODE_DRIVE_FALL_TAU_UNITS")) {
+            nodeDriveFallTauUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
+        }
 
         if (analogVddMilli == 0) {
             analogVddMilli = 1000;
@@ -1135,6 +1188,18 @@ struct IecBusDomain {
         }
         if (analogFallTauUnits == 0) {
             analogFallTauUnits = 1;
+        }
+        if (nodeHostRiseTauUnits == 0) {
+            nodeHostRiseTauUnits = 1;
+        }
+        if (nodeHostFallTauUnits == 0) {
+            nodeHostFallTauUnits = 1;
+        }
+        if (nodeDriveRiseTauUnits == 0) {
+            nodeDriveRiseTauUnits = 1;
+        }
+        if (nodeDriveFallTauUnits == 0) {
+            nodeDriveFallTauUnits = 1;
         }
     }
 
@@ -1249,9 +1314,9 @@ struct IecBusDomain {
         lineAtnMinLowPulseUnits = atnMinLow;
         lineClkMinLowPulseUnits = clkMinLow;
         lineDataMinLowPulseUnits = dataMinLow;
-        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
-        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
-        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
     }
 
     void configureContinuousLineSolverForTest(bool enabled,
@@ -1272,6 +1337,20 @@ struct IecBusDomain {
         atnModel.analogLastUpdateUnits = nowUnits;
         clkModel.analogLastUpdateUnits = nowUnits;
         dataModel.analogLastUpdateUnits = nowUnits;
+    }
+
+    void configureNodeTimingForTest(uint64_t hostSkew,
+                                    uint64_t driveSkew,
+                                    uint64_t hostRiseTau,
+                                    uint64_t hostFallTau,
+                                    uint64_t driveRiseTau,
+                                    uint64_t driveFallTau) {
+        nodeHostSkewUnits = hostSkew;
+        nodeDriveSkewUnits = driveSkew;
+        nodeHostRiseTauUnits = (hostRiseTau == 0) ? 1 : hostRiseTau;
+        nodeHostFallTauUnits = (hostFallTau == 0) ? 1 : hostFallTau;
+        nodeDriveRiseTauUnits = (driveRiseTau == 0) ? 1 : driveRiseTau;
+        nodeDriveFallTauUnits = (driveFallTau == 0) ? 1 : driveFallTau;
     }
 
     uint64_t getCurrentTimeUnits() const {
@@ -1395,9 +1474,9 @@ struct IecBusDomain {
         linkLineATNHigh = lines.atnHigh;
         linkLineCLKHigh = lines.clkHigh;
         linkLineDATAHigh = lines.dataHigh;
-        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
-        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
-        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits};
+        atnModel = IecLineModelState{linkLineATNHigh, nowUnits, false, 0, 0, linkLineATNHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
+        clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0, 0, linkLineCLKHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
+        dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0, 0, linkLineDATAHigh ? static_cast<double>(analogVddMilli) : 0.0, nowUnits, IecEdgeOwner::None};
         propagateLinesToDrives();
         if (hostEndpoint) {
             hostEndpoint->applyInputs(polarity, sig, lines);
@@ -1435,6 +1514,16 @@ struct IecBusDomain {
         return target + (current - target) * k;
     }
 
+    uint64_t resolveTauForOwner(IecEdgeOwner owner, bool rising) const {
+        if (owner == IecEdgeOwner::C64) {
+            return rising ? nodeHostRiseTauUnits : nodeHostFallTauUnits;
+        }
+        if (owner == IecEdgeOwner::Drive) {
+            return rising ? nodeDriveRiseTauUnits : nodeDriveFallTauUnits;
+        }
+        return rising ? analogRiseTauUnits : analogFallTauUnits;
+    }
+
     bool applyLineTimingModel(bool desiredHigh,
                               IecLineModelState &line,
                               uint64_t releaseDelay,
@@ -1450,13 +1539,17 @@ struct IecBusDomain {
         if (!desiredHigh) {
             line.riseEventPending = false;
             line.riseEventGeneration++;
+            if (pendingEdgeOwner == IecEdgeOwner::C64 || pendingEdgeOwner == IecEdgeOwner::Drive) {
+                line.sourceOwner = pendingEdgeOwner;
+            }
             if (line.levelHigh) {
                 line.levelHigh = false;
                 line.lowSince = nowUnits;
             }
             if (continuousLineSolverEnabled) {
                 const uint64_t delta = (nowUnits > line.analogLastUpdateUnits) ? (nowUnits - line.analogLastUpdateUnits) : 0;
-                line.analogVoltageMilli = decayToward(line.analogVoltageMilli, 0.0, delta, analogFallTauUnits);
+                const uint64_t tau = resolveTauForOwner(line.sourceOwner, false);
+                line.analogVoltageMilli = decayToward(line.analogVoltageMilli, 0.0, delta, tau);
                 line.analogLastUpdateUnits = nowUnits;
             }
             return false;
@@ -1480,10 +1573,15 @@ struct IecBusDomain {
                 return true;
             }
             const uint64_t delta = (nowUnits > line.analogLastUpdateUnits) ? (nowUnits - line.analogLastUpdateUnits) : 0;
+            IecEdgeOwner riseOwner = line.sourceOwner;
+            if (pendingEdgeOwner == IecEdgeOwner::C64 || pendingEdgeOwner == IecEdgeOwner::Drive) {
+                riseOwner = pendingEdgeOwner;
+            }
+            const uint64_t riseTau = resolveTauForOwner(riseOwner, true);
             line.analogVoltageMilli = decayToward(line.analogVoltageMilli,
                                                   static_cast<double>(analogVddMilli),
                                                   delta,
-                                                  analogRiseTauUnits);
+                                                  riseTau);
             line.analogLastUpdateUnits = nowUnits;
 
             if (line.analogVoltageMilli >= static_cast<double>(analogRiseThresholdMilli)) {
@@ -1509,7 +1607,7 @@ struct IecBusDomain {
             if (ratio >= 1.0) {
                 ratio = 0.999999;
             }
-            uint64_t tCross = static_cast<uint64_t>(std::ceil(-static_cast<double>(analogRiseTauUnits) * std::log(ratio)));
+            uint64_t tCross = static_cast<uint64_t>(std::ceil(-static_cast<double>(riseTau) * std::log(ratio)));
             if (tCross == 0) {
                 tCross = 1;
             }
@@ -1524,7 +1622,7 @@ struct IecBusDomain {
     }
 
     void scheduleBusSettleFromC64Pulls(bool pullATN, bool pullCLK, bool pullDATA) {
-        const uint64_t delay = linkDelayWithJitter(linkLatencyC64ToBus);
+        const uint64_t delay = linkDelayWithJitter(linkLatencyC64ToBus + nodeHostSkewUnits);
         scheduleEventAfter(delay, [this, pullATN, pullCLK, pullDATA, delay]() {
             pendingEdgeOwner = IecEdgeOwner::C64;
             pendingEdgeCause = IecEdgeCause::PullChange;
@@ -1537,7 +1635,7 @@ struct IecBusDomain {
     }
 
     void scheduleBusSettleFromDrivePulls(bool pullCLK, bool pullDATA) {
-        const uint64_t delay = linkDelayWithJitter(linkLatencyDriveToBus);
+        const uint64_t delay = linkDelayWithJitter(linkLatencyDriveToBus + nodeDriveSkewUnits);
         scheduleEventAfter(delay, [this, pullCLK, pullDATA, delay]() {
             pendingEdgeOwner = IecEdgeOwner::Drive;
             pendingEdgeCause = IecEdgeCause::PullChange;

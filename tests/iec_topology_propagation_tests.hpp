@@ -93,6 +93,44 @@ static uint64_t firstDelayedLineModelCommit(const std::vector<IecTemporalTraceEv
     return 0;
 }
 
+static uint64_t firstDriveOwnedCommitDelay(const std::vector<IecTemporalTraceEvent> &trace) {
+    for (const IecTemporalTraceEvent &ev : trace) {
+        if (ev.phase == IecTemporalPhase::CommitEdge &&
+            ev.edgeOwner == IecEdgeOwner::Drive &&
+            ev.edgeCause == IecEdgeCause::PullChange) {
+            return ev.effectiveDelayTicks;
+        }
+    }
+    return 0;
+}
+
+static uint64_t runDriveSkewCommitDelay(uint64_t driveSkewUnits) {
+    StaticHostEndpoint host;
+    PullOnlyDeviceEndpoint d8;
+
+    IecCable cable;
+    cable.connectHost(host);
+    cable.connectDeviceEndpoint(d8);
+    IecBusDomain *domain = cable.bus();
+    if (domain == nullptr) {
+        return 0;
+    }
+
+    domain->setTemporalDebugEnabled(true);
+    domain->clearTemporalTrace();
+    domain->configureDomainRatesForTest(985248u, 985248u, 0, 0u, 0);
+    domain->configureLineModelForTest(true, 1, 1, 1, 1, 1, 1);
+    domain->configureContinuousLineSolverForTest(true, 1000, 632, 368, 2, 1);
+    domain->configureNodeTimingForTest(0, driveSkewUnits, 2, 1, 2, 1);
+
+    d8.pullClk = true;
+    for (int i = 0; i < 16; ++i) {
+        cable.tickHalfCycle();
+    }
+
+    return firstDriveOwnedCommitDelay(domain->getTemporalTrace());
+}
+
 } // namespace iec_topology_tests_detail
 
 static void runIecTopologyPropagationTests() {
@@ -132,8 +170,24 @@ static void runIecTopologyPropagationTests() {
         assert(false);
     }
 
+    const uint64_t skew0Delay = runDriveSkewCommitDelay(0);
+    const uint64_t skew3Delay = runDriveSkewCommitDelay(3);
+    if (skew0Delay == 0 || skew3Delay == 0) {
+        std::cerr << "[IEC TOPOLOGY] FAIL: missing drive-owned delay metadata for node skew oracle" << std::endl;
+        assert(false);
+    }
+    if (skew3Delay <= skew0Delay) {
+        std::cerr << "[IEC TOPOLOGY] FAIL: expected node drive skew to increase drive-owned commit delay"
+                  << " skew0=" << skew0Delay
+                  << " skew3=" << skew3Delay
+                  << std::endl;
+        assert(false);
+    }
+
     std::cerr << "[IEC TOPOLOGY] PASS: per-segment skew and propagation oracle"
               << " short_delay=" << shortDelay
               << " long_delay=" << longDelay
+              << " drive_skew0=" << skew0Delay
+              << " drive_skew3=" << skew3Delay
               << std::endl;
 }

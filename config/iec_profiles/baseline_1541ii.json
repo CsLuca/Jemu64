@@ -20,6 +20,18 @@
     "rise_threshold_milli": 610,
     "fall_threshold_milli": 350,
     "rise_tau_ticks": 1,
-    "fall_tau_ticks": 1
+    "fall_tau_ticks": 1,
+    "node": {
+      "host": {
+        "skew_ticks": 0,
+        "rise_tau_ticks": 1,
+        "fall_tau_ticks": 1
+      },
+      "drive": {
+        "skew_ticks": 0,
+        "rise_tau_ticks": 1,
+        "fall_tau_ticks": 1
+      }
+    }
   }
 }
