@@ -39,6 +39,47 @@ struct TestIecDevice : public IIecDevice {
     }
 };
 
+struct TestIecHostEndpoint : public IIecHostEndpoint {
+    bool pullAtn = false;
+    bool pullClk = false;
+    bool pullData = false;
+    bool observedAtn = true;
+    bool observedClk = true;
+    bool observedData = true;
+    bool serialCntHigh = true;
+    bool serialSpHigh = true;
+    std::uint64_t tickCount = 0;
+
+    IecC64Signals deriveSignals(const IecBridgePolarity &) const override {
+        IecC64Signals s;
+        s.c64PullATN = pullAtn;
+        s.c64PullCLK = pullClk;
+        s.c64PullDATA = pullData;
+        s.c64AtnDriven = true;
+        s.c64ClkDriven = true;
+        s.c64DataDriven = true;
+        return s;
+    }
+
+    void applyInputs(const IecBridgePolarity &, const IecC64Signals &, const IecResolvedLines &lines) override {
+        observedAtn = lines.atnHigh;
+        observedClk = lines.clkHigh;
+        observedData = lines.dataHigh;
+    }
+
+    void setSerialPins(bool cntHigh, bool spHigh) override {
+        serialCntHigh = cntHigh;
+        serialSpHigh = spHigh;
+    }
+
+    void tickHalfCycle() override {
+        tickCount++;
+        pullAtn = ((tickCount % 17u) == 0u);
+        pullClk = ((tickCount % 5u) == 0u);
+        pullData = ((tickCount % 7u) == 0u);
+    }
+};
+
 static std::vector<IecTemporalTraceEvent> runTrace(std::uint64_t &doubleCommitCount) {
     CIA6526 cia2;
     TestIecDevice drive;
@@ -147,6 +188,51 @@ static void runIecTemporalContractTests() {
 
         (void)sawCommitFromC64;
         (void)sawModeledCommit;
+    }
+
+    {
+        TestIecHostEndpoint host;
+        TestIecDevice drive;
+        IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
+        IecBusDomain domain(host, drive, polarity);
+        domain.setTemporalDebugEnabled(true);
+        domain.clearTemporalTrace();
+        domain.configureDomainRatesForTest(985248u, 985248u, 0, 0u, 0);
+
+        for (int i = 0; i < 96; ++i) {
+            domain.tickHalfCycle();
+        }
+
+        bool sawHostOwnedCommit = false;
+        bool sawDriveOwnedCommit = false;
+        bool sawMonotonicSeq = true;
+        std::uint64_t lastSeq = 0;
+        bool first = true;
+        for (const IecTemporalTraceEvent &ev : domain.getTemporalTrace()) {
+            if (!first && ev.sequence <= lastSeq) {
+                sawMonotonicSeq = false;
+                break;
+            }
+            first = false;
+            lastSeq = ev.sequence;
+            if (ev.phase == IecTemporalPhase::CommitEdge) {
+                if (ev.edgeOwner == IecEdgeOwner::C64) {
+                    sawHostOwnedCommit = true;
+                }
+                if (ev.edgeOwner == IecEdgeOwner::Drive) {
+                    sawDriveOwnedCommit = true;
+                }
+            }
+        }
+
+        if (!sawMonotonicSeq) {
+            std::cerr << "[IEC TEMPORAL] FAIL: non-monotonic temporal sequence in autonomous host endpoint run" << std::endl;
+            assert(false);
+        }
+        if (!sawHostOwnedCommit || !sawDriveOwnedCommit) {
+            std::cerr << "[IEC TEMPORAL] FAIL: autonomous endpoint run missing host/drive owned commit edges" << std::endl;
+            assert(false);
+        }
     }
 
     std::cerr << "[IEC TEMPORAL] PASS: deterministic phase ordering (N=20) + no double-commit" << std::endl;

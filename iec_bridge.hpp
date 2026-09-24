@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -81,6 +82,41 @@ struct IecLineModelState {
     uint64_t lowSince = 0;
     bool riseEventPending = false;
     uint64_t riseEventWhen = 0;
+};
+
+struct IIecHostEndpoint {
+    virtual ~IIecHostEndpoint() {}
+    virtual IecC64Signals deriveSignals(const IecBridgePolarity &polarity) const = 0;
+    virtual void applyInputs(const IecBridgePolarity &polarity,
+                             const IecC64Signals &sig,
+                             const IecResolvedLines &lines) = 0;
+    virtual void setSerialPins(bool cntHigh, bool spHigh) = 0;
+    virtual void tickHalfCycle() = 0;
+};
+
+struct CiaIecHostEndpoint : public IIecHostEndpoint {
+    CIA6526 &cia2;
+
+    explicit CiaIecHostEndpoint(CIA6526 &cia)
+        : cia2(cia) {}
+
+    IecC64Signals deriveSignals(const IecBridgePolarity &polarity) const override {
+        return deriveIecC64Signals(cia2, polarity);
+    }
+
+    void applyInputs(const IecBridgePolarity &polarity,
+                     const IecC64Signals &sig,
+                     const IecResolvedLines &lines) override {
+        applyIecInputsToCia(cia2, polarity, sig, lines);
+    }
+
+    void setSerialPins(bool cntHigh, bool spHigh) override {
+        cia2.setSerialPins(cntHigh, spHigh);
+    }
+
+    void tickHalfCycle() override {
+        cia2.cycleCore.tickHalfCycle(cia2);
+    }
 };
 
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity) {
@@ -552,7 +588,8 @@ struct SharedIecClockDomain {
 };
 
 struct IecBusDomain {
-    CIA6526 &cia2;
+    IIecHostEndpoint *hostEndpoint = nullptr;
+    std::unique_ptr<IIecHostEndpoint> ownedHostEndpoint;
     IecBridgePolarity polarity;
     std::vector<IIecDevice *> attachedDrives;
     struct TimedEvent {
@@ -624,7 +661,20 @@ struct IecBusDomain {
     std::priority_queue<TimedEvent, std::vector<TimedEvent>, TimedEventCompare> events;
 
     IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
-        : cia2(c), polarity(p), attachedDrives{&primaryDrive} {
+        : polarity(p), attachedDrives{&primaryDrive} {
+        ownedHostEndpoint = std::unique_ptr<IIecHostEndpoint>(new CiaIecHostEndpoint(c));
+        hostEndpoint = ownedHostEndpoint.get();
+        initializeFromEnvironment();
+        bootstrapIecLink();
+    }
+
+    IecBusDomain(IIecHostEndpoint &host, IIecDevice &primaryDrive, const IecBridgePolarity &p)
+        : hostEndpoint(&host), polarity(p), attachedDrives{&primaryDrive} {
+        initializeFromEnvironment();
+        bootstrapIecLink();
+    }
+
+    void initializeFromEnvironment() {
         if (const char *driveHzEnv = std::getenv("IEC_DRIVE_HALF_HZ")) {
             const unsigned long long parsed = std::strtoull(driveHzEnv, nullptr, 10);
             if (parsed > 0ULL) {
@@ -697,8 +747,6 @@ struct IecBusDomain {
         if (const char *v = std::getenv("IEC_LINE_DATA_MIN_LOW_UNITS")) {
             lineDataMinLowPulseUnits = static_cast<uint64_t>(std::strtoull(v, nullptr, 10));
         }
-
-        bootstrapIecLink();
     }
 
     void setTemporalDebugEnabled(bool enabled) {
@@ -885,7 +933,7 @@ struct IecBusDomain {
     }
 
     void bootstrapIecLink() {
-        const IecC64Signals sig = deriveIecC64Signals(cia2, polarity);
+        const IecC64Signals sig = hostEndpoint ? hostEndpoint->deriveSignals(polarity) : IecC64Signals{};
         linkC64PullATN = sig.c64PullATN;
         linkC64PullCLK = sig.c64PullCLK;
         linkC64PullDATA = sig.c64PullDATA;
@@ -903,7 +951,9 @@ struct IecBusDomain {
         clkModel = IecLineModelState{linkLineCLKHigh, nowUnits, false, 0};
         dataModel = IecLineModelState{linkLineDATAHigh, nowUnits, false, 0};
         propagateLinesToDrives();
-        applyIecInputsToCia(cia2, polarity, sig, lines);
+        if (hostEndpoint) {
+            hostEndpoint->applyInputs(polarity, sig, lines);
+        }
     }
 
     void scheduleRiseReeval(IecLineModelState *line, uint64_t when, IecEdgeCause cause) {
@@ -1041,9 +1091,12 @@ struct IecBusDomain {
 
         const uint64_t toC64 = linkDelayWithJitter(linkLatencyBusToC64);
         scheduleEventAfter(toC64, [this]() {
-            const IecC64Signals sigNow = deriveIecC64Signals(cia2, polarity);
+            if (!hostEndpoint) {
+                return;
+            }
+            const IecC64Signals sigNow = hostEndpoint->deriveSignals(polarity);
             const IecResolvedLines linesNow = {linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh};
-            applyIecInputsToCia(cia2, polarity, sigNow, linesNow);
+            hostEndpoint->applyInputs(polarity, sigNow, linesNow);
         });
     }
 
@@ -1096,19 +1149,18 @@ struct IecBusDomain {
     }
 
     void tickC64DomainOnce() {
-        if (!c64DomainEnabled) {
+        if (!c64DomainEnabled || hostEndpoint == nullptr) {
             c64HalfTicks++;
             nextC64Units += C64_HALF_PERIOD_UNITS;
             return;
         }
 
-        const bool cntHigh = (cia2.praInput & 0x40) != 0;
-        const bool spHigh = (cia2.praInput & 0x80) != 0;
-        cia2.setSerialPins(cntHigh, spHigh);
+        const IecResolvedLines linesNow = {linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh};
+        hostEndpoint->setSerialPins(linesNow.clkHigh, linesNow.dataHigh);
 
-        const IecC64Signals pre = deriveIecC64Signals(cia2, polarity);
-        cia2.cycleCore.tickHalfCycle(cia2);
-        const IecC64Signals post = deriveIecC64Signals(cia2, polarity);
+        const IecC64Signals pre = hostEndpoint->deriveSignals(polarity);
+        hostEndpoint->tickHalfCycle();
+        const IecC64Signals post = hostEndpoint->deriveSignals(polarity);
 
         if (post.c64PullATN != pre.c64PullATN || post.c64PullCLK != pre.c64PullCLK || post.c64PullDATA != pre.c64PullDATA) {
             scheduleBusSettleFromC64Pulls(post.c64PullATN, post.c64PullCLK, post.c64PullDATA);
