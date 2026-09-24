@@ -96,3 +96,28 @@ Produced artifacts:
 
 - `level6_hardening_gate_metrics.json`
 - `level6_hardening_gate_runtime.csv`
+
+## Full Stack Gate (Daily/Nightly)
+
+Consolidated operational gate:
+
+- Script: `run_iec_full_stack_gate.ps1`
+- Profiles:
+  - `daily-fast`
+  - `nightly-strict`
+
+Examples:
+
+```powershell
+& ".\run_iec_full_stack_gate.ps1" -OperationalProfile daily-fast
+& ".\run_iec_full_stack_gate.ps1" -OperationalProfile nightly-strict
+```
+
+Default output folder:
+
+- `datasets/level6/quality_reports/full_stack_gate/`
+
+Produced artifacts:
+
+- `iec_full_stack_gate_metrics.json`
+- `iec_full_stack_gate_runtime.csv`

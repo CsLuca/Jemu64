@@ -305,6 +305,35 @@ Outputs:
 - `datasets/level6/quality_reports/daily_check/level6_daily_check_metrics.json`
 - `datasets/level6/quality_reports/daily_check/level6_daily_check_runtime.csv`
 
+## IEC Full Stack Gate (Operational Profiles)
+
+- Script: `run_iec_full_stack_gate.ps1`
+- Purpose:
+  - run one consolidated IEC pipeline including:
+    1. kernel IEC e2e,
+    2. Level5 cycle coupling,
+    3. dedicated 8->9 copy gate,
+    4. Level6 physical gate,
+    5. Level6 synthetic envelope gate,
+    6. Level6 hardening gate.
+
+Operational profiles:
+
+- `daily-fast`: fast cadence, strict portions skipped where supported.
+- `nightly-strict`: strict cadence end-to-end.
+
+Examples:
+
+```powershell
+& ".\run_iec_full_stack_gate.ps1" -OperationalProfile daily-fast
+& ".\run_iec_full_stack_gate.ps1" -OperationalProfile nightly-strict
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/full_stack_gate/iec_full_stack_gate_metrics.json`
+- `datasets/level6/quality_reports/full_stack_gate/iec_full_stack_gate_runtime.csv`
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.
