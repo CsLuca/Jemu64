@@ -8,6 +8,7 @@ param(
     [string]$OutputDir = "datasets/level6/quality_reports/hardening_gate",
     [double]$MaxRuntimeMultiplier = 2.0,
     [int]$MaxDriftLineTicks = 2,
+    [int]$MaxDriftTimingTicks = 64,
     [int]$MaxDriftTauTicks = 2,
     [int]$MaxDriftThresholdMilli = 80,
     [switch]$SkipStrict
@@ -72,8 +73,14 @@ function Compare-PathDelta {
     )
     $ref = Get-PathValue -Root $Reference -Path $Path
     $cur = Get-PathValue -Root $Current -Path $Path
-    if ($null -eq $ref -or $null -eq $cur) {
-        return [pscustomobject]@{ path = $Path; reference = $ref; current = $cur; delta = $null; budget = $Budget; pass = 0; issue = "missing_field" }
+    if ($null -eq $ref -and $null -eq $cur) {
+        return [pscustomobject]@{ path = $Path; reference = $ref; current = $cur; delta = $null; budget = $Budget; pass = 0; issue = "missing_field_both" }
+    }
+    if ($null -eq $ref -and $null -ne $cur) {
+        return [pscustomobject]@{ path = $Path; reference = $ref; current = $cur; delta = $null; budget = $Budget; pass = 1; issue = "missing_field_reference" }
+    }
+    if ($null -ne $ref -and $null -eq $cur) {
+        return [pscustomobject]@{ path = $Path; reference = $ref; current = $cur; delta = $null; budget = $Budget; pass = 0; issue = "missing_field_current" }
     }
     $r = [double]$ref
     $c = [double]$cur
@@ -136,6 +143,19 @@ if ($referenceAvailable -and (Test-Path -LiteralPath $referenceProfilePath)) {
         "analog.node.host.skew_ticks",
         "analog.node.drive.skew_ticks"
     )
+    $timingPaths = @(
+        "timing.controller_bit_hold_ticks",
+        "timing.device_bit_hold_ticks",
+        "timing.controller_between_bytes_ticks",
+        "timing.device_between_bytes_ticks",
+        "timing.atn_response_timeout_ticks",
+        "timing.device_not_present_timeout_ticks",
+        "timing.sender_timeout_ticks",
+        "timing.receiver_timeout_ticks",
+        "timing.eoi_signal_min_ticks",
+        "timing.eoi_signal_max_ticks",
+        "timing.empty_stream_timeout_ticks"
+    )
     $thresholdPaths = @(
         "analog.rise_threshold_milli",
         "analog.fall_threshold_milli"
@@ -146,6 +166,9 @@ if ($referenceAvailable -and (Test-Path -LiteralPath $referenceProfilePath)) {
     }
     foreach ($p in $tauPaths) {
         $driftRows += Compare-PathDelta -Reference $referenceProfile -Current $currentProfile -Path $p -Budget $MaxDriftTauTicks
+    }
+    foreach ($p in $timingPaths) {
+        $driftRows += Compare-PathDelta -Reference $referenceProfile -Current $currentProfile -Path $p -Budget $MaxDriftTimingTicks
     }
     foreach ($p in $thresholdPaths) {
         $driftRows += Compare-PathDelta -Reference $referenceProfile -Current $currentProfile -Path $p -Budget $MaxDriftThresholdMilli
@@ -193,6 +216,7 @@ $metrics = [ordered]@{
     }
     budgets = [ordered]@{
         max_drift_line_ticks = $MaxDriftLineTicks
+        max_drift_timing_ticks = $MaxDriftTimingTicks
         max_drift_tau_ticks = $MaxDriftTauTicks
         max_drift_threshold_milli = $MaxDriftThresholdMilli
         max_runtime_multiplier_vs_fast = $MaxRuntimeMultiplier

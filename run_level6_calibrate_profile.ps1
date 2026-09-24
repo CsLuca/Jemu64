@@ -179,6 +179,19 @@ $lineAtnMinAvg = Average-Field -Expr "line.atn.min_low_pulse_ticks" -Fallback ([
 $lineClkMinAvg = Average-Field -Expr "line.clk.min_low_pulse_ticks" -Fallback ([double]$base.line.clk.min_low_pulse_ticks)
 $lineDataMinAvg = Average-Field -Expr "line.data.min_low_pulse_ticks" -Fallback ([double]$base.line.data.min_low_pulse_ticks)
 
+# Procedure: calibrate protocol-level timing windows from capture metrics when present.
+$timingControllerBitHoldAvg = Average-Field -Expr "timing.controller_bit_hold_ticks" -Fallback ([double]$base.timing.controller_bit_hold_ticks)
+$timingDeviceBitHoldAvg = Average-Field -Expr "timing.device_bit_hold_ticks" -Fallback ([double]$base.timing.device_bit_hold_ticks)
+$timingControllerBetweenBytesAvg = Average-Field -Expr "timing.controller_between_bytes_ticks" -Fallback ([double]$base.timing.controller_between_bytes_ticks)
+$timingDeviceBetweenBytesAvg = Average-Field -Expr "timing.device_between_bytes_ticks" -Fallback ([double]$base.timing.device_between_bytes_ticks)
+$timingAtnResponseTimeoutAvg = Average-Field -Expr "timing.atn_response_timeout_ticks" -Fallback ([double]$base.timing.atn_response_timeout_ticks)
+$timingDeviceNotPresentTimeoutAvg = Average-Field -Expr "timing.device_not_present_timeout_ticks" -Fallback ([double]$base.timing.device_not_present_timeout_ticks)
+$timingSenderTimeoutAvg = Average-Field -Expr "timing.sender_timeout_ticks" -Fallback ([double]$base.timing.sender_timeout_ticks)
+$timingReceiverTimeoutAvg = Average-Field -Expr "timing.receiver_timeout_ticks" -Fallback ([double]$base.timing.receiver_timeout_ticks)
+$timingEoiSignalMinAvg = Average-Field -Expr "timing.eoi_signal_min_ticks" -Fallback ([double]$base.timing.eoi_signal_min_ticks)
+$timingEoiSignalMaxAvg = Average-Field -Expr "timing.eoi_signal_max_ticks" -Fallback ([double]$base.timing.eoi_signal_max_ticks)
+$timingEmptyStreamTimeoutAvg = Average-Field -Expr "timing.empty_stream_timeout_ticks" -Fallback ([double]$base.timing.empty_stream_timeout_ticks)
+
 $analogVddAvg = Average-Field -Expr "analog.vdd_milli" -Fallback ([double]$base.analog.vdd_milli)
 $analogRiseThresholdAvg = Average-Field -Expr "analog.rise_threshold_milli" -Fallback ([double]$base.analog.rise_threshold_milli)
 $analogFallThresholdAvg = Average-Field -Expr "analog.fall_threshold_milli" -Fallback ([double]$base.analog.fall_threshold_milli)
@@ -214,6 +227,19 @@ $out = [ordered]@{
             release_delay_ticks = Blend-Int -BaseValue ([double]$base.line.data.release_delay_ticks) -MeasuredValue $lineDataReleaseAvg -BlendBase $blend
             min_low_pulse_ticks = Blend-Int -BaseValue ([double]$base.line.data.min_low_pulse_ticks) -MeasuredValue $lineDataMinAvg -BlendBase $blend
         }
+    }
+    timing = [ordered]@{
+        controller_bit_hold_ticks = Blend-Int -BaseValue ([double]$base.timing.controller_bit_hold_ticks) -MeasuredValue $timingControllerBitHoldAvg -BlendBase $blend
+        device_bit_hold_ticks = Blend-Int -BaseValue ([double]$base.timing.device_bit_hold_ticks) -MeasuredValue $timingDeviceBitHoldAvg -BlendBase $blend
+        controller_between_bytes_ticks = Blend-Int -BaseValue ([double]$base.timing.controller_between_bytes_ticks) -MeasuredValue $timingControllerBetweenBytesAvg -BlendBase $blend
+        device_between_bytes_ticks = Blend-Int -BaseValue ([double]$base.timing.device_between_bytes_ticks) -MeasuredValue $timingDeviceBetweenBytesAvg -BlendBase $blend
+        atn_response_timeout_ticks = Blend-Int -BaseValue ([double]$base.timing.atn_response_timeout_ticks) -MeasuredValue $timingAtnResponseTimeoutAvg -BlendBase $blend
+        device_not_present_timeout_ticks = Blend-Int -BaseValue ([double]$base.timing.device_not_present_timeout_ticks) -MeasuredValue $timingDeviceNotPresentTimeoutAvg -BlendBase $blend
+        sender_timeout_ticks = Blend-Int -BaseValue ([double]$base.timing.sender_timeout_ticks) -MeasuredValue $timingSenderTimeoutAvg -BlendBase $blend
+        receiver_timeout_ticks = Blend-Int -BaseValue ([double]$base.timing.receiver_timeout_ticks) -MeasuredValue $timingReceiverTimeoutAvg -BlendBase $blend
+        eoi_signal_min_ticks = Blend-Int -BaseValue ([double]$base.timing.eoi_signal_min_ticks) -MeasuredValue $timingEoiSignalMinAvg -BlendBase $blend
+        eoi_signal_max_ticks = Blend-Int -BaseValue ([double]$base.timing.eoi_signal_max_ticks) -MeasuredValue $timingEoiSignalMaxAvg -BlendBase $blend
+        empty_stream_timeout_ticks = Blend-Int -BaseValue ([double]$base.timing.empty_stream_timeout_ticks) -MeasuredValue $timingEmptyStreamTimeoutAvg -BlendBase $blend
     }
     rx = [ordered]@{
         setup_ticks = [int]$base.rx.setup_ticks
@@ -270,6 +296,7 @@ $report = [ordered]@{
     blend_with_base = $blend
     fitted = [ordered]@{
         line = $out.line
+        timing = $out.timing
         analog = $out.analog
     }
 }

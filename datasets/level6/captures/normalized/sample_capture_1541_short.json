@@ -2,6 +2,19 @@
   "capture_id": "sample_capture_1541_short",
   "source": "synthetic_placeholder",
   "metrics": {
+    "timing": {
+      "controller_bit_hold_ticks": 20,
+      "device_bit_hold_ticks": 60,
+      "controller_between_bytes_ticks": 96,
+      "device_between_bytes_ticks": 104,
+      "atn_response_timeout_ticks": 980,
+      "device_not_present_timeout_ticks": 250,
+      "sender_timeout_ticks": 510,
+      "receiver_timeout_ticks": 980,
+      "eoi_signal_min_ticks": 196,
+      "eoi_signal_max_ticks": 506,
+      "empty_stream_timeout_ticks": 500
+    },
     "line": {
       "atn": {
         "release_delay_ticks": 1,
