@@ -136,6 +136,25 @@ Outputs:
 - `datasets/level6/quality_reports/level6_synthetic_envelope_metrics.json`
 - `datasets/level6/quality_reports/level6_synthetic_envelope_runtime.csv`
 
+## Level6 Daily Check (One Command)
+
+- Script: `run_level6_daily_check.ps1`
+- Runs in sequence:
+  1. `run_level5_cycle_coupling_gate.ps1 -Profile fast`
+  2. `run_level6_physical_gate.ps1`
+  3. `run_level6_synthetic_envelope_gate.ps1`
+
+Example:
+
+```powershell
+& ".\run_level6_daily_check.ps1" -Level5Manifest "datasets/level5/manifests/level5_official_testset_v1_manifest.json" -SyntheticManifest "datasets/level6/manifests/level6_synthetic_profiles_manifest.json" -OutputDir "datasets/level6/quality_reports/daily_check" -MaxRuntimeMultiplier 2.0
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/daily_check/level6_daily_check_metrics.json`
+- `datasets/level6/quality_reports/daily_check/level6_daily_check_runtime.csv`
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.

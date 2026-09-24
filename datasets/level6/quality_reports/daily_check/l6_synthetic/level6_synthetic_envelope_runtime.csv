@@ -1,0 +1,7 @@
+"profile","pass","dataset_pass_rate","runtime_ratio_vs_fast","runtime_ratio_budget"
+"baseline_1541","1","1","1,92857142857143","2"
+"baseline_1541c","1","1","1,92857142857143","2"
+"baseline_1541ii","1","1","1,92857142857143","2"
+"candidate_long_cable","1","1","1,92857142857143","2"
+"candidate_weak_pullup","1","1","1,92857142857143","2"
+"candidate_noisy_bus","1","1","1,92857142857143","2"
