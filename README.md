@@ -42,6 +42,25 @@ DRIVE 8 STATE
 STATUS
 ```
 
+Built-in topology presets (inside emulator console):
+
+```text
+PRESET LIST
+PRESET LOAD C64_ONLY
+PRESET LOAD C64_1541
+PRESET LOAD C64_2X1541
+PRESET SAVE C64_1541
+PRESET RESET
+```
+
+Preset meanings:
+
+- `C64_ONLY`: only C64 powered path, no cable segments.
+- `C64_1541`: C64 + `TRUNK0` + drive 8.
+- `C64_2X1541`: C64 + `TRUNK0` (C64<->drive8) + `SEG1` (drive8<->drive9).
+
+Presets are editable at runtime: load one, modify with existing `CABLE`/`WIRE`/`DRIVE` commands, then `PRESET SAVE <slot>`.
+
 At console startup, `IEC_OPTIONS` is printed with current values/effective mode:
 
 - `model_mode` (from `IEC_MODEL_MODE`, default `fast`)

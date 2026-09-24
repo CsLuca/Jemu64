@@ -20964,6 +20964,15 @@ struct EmulatorConsoleState {
         bool pending = false;
     };
 
+    struct Preset {
+        std::string name;
+        std::string description;
+        std::vector<CableSegment> cables;
+        std::string defaultCableName;
+        std::array<bool, 4> drivePowerOn{{false, false, false, false}};
+        bool c64PoweredOn = false;
+    };
+
     Bus *bus = nullptr;
     VICII *vic = nullptr;
     CIA6526 *cia1 = nullptr;
@@ -20981,6 +20990,7 @@ struct EmulatorConsoleState {
     IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
     TopologyModeOverride topologyModeOverride = TopologyModeOverride::Auto;
     std::string topologyModeSource = "AUTO";
+    std::array<Preset, 3> presets;
 };
 
 static EmulatorConsoleState::CableSegment *findConsoleCable(EmulatorConsoleState &st, const std::string &nameUpper) {
@@ -21007,6 +21017,33 @@ static bool parseDriveEndpoint(const std::string &tokenUpper, int &unitOut) {
     if (tokenUpper == "DRIVE10") { unitOut = 10; return true; }
     if (tokenUpper == "DRIVE11") { unitOut = 11; return true; }
     return false;
+}
+
+static void applyCableProfileDefaults(EmulatorConsoleState::CableSegment &segment, const std::string &profileUpper);
+
+static bool parseConsolePresetSlot(const std::string &tokenUpper, size_t &slotOut) {
+    if (tokenUpper == "C64_ONLY" || tokenUpper == "SOLO_C64" || tokenUpper == "P1") {
+        slotOut = 0;
+        return true;
+    }
+    if (tokenUpper == "C64_1541" || tokenUpper == "P2") {
+        slotOut = 1;
+        return true;
+    }
+    if (tokenUpper == "C64_2X1541" || tokenUpper == "C64_1541_1541" || tokenUpper == "P3") {
+        slotOut = 2;
+        return true;
+    }
+    return false;
+}
+
+static const char *consolePresetSlotName(size_t slot) {
+    switch (slot) {
+        case 0: return "C64_ONLY";
+        case 1: return "C64_1541";
+        case 2: return "C64_2X1541";
+    }
+    return "UNKNOWN";
 }
 
 static const char *topologyModeOverrideText(EmulatorConsoleState::TopologyModeOverride mode) {
@@ -21045,6 +21082,110 @@ static std::string envOrDefault(const char *name, const std::string &fallback) {
         }
     }
     return fallback;
+}
+
+static EmulatorConsoleState::Preset makeDefaultConsolePreset(size_t slot) {
+    EmulatorConsoleState::Preset p;
+    p.name = consolePresetSlotName(slot);
+
+    if (slot == 0) {
+        p.description = "C64 only, no IEC cable segments";
+        p.c64PoweredOn = true;
+        return p;
+    }
+
+    if (slot == 1) {
+        p.description = "C64 + cable + drive 8";
+        p.c64PoweredOn = true;
+        p.drivePowerOn[0] = true;
+        EmulatorConsoleState::CableSegment cable;
+        cable.name = "TRUNK0";
+        cable.hostConnected = true;
+        cable.driveConnected[0] = true;
+        applyCableProfileDefaults(cable, "PROFILE_SHORT");
+        p.cables.push_back(cable);
+        p.defaultCableName = cable.name;
+        return p;
+    }
+
+    p.description = "C64 + cable + drive 8 + cable + drive 9";
+    p.c64PoweredOn = true;
+    p.drivePowerOn[0] = true;
+    p.drivePowerOn[1] = true;
+
+    EmulatorConsoleState::CableSegment trunk;
+    trunk.name = "TRUNK0";
+    trunk.hostConnected = true;
+    trunk.driveConnected[0] = true;
+    applyCableProfileDefaults(trunk, "PROFILE_SHORT");
+
+    EmulatorConsoleState::CableSegment seg1;
+    seg1.name = "SEG1";
+    seg1.hostConnected = false;
+    seg1.driveConnected[0] = true;
+    seg1.driveConnected[1] = true;
+    applyCableProfileDefaults(seg1, "PROFILE_SHORT");
+
+    p.cables.push_back(trunk);
+    p.cables.push_back(seg1);
+    p.defaultCableName = trunk.name;
+    return p;
+}
+
+static void resetConsolePresetDefaults(EmulatorConsoleState &st) {
+    for (size_t i = 0; i < st.presets.size(); ++i) {
+        st.presets[i] = makeDefaultConsolePreset(i);
+    }
+}
+
+static void applyConsolePreset(EmulatorConsoleState &st, const EmulatorConsoleState::Preset &preset) {
+    st.cables = preset.cables;
+    st.defaultCableName = preset.defaultCableName;
+
+    for (size_t i = 0; i < st.drives.size(); ++i) {
+        st.drives[i].setDrivePower(preset.drivePowerOn[i]);
+    }
+
+    if (preset.c64PoweredOn) {
+        st.cpu->reset();
+        st.c64PoweredOn = true;
+        for (Drive1541 &d : st.drives) {
+            d.setC64Power(true);
+        }
+    } else {
+        st.c64PoweredOn = false;
+        for (Drive1541 &d : st.drives) {
+            d.setC64Power(false);
+        }
+    }
+}
+
+static void captureConsolePreset(EmulatorConsoleState &st, EmulatorConsoleState::Preset &preset) {
+    preset.cables = st.cables;
+    preset.defaultCableName = st.defaultCableName;
+    preset.c64PoweredOn = st.c64PoweredOn;
+    for (size_t i = 0; i < st.drives.size(); ++i) {
+        preset.drivePowerOn[i] = (st.drives[i].getPowerState() != Drive1541::PowerState::Off);
+    }
+}
+
+static void printConsolePresetList(const EmulatorConsoleState &st) {
+    for (size_t i = 0; i < st.presets.size(); ++i) {
+        const EmulatorConsoleState::Preset &p = st.presets[i];
+        size_t connectedDrives = 0;
+        for (bool v : p.drivePowerOn) {
+            if (v) {
+                connectedDrives++;
+            }
+        }
+        std::cout << "PRESET " << p.name
+                  << " slot=P" << (i + 1)
+                  << " c64=" << (p.c64PoweredOn ? "ON" : "OFF")
+                  << " drive_powered=" << connectedDrives
+                  << " segments=" << p.cables.size()
+                  << " desc=\"" << p.description << "\""
+                  << std::endl;
+    }
 }
 
 static void applyCableProfileDefaults(EmulatorConsoleState::CableSegment &segment, const std::string &profileUpper) {
@@ -21373,9 +21514,12 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
         return 1;
     }
 
+    resetConsolePresetDefaults(st);
+    applyConsolePreset(st, st.presets[1]);
+
     std::cout << "[CONSOLE] Emulator control console enabled (feature flag JEMU_EMULATOR_CONSOLE=1)." << std::endl;
     printConsoleIecOptions(st);
-    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, CABLE CREATE <name>|<name> CONNECT HOST C64|CONNECT DRIVE <unit>|DISCONNECT HOST C64|DISCONNECT DRIVE <unit>|PROFILE <p>|STATE, IEC TOPOLOGY_MODE AUTO|FORCE_SIMPLE|FORCE_DETAILED|STATE, WIRE C64 DRIVE<unit> <profile>|WIRE DRIVE<unit> DRIVE<unit> <profile>, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
+    std::cout << "[CONSOLE] Commands: PRESET LIST|LOAD <C64_ONLY|C64_1541|C64_2X1541>|SAVE <slot>|RESET, C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, CABLE CREATE <name>|<name> CONNECT HOST C64|CONNECT DRIVE <unit>|DISCONNECT HOST C64|DISCONNECT DRIVE <unit>|PROFILE <p>|STATE, IEC TOPOLOGY_MODE AUTO|FORCE_SIMPLE|FORCE_DETAILED|STATE, WIRE C64 DRIVE<unit> <profile>|WIRE DRIVE<unit> DRIVE<unit> <profile>, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
 
     std::string line;
     while (true) {
@@ -21394,6 +21538,10 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
         cmd = toUpperAscii(cmd);
 
         if (cmd == "HELP") {
+            std::cout << "PRESET LIST" << std::endl;
+            std::cout << "PRESET LOAD C64_ONLY|C64_1541|C64_2X1541" << std::endl;
+            std::cout << "PRESET SAVE C64_ONLY|C64_1541|C64_2X1541" << std::endl;
+            std::cout << "PRESET RESET" << std::endl;
             std::cout << "C64 ON|OFF|RESET|STATE" << std::endl;
             std::cout << "C64 POWER ON|OFF|RESET" << std::endl;
             std::cout << "DRIVE <8|9|10|11> ATTACH <path>" << std::endl;
@@ -21419,6 +21567,49 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
         }
         if (cmd == "QUIT" || cmd == "EXIT") {
             break;
+        }
+
+        if (cmd == "PRESET") {
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+            if (op == "LIST") {
+                printConsolePresetList(st);
+                continue;
+            }
+            if (op == "RESET") {
+                resetConsolePresetDefaults(st);
+                std::cout << "OK: PRESET RESET" << std::endl;
+                continue;
+            }
+            if (op == "LOAD") {
+                std::string slotToken;
+                iss >> slotToken;
+                slotToken = toUpperAscii(slotToken);
+                size_t slot = 0;
+                if (slotToken.empty() || !parseConsolePresetSlot(slotToken, slot)) {
+                    std::cout << "ERR: expected PRESET LOAD C64_ONLY|C64_1541|C64_2X1541" << std::endl;
+                    continue;
+                }
+                applyConsolePreset(st, st.presets[slot]);
+                std::cout << "OK: PRESET LOAD " << st.presets[slot].name << std::endl;
+                continue;
+            }
+            if (op == "SAVE") {
+                std::string slotToken;
+                iss >> slotToken;
+                slotToken = toUpperAscii(slotToken);
+                size_t slot = 0;
+                if (slotToken.empty() || !parseConsolePresetSlot(slotToken, slot)) {
+                    std::cout << "ERR: expected PRESET SAVE C64_ONLY|C64_1541|C64_2X1541" << std::endl;
+                    continue;
+                }
+                captureConsolePreset(st, st.presets[slot]);
+                std::cout << "OK: PRESET SAVE " << st.presets[slot].name << std::endl;
+                continue;
+            }
+            std::cout << "ERR: expected PRESET LIST|LOAD|SAVE|RESET" << std::endl;
+            continue;
         }
 
         if (cmd == "WIRE") {
