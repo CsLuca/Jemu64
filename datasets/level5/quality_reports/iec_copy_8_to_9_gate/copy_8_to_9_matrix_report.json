@@ -1,0 +1,370 @@
+﻿{
+    "version":  "1.0.0",
+    "profile":  "fast",
+    "runtime_exit_code":  -1073740791,
+    "matrix_path":  "C:\\dev\\Jemu64\\copier_matrix.json",
+    "manifest_csv_path":  "C:\\dev\\Jemu64\\copy_8_to_9_disk_e2e_manifest.csv",
+    "generated_at_utc":  "2026-09-24T17:50:43.6609984Z",
+    "scenarios":  [
+                      {
+                          "scenario_id":  "copy_8_to_9_file_e2e",
+                          "level":  "baseline",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "copy_8_to_9_disk_e2e",
+                          "level":  "baseline",
+                          "mode":  "disk_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "checked_retry_pass",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_mount_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_mount_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_raw_mount_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_write_protect_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_write_protect_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_weakbit_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_weakbit_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_parser_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_parser_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_gcr_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_gcr_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_dos_error_map_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_dos_error_map_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_multitrack_halftrack_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_multitrack_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_sync_relock_drift_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_sync_relock_drift_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_jitter_window_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_jitter_window_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_relock_window_soak_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_relock_window_soak_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_flux_hysteresis_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_flux_hysteresis_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_dos_recovery_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_dos_recovery_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_longtail_burst_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_longtail_burst_hard_baseline",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_longtail_extreme_corpus_fixture",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_longtail_extreme_corpus_fixture",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_raw_flux_extreme_corpus_fixture",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_g64_sync_relock_window_longtail_target",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_nib_weak_jitter_gap_longtail_target",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_multidrive_independence_8_9_10_11",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      },
+                      {
+                          "scenario_id":  "advanced_multidrive_timing_divergence_8_9_10_11",
+                          "level":  "advanced",
+                          "mode":  "file_copy",
+                          "runtime_exit_ok":  0,
+                          "marker_pass":  1,
+                          "manifest_pass":  1,
+                          "manifest_reason":  "not_required",
+                          "overall_pass":  0
+                      }
+                  ]
+}

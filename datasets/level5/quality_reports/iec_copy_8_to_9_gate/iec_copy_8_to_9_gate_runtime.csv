@@ -1,0 +1,7 @@
+"metric","value","budget","pass"
+"matrix_exit_ok_info","0","1","1"
+"file_runtime_ok_info","0","1","1"
+"disk_runtime_ok_info","0","1","1"
+"file_marker_ok","1","1","1"
+"disk_marker_ok","1","1","1"
+"manifest_checksum_match","1","1","1"

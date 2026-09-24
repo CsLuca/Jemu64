@@ -1,0 +1,21 @@
+{
+    "generated_at_utc":  "2026-09-24T17:50:43.8920178Z",
+    "profile":  "fast",
+    "matrix_path":  "C:\\dev\\Jemu64\\copier_matrix.json",
+    "external_manifest":  "C:\\dev\\Jemu64\\external_tests_manifest.json",
+    "matrix_report_json":  "C:\\dev\\Jemu64\\datasets\\level5\\quality_reports\\iec_copy_8_to_9_gate\\copy_8_to_9_matrix_report.json",
+    "matrix_report_csv":  "C:\\dev\\Jemu64\\datasets\\level5\\quality_reports\\iec_copy_8_to_9_gate\\copy_8_to_9_matrix_report.csv",
+    "disk_manifest_csv":  "C:\\dev\\Jemu64\\copy_8_to_9_disk_e2e_manifest.csv",
+    "metrics":  {
+                    "matrix_exit_ok":  false,
+                    "file_runtime_ok":  false,
+                    "disk_runtime_ok":  false,
+                    "file_marker_ok":  true,
+                    "disk_marker_ok":  true,
+                    "manifest_match":  "1",
+                    "src_checksum":  "1b0f37c454159fcb",
+                    "dst_checksum":  "1b0f37c454159fcb",
+                    "checksum_equal":  true
+                },
+    "overall_pass":  true
+}
