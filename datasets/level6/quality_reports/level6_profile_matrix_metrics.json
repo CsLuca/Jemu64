@@ -1,0 +1,15 @@
+{
+    "generated_at_utc":  "2026-09-24T09:15:28.1737188Z",
+    "manifest":  "C:\\dev\\Jemu64\\datasets\\level5\\manifests\\level5_official_testset_v1_manifest.json",
+    "profiles":  [
+                     "baseline_1541",
+                     "baseline_1541c",
+                     "baseline_1541ii"
+                 ],
+    "max_runtime_multiplier":  2,
+    "metrics":  {
+                    "profile_pass_count":  3,
+                    "profile_total":  3
+                },
+    "overall_pass":  true
+}

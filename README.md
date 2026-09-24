@@ -96,6 +96,27 @@ Outputs:
 - `datasets/level6/quality_reports/level6_physical_gate_metrics.json`
 - `datasets/level6/quality_reports/level6_physical_gate_runtime.csv`
 
+## Level6 Profile Matrix Gate (Experimental)
+
+- Script: `run_level6_profile_matrix.ps1`
+- Purpose:
+  - run `run_level6_physical_gate.ps1` across baseline profiles:
+    - `baseline_1541`
+    - `baseline_1541c`
+    - `baseline_1541ii`
+  - emit one consolidated matrix report.
+
+Example:
+
+```powershell
+& ".\run_level6_profile_matrix.ps1" -Manifest "datasets/level5/manifests/level5_official_testset_v1_manifest.json" -OutputDir "datasets/level6/quality_reports" -MaxRuntimeMultiplier 2.0
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/level6_profile_matrix_metrics.json`
+- `datasets/level6/quality_reports/level6_profile_matrix_runtime.csv`
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.
