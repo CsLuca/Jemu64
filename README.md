@@ -31,6 +31,14 @@ DRIVE 8 STATE
 STATUS
 ```
 
+At console startup, `IEC_OPTIONS` is printed with current values/effective mode:
+
+- `model_mode` (from `IEC_MODEL_MODE`, default `fast`)
+- `profile` (from `IEC_PROFILE`)
+- `topology_override` (`AUTO|FORCE_SIMPLE|FORCE_DETAILED`)
+- `topology_effective` (`SIMPLE|DETAILED`)
+- `topology_auto` (`SIMPLE|DETAILED` based on topology graph)
+
 Hotplug example:
 
 ```text
@@ -86,6 +94,15 @@ Supported wire profiles:
 - `PROFILE_MEDIUM`
 - `PROFILE_LONG`
 
+Topology mode override commands (inside emulator console):
+
+```text
+IEC STATE
+IEC TOPOLOGY_MODE AUTO
+IEC TOPOLOGY_MODE FORCE_SIMPLE
+IEC TOPOLOGY_MODE FORCE_DETAILED
+```
+
 Topology auto-enable policy:
 
 - detailed per-segment delay propagation is automatically enabled only when:
@@ -101,6 +118,7 @@ Environment variables:
 
 - `IEC_MODEL_MODE=fast|strict|physical-l6`
 - `IEC_PROFILE=baseline_1541|baseline_1541c|baseline_1541ii`
+- `IEC_TOPOLOGY_MODE=auto|force_simple|force_detailed`
 
 `IEC_PROFILE` can be either:
 

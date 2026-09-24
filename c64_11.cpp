@@ -20942,6 +20942,12 @@ static std::string detectMountedImageFormat(const std::string &path) {
 }
 
 struct EmulatorConsoleState {
+    enum class TopologyModeOverride : uint8_t {
+        Auto = 0,
+        ForceSimple = 1,
+        ForceDetailed = 2
+    };
+
     struct CableSegment {
         std::string name;
         bool hostConnected = false;
@@ -20973,6 +20979,8 @@ struct EmulatorConsoleState {
     bool lastVicHadBus = false;
     uint64_t stepCount = 0;
     IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
+    TopologyModeOverride topologyModeOverride = TopologyModeOverride::Auto;
+    std::string topologyModeSource = "AUTO";
 };
 
 static EmulatorConsoleState::CableSegment *findConsoleCable(EmulatorConsoleState &st, const std::string &nameUpper) {
@@ -20999,6 +21007,44 @@ static bool parseDriveEndpoint(const std::string &tokenUpper, int &unitOut) {
     if (tokenUpper == "DRIVE10") { unitOut = 10; return true; }
     if (tokenUpper == "DRIVE11") { unitOut = 11; return true; }
     return false;
+}
+
+static const char *topologyModeOverrideText(EmulatorConsoleState::TopologyModeOverride mode) {
+    switch (mode) {
+        case EmulatorConsoleState::TopologyModeOverride::Auto: return "AUTO";
+        case EmulatorConsoleState::TopologyModeOverride::ForceSimple: return "FORCE_SIMPLE";
+        case EmulatorConsoleState::TopologyModeOverride::ForceDetailed: return "FORCE_DETAILED";
+    }
+    return "AUTO";
+}
+
+static bool parseTopologyModeOverrideToken(const std::string &tokenUpper,
+                                           EmulatorConsoleState::TopologyModeOverride &out) {
+    if (tokenUpper == "AUTO") {
+        out = EmulatorConsoleState::TopologyModeOverride::Auto;
+        return true;
+    }
+    if (tokenUpper == "FORCE_SIMPLE" || tokenUpper == "SIMPLE" || tokenUpper == "OFF" ||
+        tokenUpper == "FALSE" || tokenUpper == "0") {
+        out = EmulatorConsoleState::TopologyModeOverride::ForceSimple;
+        return true;
+    }
+    if (tokenUpper == "FORCE_DETAILED" || tokenUpper == "DETAILED" || tokenUpper == "ON" ||
+        tokenUpper == "TRUE" || tokenUpper == "1") {
+        out = EmulatorConsoleState::TopologyModeOverride::ForceDetailed;
+        return true;
+    }
+    return false;
+}
+
+static std::string envOrDefault(const char *name, const std::string &fallback) {
+    if (const char *value = std::getenv(name)) {
+        const std::string s = trimAscii(value);
+        if (!s.empty()) {
+            return s;
+        }
+    }
+    return fallback;
 }
 
 static void applyCableProfileDefaults(EmulatorConsoleState::CableSegment &segment, const std::string &profileUpper) {
@@ -21123,6 +21169,18 @@ static bool isDetailedTopologyAutoEnabled(const EmulatorConsoleState &st) {
     return (countCableConnectedDrives(st) > 1) || (st.cables.size() >= 2);
 }
 
+static bool isDetailedTopologyEnabled(const EmulatorConsoleState &st) {
+    switch (st.topologyModeOverride) {
+        case EmulatorConsoleState::TopologyModeOverride::ForceSimple:
+            return false;
+        case EmulatorConsoleState::TopologyModeOverride::ForceDetailed:
+            return true;
+        case EmulatorConsoleState::TopologyModeOverride::Auto:
+        default:
+            return isDetailedTopologyAutoEnabled(st);
+    }
+}
+
 static void applyDelayedLineState(EmulatorConsoleState::DelayedLineState &state,
                                   const IecResolvedLines &nextLines,
                                   uint64_t delayTicks) {
@@ -21179,7 +21237,7 @@ static bool initializeEmulatorConsoleDrives(EmulatorConsoleState &st) {
 }
 
 static void syncConsoleIecBus(EmulatorConsoleState &st) {
-    const bool detailedTopology = isDetailedTopologyAutoEnabled(st);
+    const bool detailedTopology = isDetailedTopologyEnabled(st);
     bool hostLinked = false;
     for (const auto &cable : st.cables) {
         if (cable.hostConnected) {
@@ -21274,7 +21332,21 @@ static void printConsoleCableState(const EmulatorConsoleState &st) {
         }
         std::cout << std::endl;
     }
-    std::cout << "CABLE topology_mode=" << (isDetailedTopologyAutoEnabled(st) ? "DETAILED" : "SIMPLE") << std::endl;
+    std::cout << "CABLE topology_mode=" << (isDetailedTopologyEnabled(st) ? "DETAILED" : "SIMPLE")
+              << " topology_override=" << topologyModeOverrideText(st.topologyModeOverride)
+              << " topology_auto=" << (isDetailedTopologyAutoEnabled(st) ? "DETAILED" : "SIMPLE")
+              << std::endl;
+}
+
+static void printConsoleIecOptions(const EmulatorConsoleState &st) {
+    std::cout << "IEC_OPTIONS"
+              << " model_mode=" << envOrDefault("IEC_MODEL_MODE", "fast")
+              << " profile=" << envOrDefault("IEC_PROFILE", "(default)")
+              << " topology_override=" << topologyModeOverrideText(st.topologyModeOverride)
+              << " topology_source=" << st.topologyModeSource
+              << " topology_effective=" << (isDetailedTopologyEnabled(st) ? "DETAILED" : "SIMPLE")
+              << " topology_auto=" << (isDetailedTopologyAutoEnabled(st) ? "DETAILED" : "SIMPLE")
+              << std::endl;
 }
 
 static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2, SID &sid, CPU6510 &cpu) {
@@ -21286,12 +21358,24 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
     st.sid = &sid;
     st.cpu = &cpu;
 
+    if (const char *topologyModeEnv = std::getenv("IEC_TOPOLOGY_MODE")) {
+        EmulatorConsoleState::TopologyModeOverride envMode = EmulatorConsoleState::TopologyModeOverride::Auto;
+        if (parseTopologyModeOverrideToken(toUpperAscii(topologyModeEnv), envMode)) {
+            st.topologyModeOverride = envMode;
+            st.topologyModeSource = "ENV";
+        } else {
+            st.topologyModeOverride = EmulatorConsoleState::TopologyModeOverride::Auto;
+            st.topologyModeSource = "ENV_INVALID";
+        }
+    }
+
     if (!initializeEmulatorConsoleDrives(st)) {
         return 1;
     }
 
     std::cout << "[CONSOLE] Emulator control console enabled (feature flag JEMU_EMULATOR_CONSOLE=1)." << std::endl;
-    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, CABLE CREATE <name>|<name> CONNECT HOST C64|CONNECT DRIVE <unit>|DISCONNECT HOST C64|DISCONNECT DRIVE <unit>|STATE, WIRE C64 DRIVE<unit> <profile>|WIRE DRIVE<unit> DRIVE<unit> <profile>, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
+    printConsoleIecOptions(st);
+    std::cout << "[CONSOLE] Commands: C64 ON|OFF|RESET|STATE|POWER ON|OFF|RESET, DRIVE <8..11> ATTACH <path>|DETACH|CABLE ON|OFF|POWER ON|OFF|RESET|STATE, CABLE CREATE <name>|<name> CONNECT HOST C64|CONNECT DRIVE <unit>|DISCONNECT HOST C64|DISCONNECT DRIVE <unit>|PROFILE <p>|STATE, IEC TOPOLOGY_MODE AUTO|FORCE_SIMPLE|FORCE_DETAILED|STATE, WIRE C64 DRIVE<unit> <profile>|WIRE DRIVE<unit> DRIVE<unit> <profile>, PMATRIX STATE, STEP <n>, STATUS, HELP, QUIT" << std::endl;
 
     std::string line;
     while (true) {
@@ -21323,6 +21407,8 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
             std::cout << "CABLE <name> DISCONNECT HOST C64" << std::endl;
             std::cout << "CABLE <name> DISCONNECT DRIVE <8|9|10|11>" << std::endl;
             std::cout << "CABLE <name> STATE" << std::endl;
+            std::cout << "IEC STATE" << std::endl;
+            std::cout << "IEC TOPOLOGY_MODE AUTO|FORCE_SIMPLE|FORCE_DETAILED" << std::endl;
             std::cout << "WIRE C64 DRIVE<8|9|10|11> PROFILE_SHORT|PROFILE_MEDIUM|PROFILE_LONG" << std::endl;
             std::cout << "WIRE DRIVE<8|9|10|11> DRIVE<8|9|10|11> PROFILE_SHORT|PROFILE_MEDIUM|PROFILE_LONG" << std::endl;
             std::cout << "PMATRIX STATE" << std::endl;
@@ -21378,6 +21464,33 @@ static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2
                 st.defaultCableName = segment.name;
             }
             std::cout << "OK: WIRE " << epA << ' ' << epB << " " << segment.profile << " -> " << segment.name << std::endl;
+            continue;
+        }
+
+        if (cmd == "IEC") {
+            std::string op;
+            iss >> op;
+            op = toUpperAscii(op);
+            if (op == "STATE") {
+                printConsoleIecOptions(st);
+                continue;
+            }
+            if (op == "TOPOLOGY_MODE") {
+                std::string modeToken;
+                iss >> modeToken;
+                modeToken = toUpperAscii(modeToken);
+                EmulatorConsoleState::TopologyModeOverride mode = EmulatorConsoleState::TopologyModeOverride::Auto;
+                if (modeToken.empty() || !parseTopologyModeOverrideToken(modeToken, mode)) {
+                    std::cout << "ERR: expected IEC TOPOLOGY_MODE AUTO|FORCE_SIMPLE|FORCE_DETAILED" << std::endl;
+                    continue;
+                }
+                st.topologyModeOverride = mode;
+                st.topologyModeSource = "CONSOLE";
+                std::cout << "OK: IEC TOPOLOGY_MODE " << topologyModeOverrideText(st.topologyModeOverride)
+                          << " effective=" << (isDetailedTopologyEnabled(st) ? "DETAILED" : "SIMPLE") << std::endl;
+                continue;
+            }
+            std::cout << "ERR: expected IEC STATE or IEC TOPOLOGY_MODE <mode>" << std::endl;
             continue;
         }
 
