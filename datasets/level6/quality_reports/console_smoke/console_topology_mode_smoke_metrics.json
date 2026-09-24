@@ -1,0 +1,43 @@
+{
+    "generated_at_utc":  "2026-09-24T14:38:57.5623499Z",
+    "metrics":  {
+                    "checks_total":  7,
+                    "checks_pass":  7,
+                    "elapsed_s":  0.257,
+                    "exit_code":  0
+                },
+    "checks":  [
+                   {
+                       "name":  "console_banner",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "startup_options",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "force_simple_ack",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "force_detailed_ack",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "state_after_simple",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "state_after_detailed",
+                       "pass":  true
+                   },
+                   {
+                       "name":  "clean_exit",
+                       "pass":  true
+                   }
+               ],
+    "failed_checks":  [
+
+                      ],
+    "overall_pass":  true
+}

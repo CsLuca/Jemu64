@@ -257,6 +257,12 @@ struct IecLineModelState {
     uint64_t riseEventWhen = 0;
 };
 
+static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity);
+static void applyIecInputsToCia(CIA6526 &cia2,
+                                const IecBridgePolarity &polarity,
+                                const IecC64Signals &sig,
+                                const IecResolvedLines &lines);
+
 struct IIecHostEndpoint {
     virtual ~IIecHostEndpoint() {}
     virtual IecC64Signals deriveSignals(const IecBridgePolarity &polarity) const = 0;

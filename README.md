@@ -16,6 +16,17 @@ $env:JEMU_EMULATOR_CONSOLE = "1"
 .\c64_11.exe
 ```
 
+Automated topology override smoke (build + scripted console session):
+
+```powershell
+& ".\run_console_topology_mode_smoke.ps1"
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/console_smoke/console_topology_mode_smoke_runtime.csv`
+- `datasets/level6/quality_reports/console_smoke/console_topology_mode_smoke_metrics.json`
+
 Then run this script inside `jemu>`:
 
 ```text
