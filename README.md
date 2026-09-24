@@ -86,6 +86,13 @@ Supported wire profiles:
 - `PROFILE_MEDIUM`
 - `PROFILE_LONG`
 
+Topology auto-enable policy:
+
+- detailed per-segment delay propagation is automatically enabled only when:
+  - more than one drive is connected across cable segments, or
+  - at least two cable segments are defined.
+- with a single-drive/simple topology, console uses the simpler path by default.
+
 ## IEC Level6 Profile Baseline (Config-Driven)
 
 The IEC stack now supports config-driven baseline profile selection and model mode toggles.

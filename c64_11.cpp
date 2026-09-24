@@ -21103,6 +21103,26 @@ static uint64_t minHostToAnyDriveDelay(const EmulatorConsoleState &st) {
     return best;
 }
 
+static size_t countCableConnectedDrives(const EmulatorConsoleState &st) {
+    std::array<bool, 4> connected{{false, false, false, false}};
+    for (const auto &cable : st.cables) {
+        for (size_t i = 0; i < cable.driveConnected.size(); ++i) {
+            connected[i] = connected[i] || cable.driveConnected[i];
+        }
+    }
+    size_t count = 0;
+    for (bool v : connected) {
+        if (v) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static bool isDetailedTopologyAutoEnabled(const EmulatorConsoleState &st) {
+    return (countCableConnectedDrives(st) > 1) || (st.cables.size() >= 2);
+}
+
 static void applyDelayedLineState(EmulatorConsoleState::DelayedLineState &state,
                                   const IecResolvedLines &nextLines,
                                   uint64_t delayTicks) {
@@ -21159,6 +21179,7 @@ static bool initializeEmulatorConsoleDrives(EmulatorConsoleState &st) {
 }
 
 static void syncConsoleIecBus(EmulatorConsoleState &st) {
+    const bool detailedTopology = isDetailedTopologyAutoEnabled(st);
     bool hostLinked = false;
     for (const auto &cable : st.cables) {
         if (cable.hostConnected) {
@@ -21179,7 +21200,7 @@ static void syncConsoleIecBus(EmulatorConsoleState &st) {
     const IecResolvedLines lines = resolveIecLinesFromPulls(sig.c64PullATN, sig.c64PullCLK, sig.c64PullDATA, pullClk, pullData);
     for (size_t i = 0; i < st.drives.size(); ++i) {
         if (hostReachableToDriveIndex(st, i)) {
-            const uint64_t delay = shortestPathWeightHostToDriveIndex(st, i);
+            const uint64_t delay = detailedTopology ? shortestPathWeightHostToDriveIndex(st, i) : 0;
             applyDelayedLineState(st.driveLineDelay[i], lines, delay);
             const IecResolvedLines &applied = st.driveLineDelay[i].current;
             st.drives[i].setIecLines(applied.atnHigh, applied.clkHigh, applied.dataHigh);
@@ -21191,7 +21212,7 @@ static void syncConsoleIecBus(EmulatorConsoleState &st) {
         }
     }
     const IecResolvedLines linesToHostRaw = hostLinked ? lines : IecResolvedLines{true, true, true};
-    const uint64_t hostDelay = minHostToAnyDriveDelay(st);
+    const uint64_t hostDelay = detailedTopology ? minHostToAnyDriveDelay(st) : 0;
     applyDelayedLineState(st.hostLineDelay, linesToHostRaw, hostDelay);
     applyIecInputsToCia(*st.cia2, st.polarity, sig, st.hostLineDelay.current);
 }
@@ -21253,6 +21274,7 @@ static void printConsoleCableState(const EmulatorConsoleState &st) {
         }
         std::cout << std::endl;
     }
+    std::cout << "CABLE topology_mode=" << (isDetailedTopologyAutoEnabled(st) ? "DETAILED" : "SIMPLE") << std::endl;
 }
 
 static int runEmulatorConsole(Bus &bus, VICII &vic, CIA6526 &cia1, CIA6526 &cia2, SID &sid, CPU6510 &cpu) {
