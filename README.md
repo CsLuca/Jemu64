@@ -77,6 +77,25 @@ Notes:
 - `IEC_PROFILE` selects baseline line/timing presets (schema and baseline JSON files are under `config/iec_profiles/`).
 - Current loader applies line parameters + rx setup/hold + timeout hysteresis when profile data is available.
 
+## Level6 Physical Gate (Experimental)
+
+- Script: `run_level6_physical_gate.ps1`
+- Purpose:
+  - run IEC path under `IEC_MODEL_MODE=physical-l6` with baseline profile,
+  - assert dataset pass stays at budget,
+  - track runtime multiplier budget against fast profile baseline.
+
+Example:
+
+```powershell
+& ".\run_level6_physical_gate.ps1" -Manifest "datasets/level5/manifests/level5_official_testset_v1_manifest.json" -OutputDir "datasets/level6/quality_reports" -MaxRuntimeMultiplier 2.0
+```
+
+Outputs:
+
+- `datasets/level6/quality_reports/level6_physical_gate_metrics.json`
+- `datasets/level6/quality_reports/level6_physical_gate_runtime.csv`
+
 ## Multi-Drive 1541 Slot Configuration
 
 The emulator runtime exposes explicit 1541 slots for IEC device units `8`, `9`, `10`, and `11`.
