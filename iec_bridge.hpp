@@ -119,6 +119,41 @@ struct CiaIecHostEndpoint : public IIecHostEndpoint {
     }
 };
 
+struct IIecDeviceEndpoint {
+    virtual ~IIecDeviceEndpoint() {}
+    virtual void tickHalfCycle() = 0;
+    virtual void setLines(bool atnHigh, bool clkHigh, bool dataHigh) = 0;
+    virtual bool getPullCLK() const = 0;
+    virtual bool getPullDATA() const = 0;
+};
+
+struct LegacyIecDeviceEndpointAdapter : public IIecDeviceEndpoint {
+    IIecDevice *device = nullptr;
+
+    explicit LegacyIecDeviceEndpointAdapter(IIecDevice &d)
+        : device(&d) {}
+
+    void tickHalfCycle() override {
+        if (device != nullptr) {
+            device->tickIecHalfCycle();
+        }
+    }
+
+    void setLines(bool atnHigh, bool clkHigh, bool dataHigh) override {
+        if (device != nullptr) {
+            device->setIecLines(atnHigh, clkHigh, dataHigh);
+        }
+    }
+
+    bool getPullCLK() const override {
+        return (device != nullptr) ? device->getIecDrivePullCLK() : false;
+    }
+
+    bool getPullDATA() const override {
+        return (device != nullptr) ? device->getIecDrivePullDATA() : false;
+    }
+};
+
 static IecC64Signals deriveIecC64Signals(const CIA6526 &cia2, const IecBridgePolarity &polarity) {
     IecC64Signals s;
 
@@ -591,7 +626,8 @@ struct IecBusDomain {
     IIecHostEndpoint *hostEndpoint = nullptr;
     std::unique_ptr<IIecHostEndpoint> ownedHostEndpoint;
     IecBridgePolarity polarity;
-    std::vector<IIecDevice *> attachedDrives;
+    std::vector<IIecDeviceEndpoint *> attachedDevices;
+    std::vector<std::unique_ptr<IIecDeviceEndpoint>> ownedDeviceEndpoints;
     struct TimedEvent {
         uint64_t when = 0;
         uint64_t seq = 0;
@@ -661,15 +697,26 @@ struct IecBusDomain {
     std::priority_queue<TimedEvent, std::vector<TimedEvent>, TimedEventCompare> events;
 
     IecBusDomain(CIA6526 &c, IIecDevice &primaryDrive, const IecBridgePolarity &p)
-        : polarity(p), attachedDrives{&primaryDrive} {
+        : polarity(p) {
         ownedHostEndpoint = std::unique_ptr<IIecHostEndpoint>(new CiaIecHostEndpoint(c));
         hostEndpoint = ownedHostEndpoint.get();
+        ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(primaryDrive)));
+        attachedDevices.push_back(ownedDeviceEndpoints.back().get());
         initializeFromEnvironment();
         bootstrapIecLink();
     }
 
     IecBusDomain(IIecHostEndpoint &host, IIecDevice &primaryDrive, const IecBridgePolarity &p)
-        : hostEndpoint(&host), polarity(p), attachedDrives{&primaryDrive} {
+        : hostEndpoint(&host), polarity(p) {
+        ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(primaryDrive)));
+        attachedDevices.push_back(ownedDeviceEndpoints.back().get());
+        initializeFromEnvironment();
+        bootstrapIecLink();
+    }
+
+    IecBusDomain(IIecHostEndpoint &host, IIecDeviceEndpoint &primaryDevice, const IecBridgePolarity &p)
+        : hostEndpoint(&host), polarity(p) {
+        attachedDevices.push_back(&primaryDevice);
         initializeFromEnvironment();
         bootstrapIecLink();
     }
@@ -781,18 +828,31 @@ struct IecBusDomain {
     }
 
     void attachDrive(IIecDevice &drive) {
-        for (IIecDevice *existing : attachedDrives) {
-            if (existing == &drive) {
+        for (const std::unique_ptr<IIecDeviceEndpoint> &owned : ownedDeviceEndpoints) {
+            const LegacyIecDeviceEndpointAdapter *legacy = dynamic_cast<const LegacyIecDeviceEndpointAdapter *>(owned.get());
+            if (legacy != nullptr && legacy->device == &drive) {
                 return;
             }
         }
-        attachedDrives.push_back(&drive);
-        drive.setIecLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
+        ownedDeviceEndpoints.push_back(std::unique_ptr<IIecDeviceEndpoint>(new LegacyIecDeviceEndpointAdapter(drive)));
+        attachedDevices.push_back(ownedDeviceEndpoints.back().get());
+        ownedDeviceEndpoints.back()->setLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
+        scheduleBusSettleFromDrivePulls(anyDrivePullCLK(), anyDrivePullDATA());
+    }
+
+    void attachDeviceEndpoint(IIecDeviceEndpoint &endpoint) {
+        for (IIecDeviceEndpoint *existing : attachedDevices) {
+            if (existing == &endpoint) {
+                return;
+            }
+        }
+        attachedDevices.push_back(&endpoint);
+        endpoint.setLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
         scheduleBusSettleFromDrivePulls(anyDrivePullCLK(), anyDrivePullDATA());
     }
 
     size_t driveCount() const {
-        return attachedDrives.size();
+        return attachedDevices.size();
     }
 
     void configureDomainRatesForTest(uint64_t c64Hz, uint64_t driveHz, int32_t driftPpmValue, uint32_t seed, int32_t amp) {
@@ -907,8 +967,8 @@ struct IecBusDomain {
     }
 
     bool anyDrivePullCLK() const {
-        for (const IIecDevice *drive : attachedDrives) {
-            if (drive != nullptr && drive->getIecDrivePullCLK()) {
+        for (const IIecDeviceEndpoint *device : attachedDevices) {
+            if (device != nullptr && device->getPullCLK()) {
                 return true;
             }
         }
@@ -916,8 +976,8 @@ struct IecBusDomain {
     }
 
     bool anyDrivePullDATA() const {
-        for (const IIecDevice *drive : attachedDrives) {
-            if (drive != nullptr && drive->getIecDrivePullDATA()) {
+        for (const IIecDeviceEndpoint *device : attachedDevices) {
+            if (device != nullptr && device->getPullDATA()) {
                 return true;
             }
         }
@@ -925,9 +985,9 @@ struct IecBusDomain {
     }
 
     void propagateLinesToDrives() {
-        for (IIecDevice *drive : attachedDrives) {
-            if (drive != nullptr) {
-                drive->setIecLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
+        for (IIecDeviceEndpoint *device : attachedDevices) {
+            if (device != nullptr) {
+                device->setLines(linkLineATNHigh, linkLineCLKHigh, linkLineDATAHigh);
             }
         }
     }
@@ -1132,9 +1192,9 @@ struct IecBusDomain {
         const bool prevPullCLK = anyDrivePullCLK();
         const bool prevPullDATA = anyDrivePullDATA();
 
-        for (IIecDevice *drive : attachedDrives) {
-            if (drive != nullptr) {
-                drive->tickIecHalfCycle();
+        for (IIecDeviceEndpoint *device : attachedDevices) {
+            if (device != nullptr) {
+                device->tickHalfCycle();
             }
         }
         driveHalfTicks++;

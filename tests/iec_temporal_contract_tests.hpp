@@ -39,6 +39,35 @@ struct TestIecDevice : public IIecDevice {
     }
 };
 
+struct TestIecDeviceEndpoint : public IIecDeviceEndpoint {
+    bool pullClk = false;
+    bool pullData = false;
+    bool atnHigh = true;
+    bool clkHigh = true;
+    bool dataHigh = true;
+    std::uint64_t tickCount = 0;
+
+    void tickHalfCycle() override {
+        tickCount++;
+        pullClk = ((tickCount % 6u) == 2u);
+        pullData = ((tickCount % 9u) == 4u);
+    }
+
+    void setLines(bool atn, bool clk, bool data) override {
+        atnHigh = atn;
+        clkHigh = clk;
+        dataHigh = data;
+    }
+
+    bool getPullCLK() const override {
+        return pullClk;
+    }
+
+    bool getPullDATA() const override {
+        return pullData;
+    }
+};
+
 struct TestIecHostEndpoint : public IIecHostEndpoint {
     bool pullAtn = false;
     bool pullClk = false;
@@ -192,9 +221,9 @@ static void runIecTemporalContractTests() {
 
     {
         TestIecHostEndpoint host;
-        TestIecDevice drive;
+        TestIecDeviceEndpoint device;
         IecBridgePolarity polarity = makeRuntimeDefaultIecPolarity();
-        IecBusDomain domain(host, drive, polarity);
+        IecBusDomain domain(host, device, polarity);
         domain.setTemporalDebugEnabled(true);
         domain.clearTemporalTrace();
         domain.configureDomainRatesForTest(985248u, 985248u, 0, 0u, 0);
