@@ -1,6 +1,7 @@
 param(
     [string]$ExeTag = "",
-    [switch]$KeepLogs
+    [switch]$KeepLogs,
+    [switch]$NoPureGuard
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,7 +47,11 @@ $exeInfo = Get-Item -LiteralPath $exePath
 $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;" + $env:PATH
 [Environment]::SetEnvironmentVariable("IEC_PROFILE", $null, "Process")
 [Environment]::SetEnvironmentVariable("IEC_MODEL_MODE", $null, "Process")
-[Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "1", "Process")
+if ($NoPureGuard) {
+    [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", $null, "Process")
+} else {
+    [Environment]::SetEnvironmentVariable("KERNAL_TEST_ONLY_PURE_CMD_GUARD", "1", "Process")
+}
 
 # Procedure: run the exact built executable and capture output files.
 $runCmd = "`"$exePath`" 1>`"$runOut`" 2>`"$runErr`""

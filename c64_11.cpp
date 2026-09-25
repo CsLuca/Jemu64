@@ -6312,6 +6312,12 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "tests/iec_multilistener_between_bytes_tests.hpp"
 
+#include "tests/iec_fuzz_bounded_tests.hpp"
+
+#include "tests/iec_metamorphic_invariants_tests.hpp"
+
+#include "tests/iec_fault_injection_tests.hpp"
+
 #include "drive1541_physical/drive_via_domain.cpp"
 #include "drive1541_physical/gcr_codec.cpp"
 #include "drive1541_physical/bitcell_timing_model.cpp"
@@ -7289,6 +7295,11 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     }
 
     if (!observedDirectoryInRam) {
+        const bool canUsePureGuard = (kernalPureCmdGuard || kernalPureAutoBootstrap);
+        if (!canUsePureGuard) {
+            std::cerr << "[KERNAL IEC E2E] FAIL: expected directory payload not found in C64 RAM and pure guard disabled." << std::endl;
+            assert(false);
+        }
         const bool replayEnabled = (std::getenv("KERNAL_REPLAY_CIA_LOG") != nullptr);
         Drive1541 replayDrive = replayCiaLogIntoDrive(replayEnabled);
         if (replayDrive.iecRxProcessed > drive.iecRxProcessed) {
@@ -8722,6 +8733,9 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runIecSpecTimingWindowTests();
     runIecTurnaroundArbitrationTests();
     runIecMultiListenerBetweenBytesTests();
+    runIecFuzzBoundedTests();
+    runIecMetamorphicInvariantsTests();
+    runIecFaultInjectionTests();
     runDrive1541TimingBattery(cia2);
     runDrive1541LoadDirectoryE2ESmoke(cia2, bus);
     runKernelSerialLoadDirectoryTrueE2E();

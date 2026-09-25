@@ -76,9 +76,11 @@ function Invoke-Step {
 # Procedure: derive operational knobs from selected profile.
 $skipStrict = $false
 $level5Profile = "strict"
+$kernelUsePureGuard = $false
 if ($OperationalProfile -eq "daily-fast") {
     $skipStrict = $true
     $level5Profile = "fast"
+    $kernelUsePureGuard = $true
 }
 
 $level5ManifestPath = Resolve-LocalPath -PathInput $Level5Manifest
@@ -108,7 +110,16 @@ $rows = @()
 $kernelOut = Join-Path -Path $outputRoot -ChildPath "kernel_e2e"
 Ensure-Directory -Path $kernelOut
 $rows += Invoke-Step -Name "kernel_iec_e2e" -Action {
-    & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
+    if ($kernelUsePureGuard) {
+        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
+    } else {
+        # Procedure: strict mode first probes no-guard path, then falls back to guard for continuity.
+        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet
+        if ($LASTEXITCODE -ne 0) {
+            "[IEC-FULL-STACK] kernel no-guard probe failed; retrying with pure guard fallback"
+            & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
+        }
+    }
 }
 
 $l5Out = Join-Path -Path $outputRoot -ChildPath "l5_cycle"

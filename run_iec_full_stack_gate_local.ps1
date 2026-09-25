@@ -42,4 +42,11 @@ if (-not [string]::IsNullOrWhiteSpace($calProfileParent)) {
     -CalibratedProfileOut $calibratedProfilePath `
     -CalibratedProfileId $CalibratedProfileId
 
+$fullStackExit = $LASTEXITCODE
+if ($fullStackExit -ne 0) {
+    exit $fullStackExit
+}
+
+# Procedure: run additional synthetic sweep locally for broader non-measured envelope coverage.
+& "$repo\run_level6_synthetic_sweep_gate.ps1" -OutputDir ".local/quality_reports/l6_synthetic_sweep"
 exit $LASTEXITCODE
