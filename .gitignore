@@ -1,0 +1,14 @@
+# Local UCRT64 verification harness outputs
+/datasets/level6/quality_reports/verified_ucrt64/
+
+# Local binaries produced during manual signoff/debug
+/c64_11.exe
+/c64_11_fast_signoff.exe
+/c64_11_strict_signoff.exe
+
+# Local runtime/debug dumps generated from root-level runs
+/week*_runtime.csv
+/*.trace.csv
+/copier_matrix_report.csv
+/copier_matrix_report.json
+/copy_8_to_9_disk_e2e_manifest.csv
