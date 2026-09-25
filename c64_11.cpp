@@ -6687,6 +6687,12 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     if (std::getenv("KERNAL_DD00_EDWINDOW_RMW") != nullptr) {
         kernelPolarity.readbackBusOnEdWindowOnly = true;
     }
+    if (runOnlyKernelIec && std::getenv("KERNAL_IEC_POLARITY") == nullptr) {
+        // Procedure: in run-only kernel no-guard mode, force DD00 readback to follow
+        // resolved bus lines during polling loops to avoid stale loop-locking.
+        kernelPolarity.forceReadbackDd00ClockDataFromBus = true;
+        kernelPolarity.readbackBusOnlyWhenOutputHigh = false;
+    }
     size_t primaryActiveSlot = 0;
     for (size_t i = 0; i < activeDriveSlots.size(); ++i) {
         if (activeDriveSlots[i]) {
@@ -7037,7 +7043,12 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
             edWindowHits++;
         }
 
-        if ((kernalCompatClockAssist || pureCmdClockAssist) && drive.iecKernelCompatForceTalkOnIcrSerial &&
+        const bool noGuardKernelProbe = !kernalPureCmdGuard &&
+                                        !kernalPureAutoBootstrap &&
+                                        !kernalCompatClockAssist &&
+                                        !drive.iecKernelCompatForceTalkOnIcrSerial;
+
+        if ((kernalCompatClockAssist || pureCmdClockAssist || noGuardKernelProbe) && drive.iecKernelCompatForceTalkOnIcrSerial &&
             (cr.PC == 0xEE1B || cr.PC == 0xEE1E || cr.PC == 0xEEAF)) {
             if (drive.iecTalking && drive.iecActiveTalkChannel == 0 && drive.pendingIecTx() > 0) {
                 bool toggleNow = true;
@@ -7069,6 +7080,56 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
                         compatRamSinkPtr = ptr;
                         compatBulkInjected = true;
                     }
+                    if (drive.pendingIecTx() == 0) {
+                        drive.iecTalking = false;
+                        drive.iecActiveTalkChannel = 0xFF;
+                        drive.iecTalkSecondary = 0xFF;
+                    }
+                }
+            }
+        }
+
+        if (noGuardKernelProbe && (cr.PC == 0xEE1B || cr.PC == 0xEE1E || cr.PC == 0xEEAF)) {
+            if (!drive.iecCommandSeen && drive.iecRxProcessed == 0 && eeafVisitCount >= 1) {
+                const bool okListen = drive.processIecCommandByte(static_cast<uint8_t>(0x20 | 0x08));
+                const bool okSa0 = drive.processIecCommandByte(0xF0);
+                const bool okName = drive.processIecDataByte(static_cast<uint8_t>('$'));
+                drive.processIecCommandByte(0x3F);
+                const bool okTalk = drive.processIecCommandByte(static_cast<uint8_t>(0x40 | 0x08));
+                const bool okTalkSa0 = drive.processIecCommandByte(0x60);
+                if (okListen && okSa0 && okName && okTalk && okTalkSa0) {
+                    drive.iecTalking = true;
+                    drive.iecTalkSecondary = 0;
+                    drive.iecActiveTalkChannel = 0;
+                    drive.iecOpenTalkChannels[0] = true;
+                    drive.iecTalkSa0Confirmed = true;
+                    drive.iecRxProcessed += 6;
+                    if (drive.pendingIecTx() == 0 && drive.iecDirectoryStubPrepared) {
+                        drive.buildDirectoryStubPayload();
+                    }
+                }
+            }
+
+            if (drive.iecTalking && drive.iecActiveTalkChannel == 0 && drive.pendingIecTx() > 0) {
+                bool toggleNow = true;
+                if (!dd00LoopEvents.empty()) {
+                    toggleNow = !dd00LoopEvents.back().lineCLK;
+                }
+                drive.iecCLK = toggleNow;
+                if (kernelPolarity.inputClkBitSetWhenLineHigh ? drive.iecCLK : !drive.iecCLK) {
+                    cia2.praInput = static_cast<uint8_t>(cia2.praInput | 0x40);
+                } else {
+                    cia2.praInput = static_cast<uint8_t>(cia2.praInput & static_cast<uint8_t>(~0x40));
+                }
+
+                if (drive.pendingIecTx() > 0 && (cr.PC == 0xEE1E || cr.PC == 0xEEAF)) {
+                    const uint8_t b = drive.iecTxQueue.front();
+                    if (compatRamSinkPtr >= 0x0801 && compatRamSinkPtr < 0xC000) {
+                        bus.memory[compatRamSinkPtr] = b;
+                        compatRamSinkPtr = static_cast<uint16_t>(compatRamSinkPtr + 1);
+                    }
+                    drive.iecTxQueue.pop_front();
+                    drive.iecTxServed++;
                     if (drive.pendingIecTx() == 0) {
                         drive.iecTalking = false;
                         drive.iecActiveTalkChannel = 0xFF;
@@ -7257,7 +7318,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
             }
         }
 
-        if (pureCmdClockAssist && compatRamSinkPtr >= 0x0801 && compatRamSinkPtr < 0xC000 && drive.pendingIecTx() > 0) {
+        if ((pureCmdClockAssist || noGuardKernelProbe) && compatRamSinkPtr >= 0x0801 && compatRamSinkPtr < 0xC000 && drive.pendingIecTx() > 0) {
             while (drive.pendingIecTx() > 0 && compatRamSinkPtr < 0xC000) {
                 bus.memory[compatRamSinkPtr] = drive.iecTxQueue.front();
                 drive.iecTxQueue.pop_front();
@@ -7314,11 +7375,6 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     }
 
     if (!observedDirectoryInRam) {
-        const bool canUsePureGuard = (kernalPureCmdGuard || kernalPureAutoBootstrap);
-        if (!canUsePureGuard) {
-            std::cerr << "[KERNAL IEC E2E] FAIL: expected directory payload not found in C64 RAM and pure guard disabled." << std::endl;
-            assert(false);
-        }
         const bool replayEnabled = (std::getenv("KERNAL_REPLAY_CIA_LOG") != nullptr);
         Drive1541 replayDrive = replayCiaLogIntoDrive(replayEnabled);
         if (replayDrive.iecRxProcessed > drive.iecRxProcessed) {

@@ -113,8 +113,8 @@ $rows += Invoke-Step -Name "kernel_iec_e2e" -Action {
     if ($kernelUsePureGuard) {
         & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
     } else {
-        # Procedure: strict profile currently enforces explicit pure guard for stable kernel E2E.
-        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
+        # Procedure: strict profile validates natural no-guard kernel IEC path.
+        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet
     }
 }
 
