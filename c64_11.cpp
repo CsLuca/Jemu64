@@ -6209,6 +6209,7 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "iec_host_helpers.hpp"
 #include "iec_kernel_noguard_probe.hpp"
+#include "iec_kernel_trace_helpers.hpp"
 
 #include "iec_host_session.hpp"
 
@@ -6790,21 +6791,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     uint64_t busClkRising = 0;
     uint64_t busClkRisingAtnLow = 0;
     bool prevLineCLKHigh = true;
-    struct Dd00LoopEvent {
-        uint32_t step = 0;
-        uint16_t pc = 0;
-        uint8_t dd00 = 0;
-        uint8_t dd0d = 0;
-        bool lineCLK = true;
-        bool lineDATA = true;
-        bool lineATN = true;
-        bool txActive = false;
-        uint8_t txBit = 0;
-        bool eoiPending = false;
-        uint16_t txq = 0;
-        uint64_t txServed = 0;
-    };
-    std::vector<Dd00LoopEvent> dd00LoopEvents;
+    std::vector<IecKernelDd00LoopEvent> dd00LoopEvents;
     dd00LoopEvents.reserve(1024);
     bool kernalDd00TraceEnabled = (std::getenv("KERNAL_DD00_TRACE") != nullptr);
     bool kernalDebugForceClockToggle = (std::getenv("KERNAL_DEBUG_FORCE_CLOCK_TOGGLE") != nullptr);
@@ -7120,12 +7107,13 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
 
         if (kernalDd00TraceEnabled) {
             const uint8_t dd00Now = cia2.getPortACombined();
-            const bool inHotLoop = (cr.PC == 0xEE1B || cr.PC == 0xEE1E || cr.PC == 0xEEAF || cr.PC == 0xED5D || cr.PC == 0xED5E);
             const bool dd00Changed = (dd00Now != prevDd00Trace);
             const bool txProgress = (drive.iecTxServed != prevTxServedTrace);
             const bool trackTxSequencer = (drive.iecTxByteActive || drive.pendingIecTx() > 0);
-            if ((inHotLoop || dd00Changed || txProgress || trackTxSequencer) && dd00LoopEvents.size() < 4096) {
-                dd00LoopEvents.push_back(Dd00LoopEvent{
+            if (shouldRecordIecKernelDd00LoopEvent(cr.PC, dd00Changed, txProgress, trackTxSequencer)) {
+                appendIecKernelDd00LoopEvent(dd00LoopEvents,
+                                             4096,
+                                             IecKernelDd00LoopEvent{
                     i,
                     cr.PC,
                     dd00Now,
@@ -7464,23 +7452,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
                       << ":$" << (int)dd00ReadEd50Ed80History[hi];
         }
         if (!dd00LoopEvents.empty()) {
-            std::cerr << " dd00_loop=";
-            const size_t startIdx = (dd00LoopEvents.size() > 24) ? (dd00LoopEvents.size() - 24) : 0;
-            for (size_t ei = startIdx; ei < dd00LoopEvents.size(); ++ei) {
-                const auto &ev = dd00LoopEvents[ei];
-                std::cerr << (ei == startIdx ? "" : "|")
-                          << "$" << std::hex << ev.pc
-                          << ":$" << (int)ev.dd00
-                          << ",icr=$" << (int)ev.dd0d
-                          << ",clk=" << (ev.lineCLK ? 1 : 0)
-                          << ",dat=" << (ev.lineDATA ? 1 : 0)
-                          << ",atn=" << (ev.lineATN ? 1 : 0)
-                          << ",txa=" << (ev.txActive ? 1 : 0)
-                          << ",tb=" << std::dec << (int)ev.txBit
-                          << ",eoi=" << (ev.eoiPending ? 1 : 0)
-                          << ",q=" << ev.txq
-                          << ",tx=" << ev.txServed;
-            }
+            dumpIecKernelDd00LoopEvents(std::cerr, dd00LoopEvents, 24);
         }
         std::cerr << " cia_log_sz=" << std::dec << ciaAccessLog.size();
         std::cerr << std::dec
