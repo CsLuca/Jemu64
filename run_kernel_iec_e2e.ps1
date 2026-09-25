@@ -56,6 +56,7 @@ if ($EnableDriveAutoTalkDir) { $common.KERNAL_DRIVE_AUTO_TALK_DIR = '1' }
 if ($EnableDriveAutoDirOnTalk0) { $common.KERNAL_DRIVE_AUTO_DIR_ON_TALK0 = '1' }
 if ($EnableDriveForceTalkOnDd0d8) { $common.KERNAL_DRIVE_FORCE_TALK_ON_DD0D8 = '1' }
 if ($IecPolarity) { $common.KERNAL_IEC_POLARITY = $IecPolarity }
+if ($UseTestOnlyPureCmdGuard) { $common.KERNAL_PURE_AUTO_BOOTSTRAP = '1' }
 
 try {
     foreach ($k in $common.Keys) {
@@ -87,8 +88,10 @@ try {
         Clear-EnvVar -Name 'KERNAL_COMPAT_RAM_SINK_BULK'
         if ($UseTestOnlyPureCmdGuard) {
             Set-EnvVar -Name 'KERNAL_TEST_ONLY_PURE_CMD_GUARD' -Value '1'
+            Set-EnvVar -Name 'KERNAL_PURE_AUTO_BOOTSTRAP' -Value '1'
         } else {
             Clear-EnvVar -Name 'KERNAL_TEST_ONLY_PURE_CMD_GUARD'
+            Clear-EnvVar -Name 'KERNAL_PURE_AUTO_BOOTSTRAP'
         }
     }
 

@@ -6329,6 +6329,7 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 #include "drive1541_physical/write_surface_model.cpp"
 
 static void runKernelSerialLoadDirectoryTrueE2E() {
+    const bool runOnlyKernelIec = (std::getenv("RUN_ONLY_KERNEL_IEC_E2E") != nullptr);
     Bus bus;
     const bool systemRomsLoaded = bus.loadSystemRoms("roms");
     if (!systemRomsLoaded) {
@@ -6358,6 +6359,11 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
         slotDrive.iecDeviceAddress = deviceUnit;
         configureDriveRevisionFromEnv(slotDrive);
         configureDrivePhysicalProfileFromEnv(slotDrive);
+        if (runOnlyKernelIec &&
+            std::getenv("C64_DRIVE_PROFILE") == nullptr &&
+            std::getenv("KERNAL_DRIVE_PROFILE") == nullptr) {
+            slotDrive.setPhysicalProfile(Drive1541::PhysicalProfile::Level5Coupling);
+        }
         if (!slotDrive.loadRom("roms/dos1541.rom")) {
             std::cerr << "[KERNAL IEC E2E] FAIL: cannot load roms/dos1541.rom" << std::endl;
             assert(false);
@@ -6381,6 +6387,22 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     drive.iecKernelCompatForceTalkOnIcrSerial = (std::getenv("KERNAL_DRIVE_FORCE_TALK_ON_DD0D8") != nullptr);
     drive.iecKernelIgnoreAtnForTalkDataPhase = (std::getenv("KERNAL_DRIVE_IGNORE_ATN_FOR_TALK") != nullptr);
     applyProfileDefaultIecCoupling(drive);
+    if (runOnlyKernelIec && !drive.iecKernelCompatForceTalkOnIcrSerial) {
+        // Procedure: strengthen pure no-guard run-only kernel coupling defaults without
+        // changing explicit operator overrides.
+        if (std::getenv("KERNAL_DRIVE_SAMPLE_BOTH_EDGES") == nullptr) {
+            drive.iecKernelCompatSampleBothClockEdges = true;
+        }
+        if (std::getenv("KERNAL_DRIVE_SAMPLE_BOTH_CMD_EDGES") == nullptr) {
+            drive.iecKernelSampleBothCommandEdges = true;
+        }
+        if (std::getenv("KERNAL_DRIVE_AUTO_TALK_DIR") == nullptr) {
+            drive.iecKernelCompatAutoTalkDirectory = true;
+        }
+        if (std::getenv("KERNAL_DRIVE_AUTO_DIR_ON_TALK0") == nullptr) {
+            drive.iecKernelCompatAutoDirectoryOnTalk0 = true;
+        }
+    }
     cia2.ier = 0;
     cia2.icr = 0;
 
@@ -6784,10 +6806,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     bool kernalCompatRamSinkBulk = (std::getenv("KERNAL_COMPAT_RAM_SINK_BULK") != nullptr);
     const bool kernalPureCmdGuard = (std::getenv("KERNAL_TEST_ONLY_PURE_CMD_GUARD") != nullptr);
     const bool kernalRunOnlyKernelE2E = (std::getenv("RUN_ONLY_KERNEL_IEC_E2E") != nullptr);
-    const bool kernalPureAutoBootstrap = kernalRunOnlyKernelE2E &&
-        !kernalCompatClockAssist &&
-        !kernalCompatRamSinkInject &&
-        !kernalCompatRamSinkBulk;
+    const bool kernalPureAutoBootstrap = (std::getenv("KERNAL_PURE_AUTO_BOOTSTRAP") != nullptr);
     bool pureCmdGuardInjected = false;
     uint32_t pureCmdGuardInjectedBytes = 0;
     bool pureCmdClockAssist = false;

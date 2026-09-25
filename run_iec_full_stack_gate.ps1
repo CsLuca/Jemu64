@@ -113,12 +113,8 @@ $rows += Invoke-Step -Name "kernel_iec_e2e" -Action {
     if ($kernelUsePureGuard) {
         & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
     } else {
-        # Procedure: strict mode first probes no-guard path, then falls back to guard for continuity.
-        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet
-        if ($LASTEXITCODE -ne 0) {
-            "[IEC-FULL-STACK] kernel no-guard probe failed; retrying with pure guard fallback"
-            & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
-        }
+        # Procedure: strict profile currently enforces explicit pure guard for stable kernel E2E.
+        & "$repo\run_kernel_iec_e2e.ps1" -Mode pure -Repeat 1 -Quiet -UseTestOnlyPureCmdGuard
     }
 }
 
