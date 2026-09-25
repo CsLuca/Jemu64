@@ -6208,6 +6208,7 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 #include "drive_iec_handshake_smoke.hpp"
 
 #include "iec_host_helpers.hpp"
+#include "iec_kernel_noguard_probe.hpp"
 
 #include "iec_host_session.hpp"
 
@@ -6817,6 +6818,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     uint32_t pureCmdGuardInjectedBytes = 0;
     bool pureCmdClockAssist = false;
     bool kernalDebugClockFlip = false;
+    bool kernelNoGuardProbeLastClkHigh = true;
     uint8_t prevDd00Trace = 0xFF;
     uint64_t prevTxServedTrace = 0;
     bool kernalBranchTraceEnabled = (std::getenv("KERNAL_BRANCH_TRACE") != nullptr);
@@ -7089,55 +7091,15 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
             }
         }
 
-        if (noGuardKernelProbe && (cr.PC == 0xEE1B || cr.PC == 0xEE1E || cr.PC == 0xEEAF)) {
-            if (!drive.iecCommandSeen && drive.iecRxProcessed == 0 && eeafVisitCount >= 1) {
-                const bool okListen = drive.processIecCommandByte(static_cast<uint8_t>(0x20 | 0x08));
-                const bool okSa0 = drive.processIecCommandByte(0xF0);
-                const bool okName = drive.processIecDataByte(static_cast<uint8_t>('$'));
-                drive.processIecCommandByte(0x3F);
-                const bool okTalk = drive.processIecCommandByte(static_cast<uint8_t>(0x40 | 0x08));
-                const bool okTalkSa0 = drive.processIecCommandByte(0x60);
-                if (okListen && okSa0 && okName && okTalk && okTalkSa0) {
-                    drive.iecTalking = true;
-                    drive.iecTalkSecondary = 0;
-                    drive.iecActiveTalkChannel = 0;
-                    drive.iecOpenTalkChannels[0] = true;
-                    drive.iecTalkSa0Confirmed = true;
-                    drive.iecRxProcessed += 6;
-                    if (drive.pendingIecTx() == 0 && drive.iecDirectoryStubPrepared) {
-                        drive.buildDirectoryStubPayload();
-                    }
-                }
-            }
-
-            if (drive.iecTalking && drive.iecActiveTalkChannel == 0 && drive.pendingIecTx() > 0) {
-                bool toggleNow = true;
-                if (!dd00LoopEvents.empty()) {
-                    toggleNow = !dd00LoopEvents.back().lineCLK;
-                }
-                drive.iecCLK = toggleNow;
-                if (kernelPolarity.inputClkBitSetWhenLineHigh ? drive.iecCLK : !drive.iecCLK) {
-                    cia2.praInput = static_cast<uint8_t>(cia2.praInput | 0x40);
-                } else {
-                    cia2.praInput = static_cast<uint8_t>(cia2.praInput & static_cast<uint8_t>(~0x40));
-                }
-
-                if (drive.pendingIecTx() > 0 && (cr.PC == 0xEE1E || cr.PC == 0xEEAF)) {
-                    const uint8_t b = drive.iecTxQueue.front();
-                    if (compatRamSinkPtr >= 0x0801 && compatRamSinkPtr < 0xC000) {
-                        bus.memory[compatRamSinkPtr] = b;
-                        compatRamSinkPtr = static_cast<uint16_t>(compatRamSinkPtr + 1);
-                    }
-                    drive.iecTxQueue.pop_front();
-                    drive.iecTxServed++;
-                    if (drive.pendingIecTx() == 0) {
-                        drive.iecTalking = false;
-                        drive.iecActiveTalkChannel = 0xFF;
-                        drive.iecTalkSecondary = 0xFF;
-                    }
-                }
-            }
-        }
+        applyKernelNoGuardProbeStep(noGuardKernelProbe,
+                                    cr.PC,
+                                    eeafVisitCount,
+                                    drive,
+                                    cia2,
+                                    kernelPolarity,
+                                    kernelNoGuardProbeLastClkHigh,
+                                    bus,
+                                    compatRamSinkPtr);
 
         if (kernalDebugForceClockToggle) {
             if (cr.PC == 0xEE1B || cr.PC == 0xEE1E || cr.PC == 0xEEAF) {
