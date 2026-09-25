@@ -12,3 +12,6 @@
 /copier_matrix_report.csv
 /copier_matrix_report.json
 /copy_8_to_9_disk_e2e_manifest.csv
+
+# Local-only gate outputs and scratch profiles
+/.local/
