@@ -34,6 +34,7 @@ static void runIecSpecTimingWindowTests() {
         drive.iecTalking = true;
         drive.iecActiveTalkChannel = 0;
         drive.iecTalkSa0Confirmed = true;
+        drive.iecSenderTimeoutTicks = Drive1541::IEC_EOI_TIMEOUT_TICKS;
         drive.iecTxQueue.push_back(0x42u);
 
         drive.setIecLines(true, true, true);
@@ -52,13 +53,23 @@ static void runIecSpecTimingWindowTests() {
             assert(false);
         }
 
-        const std::uint32_t budget = Drive1541::IEC_EOI_TIMEOUT_TICKS;
-        for (std::uint32_t i = 0; i < budget; ++i) {
+        const std::uint32_t budget = drive.iecSenderTimeoutTicks;
+        const std::uint32_t startWait = drive.iecEoiWaitTicks;
+        if (startWait > budget) {
+            std::cerr << "[IEC SPEC TIMING] FAIL: invalid initial EOI wait state" << std::endl;
+            assert(false);
+        }
+        const std::uint32_t remaining = budget - startWait;
+        for (std::uint32_t i = 0; i < remaining; ++i) {
             drive.setIecLines(true, true, true);
             drive.stepIecSerial();
+            if (drive.statusCodeOf(drive.iecStatusLine) != 0) {
+                std::cerr << "[IEC SPEC TIMING] FAIL: EOI timeout tripped before sender-timeout window" << std::endl;
+                assert(false);
+            }
         }
         if (drive.statusCodeOf(drive.iecStatusLine) != 0) {
-            std::cerr << "[IEC SPEC TIMING] FAIL: EOI timeout tripped before sender-timeout window" << std::endl;
+            std::cerr << "[IEC SPEC TIMING] FAIL: EOI timeout tripped at sender-timeout boundary" << std::endl;
             assert(false);
         }
 

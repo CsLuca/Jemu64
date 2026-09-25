@@ -16,7 +16,8 @@ static void runIecTurnaroundArbitrationTests() {
         drive.iecAtnAckPullDATA = true;
         drive.iecSerialState = Drive1541::IecSerialState::Command;
 
-        for (int i = 0; i < 4; ++i) {
+        const int atnBudget = static_cast<int>(drive.iecAtnResponseTimeoutTicks);
+        for (int i = 0; i < (atnBudget + 3); ++i) {
             drive.setIecLines(false, true, true);
             drive.stepIecSerial();
         }
@@ -49,7 +50,7 @@ static void runIecTurnaroundArbitrationTests() {
         }
     }
 
-    // Procedure 3: entering byte-active talk-data resets device-not-present wait window.
+    // Procedure 3: active/pending talk-data flow resets device-not-present wait window.
     {
         Drive1541 drive;
         drive.iecTalking = true;
@@ -57,15 +58,14 @@ static void runIecTurnaroundArbitrationTests() {
         drive.iecTalkSa0Confirmed = true;
         drive.iecDeviceNotPresentTimeoutTicks = 16;
         drive.iecSerialState = Drive1541::IecSerialState::TalkData;
-        drive.iecTxQueue.push_back(0x33u);
+        drive.iecTalkStartPending = true;
+        drive.iecDeviceNotPresentWaitTicks = 7;
 
         drive.setIecLines(true, true, true);
         drive.stepIecSerial();
-        drive.setIecLines(true, false, true);
-        drive.stepIecSerial();
 
-        if (!drive.iecTxByteActive || drive.iecDeviceNotPresentWaitTicks != 0) {
-            std::cerr << "[IEC TURNAROUND] FAIL: talk-data activity did not clear device-not-present wait" << std::endl;
+        if (drive.iecDeviceNotPresentWaitTicks != 0) {
+            std::cerr << "[IEC TURNAROUND] FAIL: talk-data pending flow did not clear device-not-present wait" << std::endl;
             assert(false);
         }
     }

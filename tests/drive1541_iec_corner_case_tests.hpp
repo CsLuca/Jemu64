@@ -143,9 +143,11 @@ static void runDrive1541IecCornerCaseTests() {
     {
         Drive1541 drive;
         drive.iecListening = true;
+        drive.iecReceiverTimeoutTicks = Drive1541::IEC_SERIAL_TIMEOUT_TICKS;
+        drive.iecSerialTimeoutHysteresisTicks = Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
         drive.iecRxBitCount = 1;
         drive.iecRxShift = 1;
-        const std::uint32_t rxBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
+        const std::uint32_t rxBudget = drive.iecReceiverTimeoutTicks + drive.iecSerialTimeoutHysteresisTicks;
         for (std::uint32_t i = 0; i < rxBudget; ++i) {
             drive.setIecLines(true, true, true);
             drive.stepIecSerial();
@@ -168,10 +170,12 @@ static void runDrive1541IecCornerCaseTests() {
         drive.iecTalking = true;
         drive.iecActiveTalkChannel = 0;
         drive.iecTalkSa0Confirmed = true;
+        drive.iecSenderTimeoutTicks = Drive1541::IEC_SERIAL_TIMEOUT_TICKS;
+        drive.iecSerialTimeoutHysteresisTicks = Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
         drive.iecTxByteActive = true;
         drive.iecTxShift = 0xA5u;
         drive.iecTxBitCount = 2;
-        const std::uint32_t txBudget = Drive1541::IEC_SERIAL_TIMEOUT_TICKS + Drive1541::IEC_TIMEOUT_HYSTERESIS_TICKS;
+        const std::uint32_t txBudget = drive.iecSenderTimeoutTicks + drive.iecSerialTimeoutHysteresisTicks;
         for (std::uint32_t i = 0; i < txBudget; ++i) {
             drive.setIecLines(true, true, true);
             drive.stepIecSerial();

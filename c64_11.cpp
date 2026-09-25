@@ -6226,6 +6226,8 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 
 #include "drive_iec_status_smoke.hpp"
 
+#include "drive_iec_status_timeout_minimal_tests.hpp"
+
 #include "drive_iec_mem_smoke.hpp"
 
 #include "drive_iec_exec_block_cmd_smoke.hpp"
@@ -8679,6 +8681,7 @@ static void runDriveIecSmokeSuite(Bus &bus, CIA6526 &cia2) {
     runDrive1541IecDualDriveCopySmoke();
     runDrive1541IecD64DirectoryMountSmoke();
     runDrive1541IecAdvancedImageMountSmoke();
+    runDrive1541IecStatusTimeoutMinimalTests();
     runDrive1541IecStatusTimeoutSmoke(cia2);
     runDrive1541IecMemoryCommandSmoke(cia2);
     runDrive1541IecExecBlockCommandSmoke(cia2);
