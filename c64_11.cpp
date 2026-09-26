@@ -6210,6 +6210,7 @@ static bool runExternalRomCase(Bus &bus, CPU6510 &cpu, const ExternalRomCase &tc
 #include "iec_host_helpers.hpp"
 #include "iec_kernel_noguard_probe.hpp"
 #include "iec_kernel_trace_helpers.hpp"
+#include "iec_kernel_cia_taps.hpp"
 
 #include "iec_host_session.hpp"
 
@@ -6494,13 +6495,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     r.P = UNUSED | INTERRUPT_DISABLE;
     cpu.setRegisters(r);
 
-    struct CiaAccessEvent {
-        uint16_t pc = 0;
-        uint16_t addr = 0;
-        uint8_t val = 0;
-        bool isWrite = false;
-    };
-    std::vector<CiaAccessEvent> ciaAccessLog;
+    std::vector<IecKernelCiaAccessEvent> ciaAccessLog;
     ciaAccessLog.reserve(16384);
 
     uint64_t dd00Writes = 0;
@@ -6583,11 +6578,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
             }
         }
         const uint16_t pcNow = cpu.getRegisters().PC;
-        if ((pcNow >= 0xED40 && pcNow <= 0xEED0) &&
-            (addr >= 0xDC00 && addr <= 0xDD0F) &&
-            ciaAccessLog.size() < 200000) {
-            ciaAccessLog.push_back(CiaAccessEvent{pcNow, addr, val, true});
-        }
+        appendIecKernelCiaTapEvent(ciaAccessLog, 200000, pcNow, addr, val, true);
         if (addr == 0xDD00) {
             dd00Writes++;
             lastDd00 = val;
@@ -6623,11 +6614,7 @@ static void runKernelSerialLoadDirectoryTrueE2E() {
     };
     bus.readTap = [&](uint16_t addr, uint8_t val) {
         const uint16_t pcNow = cpu.getRegisters().PC;
-        if ((pcNow >= 0xED40 && pcNow <= 0xEED0) &&
-            (addr >= 0xDC00 && addr <= 0xDD0F) &&
-            ciaAccessLog.size() < 200000) {
-            ciaAccessLog.push_back(CiaAccessEvent{pcNow, addr, val, false});
-        }
+        appendIecKernelCiaTapEvent(ciaAccessLog, 200000, pcNow, addr, val, false);
         if (addr == 0xDD00) {
             dd00Reads++;
             if (dd00ReadHistCount < dd00ReadHistory.size()) {
